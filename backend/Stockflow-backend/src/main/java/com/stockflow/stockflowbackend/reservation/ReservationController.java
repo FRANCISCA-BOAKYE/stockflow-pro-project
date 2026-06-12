@@ -1,0 +1,48 @@
+package com.stockflow.stockflowbackend.reservation;
+
+import com.stockflow.stockflowbackend.dto.AvailableStockResponse;
+import com.stockflow.stockflowbackend.dto.CreateReservationRequest;
+import com.stockflow.stockflowbackend.dto.ReservationResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/reserve")
+public class ReservationController {
+
+    private final ReservationService reservationService;
+
+    public ReservationController(ReservationService reservationService) {
+        this.reservationService = reservationService;
+    }
+
+    private Long getBusinessId(Authentication authentication) {
+        return (Long) authentication.getDetails();
+    }
+
+    @PostMapping
+    public ResponseEntity<ReservationResponse> create(
+            @RequestBody CreateReservationRequest request,
+            Authentication authentication) {
+        // Using businessId as a placeholder for userId for now
+        Long businessId = getBusinessId(authentication);
+        return ResponseEntity.ok(
+                reservationService.createReservation(request, businessId, businessId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> release(@PathVariable Long id) {
+        reservationService.releaseReservation(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/available")
+    public ResponseEntity<AvailableStockResponse> available(
+            @RequestParam Long productId,
+            @RequestParam String productType,
+            Authentication authentication) {
+        return ResponseEntity.ok(reservationService.getAvailableStock(
+                productId, productType, getBusinessId(authentication)));
+    }
+}
