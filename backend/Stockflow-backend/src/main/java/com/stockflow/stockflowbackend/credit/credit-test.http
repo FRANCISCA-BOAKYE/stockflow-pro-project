@@ -1,0 +1,26 @@
+### Login first to get token
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "Password123!"
+}
+
+
+### Create credit record
+POST http://localhost:8080/credit/record
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTI4Mzc1NSwiZXhwIjoxNzgxMzcwMTU1fQ.fpwOPTfgX3Skgyq0gZrRQ5ErWirh4Q_W1BSu9K-qnG_9HNS5-URn4ogeuzeMgxRZ
+
+{
+  "creditorBusinessId": 1,
+  "debtorBusinessId": 1,
+  "transactionId": 1,
+  "amountUsd": 500.00,
+  "dueDate": "2026-07-15"
+}
+
+### Get credit accounts
+GET http://localhost:8080/credit/accounts
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTI4Mzc1NSwiZXhwIjoxNzgxMzcwMTU1fQ.fpwOPTfgX3Skgyq0gZrRQ5ErWirh4Q_W1BSu9K-qnG_9HNS5-URn4ogeuzeMgxRZ
