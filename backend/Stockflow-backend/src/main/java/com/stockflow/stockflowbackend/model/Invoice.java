@@ -1,5 +1,6 @@
 package com.stockflow.stockflowbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,16 +26,17 @@ public class Invoice {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_business_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Business sellerBusiness;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "buyer_business_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Business buyerBusiness;
 
     @Column(name = "buyer_name", length = 200)
     private String buyerName;
 
-    // Store credit_record_id as plain Long to avoid circular reference
     @Column(name = "credit_record_id")
     private Long creditRecordId;
 
@@ -55,9 +57,11 @@ public class Invoice {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "generated_by_user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private AppUser generatedByUser;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private List<InvoiceItem> items;
 
     @Column(name = "created_at", updatable = false)
