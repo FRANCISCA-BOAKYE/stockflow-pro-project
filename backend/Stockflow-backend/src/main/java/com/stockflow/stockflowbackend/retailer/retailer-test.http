@@ -1,0 +1,38 @@
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "Password123!"
+}
+
+### Add a category
+POST http://localhost:8080/retailer/categories
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ1MDc1MSwiZXhwIjoxNzgxNTM3MTUxfQ.jxa-jvxFTHkhVsdqUYQfPGFEvcVhYFjSBnVwCMMZZUXma6dFYIuM8ag7Tn5si_b3
+
+{
+  "name": "Beverages"
+}
+
+### Add a product
+POST http://localhost:8080/retailer/products
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ1MDc1MSwiZXhwIjoxNzgxNTM3MTUxfQ.jxa-jvxFTHkhVsdqUYQfPGFEvcVhYFjSBnVwCMMZZUXma6dFYIuM8ag7Tn5si_b3
+
+{
+  "name": "Coca Cola 500ml",
+  "priceUsd": 1.50,
+  "quantity": 100,
+  "minThreshold": 10,
+  "unit": "bottle"
+}
+
+### Get all products
+GET http://localhost:8080/retailer/products
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ1MDc1MSwiZXhwIjoxNzgxNTM3MTUxfQ.jxa-jvxFTHkhVsdqUYQfPGFEvcVhYFjSBnVwCMMZZUXma6dFYIuM8ag7Tn5si_b3
+
+### Get low stock products
+GET http://localhost:8080/retailer/products/low-stock
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ1MDc1MSwiZXhwIjoxNzgxNTM3MTUxfQ.jxa-jvxFTHkhVsdqUYQfPGFEvcVhYFjSBnVwCMMZZUXma6dFYIuM8ag7Tn5si_b3
