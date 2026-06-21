@@ -39,7 +39,9 @@ export default function Login() {
         router.replace(tierRoute[res.data.tierType] as any);
       }
     } catch (err: any) {
-      console.log('ERROR:', JSON.stringify(err.response?.data), 'STATUS:', err.response?.status);
+      console.log('FULL ERROR:', JSON.stringify(err));
+      console.log('ERROR MESSAGE:', err.message);
+      console.log('ERROR CODE:', err.code);
       setError(err.response?.data?.message || 'Login failed. Check your credentials.');
     } finally {
       setLoading(false);
