@@ -1,16 +1,17 @@
+### Register a test account
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{"businessName": "Test Business",
+
+  "tierType": "MANUFACTURER",
+  "subscriptionPlan": "STANDARD",
+  "adminName": "Ethel",
+  "adminEmail": "ethel@test.com",
+  "adminPassword": "Password123!"}
+
 ### Login
 POST http://localhost:8080/auth/login
 Content-Type: application/json
 
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
-### Login
-POST http://localhost:8080/auth/login
-Content-Type: application/json
-
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
+{"email": "ethel@test.com", "password": "Password123!"}
