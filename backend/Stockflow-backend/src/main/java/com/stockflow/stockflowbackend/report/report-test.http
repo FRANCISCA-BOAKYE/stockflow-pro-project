@@ -1,0 +1,12 @@
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "Password123!"
+}
+
+### Get dashboard (Manufacturer tier)
+GET http://localhost:8080/reports/dashboard
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NDcxMSwiZXhwIjoxNzgxNTYxMTExfQ.fypoCuWwE73S7tTlKwFro1Dmbdtv106hf1UwHF5iQEcQxBRoUrfIvkEbzFqMjFxK

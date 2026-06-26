@@ -1,0 +1,27 @@
+### Login to get token
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "Password123!"
+}
+
+### Check available stock for product 1 (RETAIL_PRODUCT)
+GET http://localhost:8080/reserve/available?productId=1&productType=RETAIL_PRODUCT
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTI4NjIxNSwiZXhwIjoxNzgxMzcyNjE1fQ.cfAsbt_hzq7ufHEqi4uo-LkDXk4wpzYhW8KJs7nJXFUGK62CrAQxpJAC6toTzo_3
+
+### Create a reservation for 10 units
+POST http://localhost:8080/reserve
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTI4NjIxNSwiZXhwIjoxNzgxMzcyNjE1fQ.cfAsbt_hzq7ufHEqi4uo-LkDXk4wpzYhW8KJs7nJXFUGK62CrAQxpJAC6toTzo_3
+
+{
+  "productId": 1,
+  "productType": "RETAIL_PRODUCT",
+  "quantity": 10
+}
+
+### Check available stock again - should now show 40
+GET http://localhost:8080/reserve/available?productId=1&productType=RETAIL_PRODUCT
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTI4NjIxNSwiZXhwIjoxNzgxMzcyNjE1fQ.cfAsbt_hzq7ufHEqi4uo-LkDXk4wpzYhW8KJs7nJXFUGK62CrAQxpJAC6toTzo_3

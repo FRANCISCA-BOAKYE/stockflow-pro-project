@@ -1,0 +1,50 @@
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "Password123!"
+}
+
+### Add a category
+POST http://localhost:8080/retailer/categories
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NDk3MiwiZXhwIjoxNzgxNTYxMzcyfQ.0_iDRPerePjdhkOC-MU7bn049OI4E-wrtC2mRjfqd43GvJfnjpr4hz0MIQq_Yl-b
+
+{
+  "name": "Beverages"
+}
+
+### Add a product
+POST http://localhost:8080/retailer/products
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NDk3MiwiZXhwIjoxNzgxNTYxMzcyfQ.0_iDRPerePjdhkOC-MU7bn049OI4E-wrtC2mRjfqd43GvJfnjpr4hz0MIQq_Yl-b
+
+{
+  "name": "Coca Cola 500ml",
+  "priceUsd": 1.50,
+  "quantity": 100,
+  "minThreshold": 10,
+  "unit": "bottle"
+}
+
+### Get all products
+GET http://localhost:8080/retailer/products
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NDk3MiwiZXhwIjoxNzgxNTYxMzcyfQ.0_iDRPerePjdhkOC-MU7bn049OI4E-wrtC2mRjfqd43GvJfnjpr4hz0MIQq_Yl-b
+
+### Get low stock products
+GET http://localhost:8080/retailer/products/low-stock
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NDk3MiwiZXhwIjoxNzgxNTYxMzcyfQ.0_iDRPerePjdhkOC-MU7bn049OI4E-wrtC2mRjfqd43GvJfnjpr4hz0MIQq_Yl-b
+### Test error handling - product that doesnt exist
+GET http://localhost:8080/retailer/products/99999
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NDk3MiwiZXhwIjoxNzgxNTYxMzcyfQ.0_iDRPerePjdhkOC-MU7bn049OI4E-wrtC2mRjfqd43GvJfnjpr4hz0MIQq_Yl-b
+
+### Test wrong password
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "wrongpassword"
+}

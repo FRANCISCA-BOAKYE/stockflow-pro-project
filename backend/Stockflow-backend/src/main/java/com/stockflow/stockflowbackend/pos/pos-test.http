@@ -1,0 +1,30 @@
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "francisca@acme.com",
+  "password": "Password123!"
+}
+
+### Process a retail sale - CASH
+POST http://localhost:8080/pos/retail
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ1MTUyOSwiZXhwIjoxNzgxNTM3OTI5fQ.twNB8s6z8osRuV0PX6T4amoOU_IQMOGBV-2Pc5r-j6qHecYW6bcbtPrmEm0j0zEO
+
+{
+  "productId": 2,
+  "productType": "RETAIL_PRODUCT",
+  "quantity": 5,
+  "unitPriceUsd": 1.50,
+  "paymentMode": "CASH",
+  "buyerName": "John Doe"
+}
+
+### Get all invoices
+GET http://localhost:8080/pos/invoices
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ3NzExMiwiZXhwIjoxNzgxNTYzNTEyfQ.czG_1gR37FByLL0E_NrkcZ2_6MFsRCNOxASlfgOZypuPZqlvxAYvX3na-07ViBVD
+
+### Get only unpaid invoices
+GET http://localhost:8080/pos/invoices?status=PAID
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MTQ1MTUyOSwiZXhwIjoxNzgxNTM3OTI5fQ.twNB8s6z8osRuV0PX6T4amoOU_IQMOGBV-2Pc5r-j6qHecYW6bcbtPrmEm0j0zEO

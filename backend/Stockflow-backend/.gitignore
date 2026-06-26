@@ -1,0 +1,6 @@
+target/
+.idea/
+*.class
+*.iml
+application-secrets.properties
+.env
