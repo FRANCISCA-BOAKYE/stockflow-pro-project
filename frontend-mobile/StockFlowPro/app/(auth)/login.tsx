@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 
 const axios = require('axios').default;
 
-const API_BASE_URL = 'http://10.108.12.129:8080';
+const API_BASE_URL = 'https://stockflow-backend-qwpt.onrender.com';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -39,6 +39,9 @@ export default function Login() {
         router.replace(tierRoute[res.data.tierType] as any);
       }
     } catch (err: any) {
+      console.log('FULL ERROR:', JSON.stringify(err));
+      console.log('ERROR MESSAGE:', err.message);
+      console.log('ERROR CODE:', err.code);
       setError(err.response?.data?.message || 'Login failed. Check your credentials.');
     } finally {
       setLoading(false);

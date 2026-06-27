@@ -23,17 +23,3 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iL
 ### Get finished goods
 GET http://localhost:8080/manufacturer/finished-goods
 Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS
-
-
-
-### Login live
-POST https://stockflow-backend-qwpt.onrender.com/auth/login
-Content-Type: application/json
-
-{"email": "francisca@acme.com", "password": "Password123!"}
-
-### Get materials live
-GET https://stockflow-backend-qwpt.onrender.com/manufacturer/materials
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1NDE1MywiZXhwIjoxNzgyNjQwNTUzfQ.FSBA47u-bGDA357RLgjtdxWudzKDZmJVnic9nShacVrxGjcEsn5g0VK6_pYuhLG9
-
-
