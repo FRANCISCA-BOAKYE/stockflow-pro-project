@@ -40,8 +40,7 @@ public class ManufacturerController {
 
     @GetMapping("/recipes")
     public ResponseEntity<List<Recipe>> getRecipes(Authentication auth) {
-        return ResponseEntity.ok(
-                manufacturerService.recipeRepository.findByBusinessIdAndIsActiveTrue(getBusinessId(auth)));
+        return ResponseEntity.ok(manufacturerService.getRecipes(getBusinessId(auth)));
     }
 
     @PostMapping("/recipes")
@@ -65,9 +64,7 @@ public class ManufacturerController {
 
     @GetMapping("/production/history")
     public ResponseEntity<List<ProductionRun>> history(Authentication auth) {
-        return ResponseEntity.ok(
-                manufacturerService.productionRunRepository
-                        .findByBusinessIdOrderByConfirmedAtDesc(getBusinessId(auth)));
+        return ResponseEntity.ok(manufacturerService.getProductionHistory(getBusinessId(auth)));
     }
 
     @GetMapping("/finished-goods")

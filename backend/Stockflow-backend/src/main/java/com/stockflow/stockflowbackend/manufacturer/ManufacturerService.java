@@ -205,4 +205,14 @@ public class ManufacturerService {
         }
         return dispatchRepository.save(dispatch);
     }
+
+    @Transactional(readOnly = true)
+    public List<Recipe> getRecipes(Long businessId) {
+        return recipeRepository.findByBusinessIdAndIsActiveTrue(businessId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductionRun> getProductionHistory(Long businessId) {
+        return productionRunRepository.findByBusinessIdOrderByConfirmedAtDesc(businessId);
+    }
 }
