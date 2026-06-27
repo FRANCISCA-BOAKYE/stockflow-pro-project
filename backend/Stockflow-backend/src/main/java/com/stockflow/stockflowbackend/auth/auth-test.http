@@ -2,45 +2,24 @@
 POST http://localhost:8080/auth/login
 Content-Type: application/json
 
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
-### Login
-POST http://localhost:8080/auth/login
+{"email": "francisca@acme.com", "password": "Password123!"}
+
+### Get materials
+GET http://localhost:8080/manufacturer/materials
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS
+
+### Add a material
+POST http://localhost:8080/manufacturer/materials
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS
 
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
-### Test live login
-POST https://stockflow-backend-qwpt.onrender.com/auth/login
-Content-Type: application/json
+{"name": "Cotton Fabric", "unit": "metres",
+  "quantity": 3000, "minThreshold": 100, "costPerUnit": 2.50}
 
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
+### Get recipes
+GET http://localhost:8080/manufacturer/recipes
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS
 
-### Register on live server
-POST https://stockflow-backend-qwpt.onrender.com/auth/register
-Content-Type: application/json
-
-{
-  "businessName": "Acme Manufacturing",
-  "tierType": "MANUFACTURER",
-  "subscriptionPlan": "STANDARD",
-  "adminName": "Francisca",
-  "adminEmail": "francisca@acme.com",
-  "adminPassword": "Password123!"
-}
-
-### Then login
-POST https://stockflow-backend-qwpt.onrender.com/auth/login
-Content-Type: application/json
-
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
+### Get finished goods
+GET http://localhost:8080/manufacturer/finished-goods
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS
