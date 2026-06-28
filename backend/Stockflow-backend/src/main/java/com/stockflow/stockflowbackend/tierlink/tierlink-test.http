@@ -1,0 +1,29 @@
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{"email": "priscilla@shop.com", "password": "Password123!"}
+
+### Send link request
+POST http://localhost:8080/links/request
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJwcmlzY2lsbGFAc2hvcC5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjE3MjAzNCwiZXhwIjoxNzgyMjU4NDM0fQ.H2HNgrAzakAsDnQf6sR_YqjotG65JoraOyIUNOaH3kiZcvc40y7pzBKufOI3A1KV
+
+{"partnerBusinessId": 1}
+
+### Get all linked partners
+GET http://localhost:8080/links/partners
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJwcmlzY2lsbGFAc2hvcC5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjE3MjAzNCwiZXhwIjoxNzgyMjU4NDM0fQ.H2HNgrAzakAsDnQf6sR_YqjotG65JoraOyIUNOaH3kiZcvc40y7pzBKufOI3A1KV
+
+### Create marketplace listing
+POST http://localhost:8080/marketplace/listing
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJwcmlzY2lsbGFAc2hvcC5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjE3MjAzNCwiZXhwIjoxNzgyMjU4NDM0fQ.H2HNgrAzakAsDnQf6sR_YqjotG65JoraOyIUNOaH3kiZcvc40y7pzBKufOI3A1KV
+
+{"headline": "Premium Retail Shop", "description": "We stock quality products", "location": "Kumasi, Ghana", "contactEmail": "priscilla@shop.com", "deliveryTerms": "Pickup available", "creditTerms": "30 day credit available"}
+
+### Browse marketplace (no token needed)
+GET http://localhost:8080/marketplace/listings
+
+### Browse only retailers
+GET http://localhost:8080/marketplace/listings?tierType=RETAILER
