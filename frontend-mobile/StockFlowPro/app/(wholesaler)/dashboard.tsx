@@ -135,22 +135,22 @@ export default function WholesalerDashboard() {
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Recent activity</Text>
           </View>
-          {[
-            { msg: 'Bulk order from Bright Mart', time: 'Today · 9:00 AM', amount: '$2,800', positive: true },
-            { msg: 'Stock received from BevCo Ltd', time: 'Yesterday · 2:00 PM', amount: '500 cases', positive: false },
-            { msg: 'Credit payment from Delta Stores', time: 'Yesterday · 11:00 AM', amount: '$1,400', positive: true },
-          ].map((t, i) => (
-            <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
-              <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
-                <Ionicons name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'} size={16} color={t.positive ? '#059669' : '#64748B'} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.txnName}>{t.msg}</Text>
-                <Text style={s.txnTime}>{t.time}</Text>
-              </View>
-              <Text style={s.txnDetail}>{t.amount}</Text>
-            </View>
-          ))}
+        {[
+  { msg: 'Bulk order from Bright Mart', time: 'Today · 9:00 AM', amount: '$2,800', positive: true, by: 'Grace Owusu' },
+  { msg: 'Stock received from BevCo Ltd', time: 'Yesterday · 2:00 PM', amount: '500 cases', positive: false, by: 'James Mensah' },
+  { msg: 'Credit payment from Delta Stores', time: 'Yesterday · 11:00 AM', amount: '$1,400', positive: true, by: 'You' },
+].map((t, i) => (
+  <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
+    <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
+      <Ionicons name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'} size={16} color={t.positive ? '#059669' : '#64748B'} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={s.txnName}>{t.msg}</Text>
+      <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+    </View>
+    <Text style={s.txnDetail}>{t.amount}</Text>
+  </View>
+))}
         </View>
       </ScrollView>
     </SafeAreaView>
