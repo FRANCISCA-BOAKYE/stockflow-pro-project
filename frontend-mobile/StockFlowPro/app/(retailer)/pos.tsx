@@ -79,6 +79,10 @@ export default function POSScreen() {
           <View style={s.card}>
             <Text style={s.prodName}>{selected.name}</Text>
             <Text style={s.prodPrice}>${selected.price.toFixed(2)} per unit</Text>
+            <View style={s.reserveRow}>
+              <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
+              <Text style={s.reserveText}> {qty} units reserved for this sale · {selected.stock - qty} available</Text>
+            </View>
             <View style={s.stepperRow}>
               <Text style={s.stepLabel}>Quantity</Text>
               <View style={s.stepper}>
@@ -166,6 +170,8 @@ const s = StyleSheet.create({
   resultName: { flex: 1, fontSize: 13, color: '#0F172A' },
   resultPrice: { fontSize: 13, fontWeight: '600', color: '#1A56DB' },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', gap: 8 },
+  reserveRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 8, padding: 8 },
+  reserveText: { fontSize: 10.5, color: '#1A56DB' },
   prodName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
   prodPrice: { fontSize: 12, color: '#6B7280' },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

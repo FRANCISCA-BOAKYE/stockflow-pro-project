@@ -98,10 +98,14 @@ export default function WholesalerPOSScreen() {
           </View>
         )}
 
-        {selected && (
-          <View style={s.card}>
-            <Text style={s.prodName}>{selected.name}</Text>
-            <View style={s.availRow}>
+{selected && (
+  <View style={s.card}>
+    <Text style={s.prodName}>{selected.name}</Text>
+    <View style={s.reserveRow}>
+      <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
+      <Text style={s.reserveText}> {qty} units reserved · {selected.quantity - qty} available</Text>
+    </View>
+    <View style={s.availRow}>
               <Ionicons name="checkmark-circle-outline" size={13} color="#059669" />
               <Text style={s.prodAvail}> Available: {selected.quantity} units</Text>
             </View>
@@ -227,4 +231,6 @@ const s = StyleSheet.create({
   footer: { padding: 12, backgroundColor: '#fff', borderTopWidth: 0.5, borderTopColor: '#E5E7EB' },
   confirmBtn: { backgroundColor: '#059669', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   confirmText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  reserveRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 8, padding: 8 },
+reserveText: { fontSize: 10.5, color: '#1A56DB' },
 });

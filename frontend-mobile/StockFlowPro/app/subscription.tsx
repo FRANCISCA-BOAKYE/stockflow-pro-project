@@ -3,14 +3,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 
-const PLANS = [
-  { name: 'Standard', price: 17, features: ['Up to 500 products', 'Basic reporting', 'Email support', 'POS system', 'Credit tracking'] },
-  { name: 'Premium', price: 30, features: ['Unlimited products', 'Advanced analytics', 'Priority support', 'POS system', 'Credit tracking', 'Marketplace listing', 'Multi-user access'] },
-];
+const getPlansForTier = (tier?: string) => {
+  if (tier === 'MANUFACTURER') {
+    return [
+      { name: 'Standard', price: 80, features: ['5 sub-accounts', 'Material management', 'Recipe setup', 'Production planning', 'Finished goods tracking', 'POS dispatch', 'Credit tracking', 'Marketplace listing'] },
+      { name: 'Premium', price: 110, features: ['10 sub-accounts', 'Everything in Standard', 'Advanced reports', 'Delivery scheduling', 'Invoice generation (WhatsApp/email)'] },
+    ];
+  }
+  if (tier === 'WHOLESALER') {
+    return [
+      { name: 'Standard', price: 45, features: ['6 sub-accounts', 'Warehouse management', 'POS', 'Credit tracking', 'Overdue alerts', 'Tier linking', 'Marketplace listing'] },
+      { name: 'Premium', price: 75, features: ['8 sub-accounts', 'Everything in Standard', 'Advanced reports', 'Delivery scheduling', 'Invoice generation (WhatsApp/email)'] },
+    ];
+  }
+  return [
+    { name: 'Standard', price: 17, features: ['2 sub-accounts', 'Inventory management', 'POS', 'Search & filtering', 'Low-stock alerts', 'Transaction history', 'Credit tracking'] },
+    { name: 'Premium', price: 30, features: ['5 sub-accounts', 'Everything in Standard', 'Customer purchase history', 'Auto-reorder suggestions', 'Advanced sales reports'] },
+  ];
+};
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const PLANS = getPlansForTier(user?.tierType);
 
   return (
     <SafeAreaView style={s.page}>

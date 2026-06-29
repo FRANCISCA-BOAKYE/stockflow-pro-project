@@ -4,11 +4,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 
-const TEAM_MEMBERS = [
-  { id: '1', name: 'You', role: 'Admin', email: 'you@business.com', isCurrentUser: true },
-  { id: '2', name: 'James Mensah', role: 'Manager', email: 'manager@business.com', isCurrentUser: false },
-  { id: '3', name: 'Grace Owusu', role: 'Staff', email: 'staff@business.com', isCurrentUser: false },
-];
+const getTeamForTier = (tier?: string) => {
+  if (tier === 'MANUFACTURER') {
+    return [
+      { id: '1', name: 'You', role: 'Company Admin', email: 'you@business.com', isCurrentUser: true },
+      { id: '2', name: 'James Mensah', role: 'Production Supervisor', email: 'production@business.com', isCurrentUser: false },
+      { id: '3', name: 'Grace Owusu', role: 'Store Keeper', email: 'store@business.com', isCurrentUser: false },
+      { id: '4', name: 'Kwesi Appiah', role: 'POS Operator', email: 'pos@business.com', isCurrentUser: false },
+    ];
+  }
+  if (tier === 'WHOLESALER') {
+    return [
+      { id: '1', name: 'You', role: 'Warehouse Admin', email: 'you@business.com', isCurrentUser: true },
+      { id: '2', name: 'James Mensah', role: 'Receiving Staff', email: 'receiving@business.com', isCurrentUser: false },
+      { id: '3', name: 'Grace Owusu', role: 'Sales Staff', email: 'sales@business.com', isCurrentUser: false },
+    ];
+  }
+  return [
+    { id: '1', name: 'You', role: 'Shop Owner', email: 'you@business.com', isCurrentUser: true },
+    { id: '2', name: 'Grace Owusu', role: 'Shop Staff', email: 'staff@business.com', isCurrentUser: false },
+  ];
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -16,6 +32,7 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const TEAM_MEMBERS = getTeamForTier(user?.tierType);
 
   const initials = user?.name
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
@@ -70,8 +87,8 @@ export default function ProfileScreen() {
                 <Text style={s.memberName}>{member.name} {member.isCurrentUser && '(You)'}</Text>
                 <Text style={s.memberEmail}>{member.email}</Text>
               </View>
-              <View style={[s.roleBadge, member.role === 'Admin' && s.adminBadge]}>
-                <Text style={[s.roleBadgeText, member.role === 'Admin' && s.adminBadgeText]}>{member.role}</Text>
+              <View style={[s.roleBadge, member.isCurrentUser && s.adminBadge]}>
+                <Text style={[s.roleBadgeText, member.isCurrentUser && s.adminBadgeText]}>{member.role}</Text>
               </View>
             </View>
           ))}
