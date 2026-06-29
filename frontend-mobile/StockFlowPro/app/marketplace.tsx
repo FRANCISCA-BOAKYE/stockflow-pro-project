@@ -4,12 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const LISTINGS = [
-  { id: '1', name: 'Acme Manufacturing', type: 'MANUFACTURER', location: 'Kumasi, Ghana', products: ['Steel Parts', 'Aluminium Sheets'], rating: 4.8, verified: true },
-  { id: '2', name: 'Apex Distributors', type: 'WHOLESALER', location: 'Accra, Ghana', products: ['Beverages', 'Dry Goods'], rating: 4.6, verified: true },
-  { id: '3', name: 'Bright Mart Retail', type: 'RETAILER', location: 'Kumasi, Ghana', products: ['Food', 'Household'], rating: 4.5, verified: true },
-  { id: '4', name: 'Metro Wholesale', type: 'WHOLESALER', location: 'Tema, Ghana', products: ['Cement', 'Steel'], rating: 4.3, verified: false },
-  { id: '5', name: 'GoldCoast Manufacturers', type: 'MANUFACTURER', location: 'Cape Coast, Ghana', products: ['Textiles', 'Garments'], rating: 4.7, verified: true },
-  { id: '6', name: 'Volta Distributors', type: 'WHOLESALER', location: 'Ho, Ghana', products: ['Electronics'], rating: 4.9, verified: true },
+  { id: '1', name: 'Acme Manufacturing', type: 'MANUFACTURER', location: 'Kumasi, Ghana', products: ['Steel Parts', 'Aluminium Sheets'], priceRange: '$10 – $500', moq: '100 units', deliveryTerms: '7–14 days', creditTerms: 'Net 30', rating: 4.8, verified: true },
+  { id: '2', name: 'Apex Distributors', type: 'WHOLESALER', location: 'Accra, Ghana', products: ['Beverages', 'Dry Goods'], priceRange: '$5 – $200', moq: '50 units', deliveryTerms: '3–5 days', creditTerms: 'Net 15', rating: 4.6, verified: true },
+  { id: '3', name: 'Bright Mart Retail', type: 'RETAILER', location: 'Kumasi, Ghana', products: ['Food', 'Household'], priceRange: '$1 – $50', moq: '1 unit', deliveryTerms: 'Same day', creditTerms: 'COD', rating: 4.5, verified: true },
+  { id: '4', name: 'Metro Wholesale', type: 'WHOLESALER', location: 'Tema, Ghana', products: ['Cement', 'Steel'], priceRange: '$20 – $2,000', moq: '1 ton', deliveryTerms: '5–7 days', creditTerms: 'Net 30', rating: 4.3, verified: false },
+  { id: '5', name: 'GoldCoast Manufacturers', type: 'MANUFACTURER', location: 'Cape Coast, Ghana', products: ['Textiles'], priceRange: '$5 – $300', moq: '200 units', deliveryTerms: '10–15 days', creditTerms: 'Net 60', rating: 4.7, verified: true },
 ];
 
 const TYPE_COLOR: Record<string, { bg: string; text: string }> = {
@@ -86,13 +85,31 @@ export default function MarketplaceScreen() {
                   <Text style={s.location}> {item.location}</Text>
                 </View>
                 <View style={s.productRow}>
-                  {item.products.map(p => (
-                    <View key={p} style={s.productChip}>
-                      <Text style={s.productChipText}>{p}</Text>
-                    </View>
-                  ))}
-                </View>
-                <TouchableOpacity style={s.contactBtn}>
+  {item.products.map(p => (
+    <View key={p} style={s.productChip}>
+      <Text style={s.productChipText}>{p}</Text>
+    </View>
+  ))}
+</View>
+<View style={s.detailsGrid}>
+  <View style={s.detailItem}>
+    <Text style={s.detailLabel}>Price range</Text>
+    <Text style={s.detailValue}>{item.priceRange}</Text>
+  </View>
+  <View style={s.detailItem}>
+    <Text style={s.detailLabel}>Min. order</Text>
+    <Text style={s.detailValue}>{item.moq}</Text>
+  </View>
+  <View style={s.detailItem}>
+    <Text style={s.detailLabel}>Delivery</Text>
+    <Text style={s.detailValue}>{item.deliveryTerms}</Text>
+  </View>
+  <View style={s.detailItem}>
+    <Text style={s.detailLabel}>Credit terms</Text>
+    <Text style={s.detailValue}>{item.creditTerms}</Text>
+  </View>
+</View>
+<TouchableOpacity style={s.contactBtn}>
                   <Text style={s.contactBtnText}>Contact</Text>
                 </TouchableOpacity>
               </View>
@@ -134,4 +151,8 @@ const s = StyleSheet.create({
   productChipText: { fontSize: 10, color: '#374151' },
   contactBtn: { backgroundColor: '#1A56DB', borderRadius: 10, padding: 10, alignItems: 'center' },
   contactBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10 },
+detailItem: { width: '47%' },
+detailLabel: { fontSize: 9, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.3 },
+detailValue: { fontSize: 11.5, color: '#374151', fontWeight: '600', marginTop: 1 },
 });
