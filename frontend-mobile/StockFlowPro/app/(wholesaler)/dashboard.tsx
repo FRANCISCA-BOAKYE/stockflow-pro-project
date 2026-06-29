@@ -47,6 +47,14 @@ export default function WholesalerDashboard() {
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
+  const trialDaysLeft = (() => {
+    const startedAt = data?.trialStartedAt ?? user?.trialStartedAt;
+    if (!startedAt) return null;
+    const start = new Date(startedAt);
+    const daysElapsed = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return 14 - daysElapsed;
+  })();
+
   const kpis = [
     { label: 'WAREHOUSE STOCK', value: data?.totalStockItems ?? '—', sub: 'items', icon: 'archive-outline', iconBg: '#EFF6FF', iconColor: '#1A56DB' },
     { label: 'CREDIT OWED', value: data?.totalCreditOwedByRetailers != null ? `$${Number(data.totalCreditOwedByRetailers).toFixed(2)}` : '$0.00', sub: 'by retailers', icon: 'wallet-outline', iconBg: '#FEF2F2', iconColor: '#DC2626' },
@@ -107,6 +115,15 @@ export default function WholesalerDashboard() {
             </View>
           ) : null}
 
+          {(data?.subscriptionStatus ?? user?.subscriptionStatus) === 'TRIAL' && trialDaysLeft !== null && trialDaysLeft <= 4 && trialDaysLeft > 0 && (
+            <TouchableOpacity style={s.trialCard} onPress={() => router.push('/subscription' as any)}>
+              <Ionicons name="time-outline" size={16} color="#C27803" />
+              <Text style={s.trialCardText}>
+                Trial ends in {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} — tap to view plans
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View style={s.kpiGrid}>
             {kpis.map((k, i) => (
               <View key={i} style={s.kpiCard}>
@@ -135,22 +152,22 @@ export default function WholesalerDashboard() {
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Recent activity</Text>
           </View>
-        {[
-  { msg: 'Bulk order from Bright Mart', time: 'Today · 9:00 AM', amount: '$2,800', positive: true, by: 'Grace Owusu' },
-  { msg: 'Stock received from BevCo Ltd', time: 'Yesterday · 2:00 PM', amount: '500 cases', positive: false, by: 'James Mensah' },
-  { msg: 'Credit payment from Delta Stores', time: 'Yesterday · 11:00 AM', amount: '$1,400', positive: true, by: 'You' },
-].map((t, i) => (
-  <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
-    <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
-      <Ionicons name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'} size={16} color={t.positive ? '#059669' : '#64748B'} />
-    </View>
-    <View style={{ flex: 1 }}>
-      <Text style={s.txnName}>{t.msg}</Text>
-      <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-    </View>
-    <Text style={s.txnDetail}>{t.amount}</Text>
-  </View>
-))}
+          {[
+            { msg: 'Bulk order from Bright Mart', time: 'Today · 9:00 AM', amount: '$2,800', positive: true, by: 'Grace Owusu' },
+            { msg: 'Stock received from BevCo Ltd', time: 'Yesterday · 2:00 PM', amount: '500 cases', positive: false, by: 'James Mensah' },
+            { msg: 'Credit payment from Delta Stores', time: 'Yesterday · 11:00 AM', amount: '$1,400', positive: true, by: 'You' },
+          ].map((t, i) => (
+            <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
+              <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
+                <Ionicons name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'} size={16} color={t.positive ? '#059669' : '#64748B'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.txnName}>{t.msg}</Text>
+                <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+              </View>
+              <Text style={s.txnDetail}>{t.amount}</Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -175,6 +192,8 @@ const s = StyleSheet.create({
   body: { padding: 14, marginTop: -20 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', borderRadius: 10, padding: 10, marginBottom: 12 },
   errorText: { fontSize: 12, color: '#DC2626', flex: 1 },
+  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.25)', padding: 12, marginBottom: 12 },
+  trialCardText: { fontSize: 12, color: '#C27803', fontWeight: '500', flex: 1 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
   kpiCard: { width: '47.5%', backgroundColor: '#fff', borderRadius: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 14 },
   kpiIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },

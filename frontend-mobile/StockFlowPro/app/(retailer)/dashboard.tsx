@@ -47,43 +47,19 @@ export default function RetailerDashboard() {
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
+  const trialDaysLeft = (() => {
+    const startedAt = data?.trialStartedAt ?? user?.trialStartedAt;
+    if (!startedAt) return null;
+    const start = new Date(startedAt);
+    const daysElapsed = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return 14 - daysElapsed;
+  })();
+
   const kpis = [
-    {
-      label: 'TOTAL PRODUCTS',
-      value: data?.totalProducts ?? '—',
-      sub: 'in inventory',
-      icon: 'cube-outline',
-      iconBg: '#EFF6FF',
-      iconColor: '#1A56DB',
-    },
-    {
-      label: 'LOW STOCK',
-      value: data?.lowStockCount ?? '—',
-      sub: 'need restocking',
-      icon: 'warning-outline',
-      iconBg: '#FFFBEB',
-      iconColor: '#C27803',
-    },
-    {
-      label: "TODAY'S SALES",
-      value: data?.todaySalesUsd != null
-        ? `$${data.todaySalesUsd.toFixed(2)}`
-        : '—',
-      sub: 'revenue',
-      icon: 'receipt-outline',
-      iconBg: '#ECFDF5',
-      iconColor: '#059669',
-    },
-    {
-      label: 'CREDIT OWED',
-      value: data?.totalCreditOwedByCustomers != null
-        ? `$${data.totalCreditOwedByCustomers.toFixed(2)}`
-        : '—',
-      sub: 'outstanding',
-      icon: 'wallet-outline',
-      iconBg: '#FEF2F2',
-      iconColor: '#DC2626',
-    },
+    { label: 'TOTAL PRODUCTS', value: data?.totalProducts ?? '—', sub: 'in inventory', icon: 'cube-outline', iconBg: '#EFF6FF', iconColor: '#1A56DB' },
+    { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: '#FFFBEB', iconColor: '#C27803' },
+    { label: "TODAY'S SALES", value: data?.todaySalesUsd != null ? `$${data.todaySalesUsd.toFixed(2)}` : '—', sub: 'revenue', icon: 'receipt-outline', iconBg: '#ECFDF5', iconColor: '#059669' },
+    { label: 'CREDIT OWED', value: data?.totalCreditOwedByCustomers != null ? `$${data.totalCreditOwedByCustomers.toFixed(2)}` : '—', sub: 'outstanding', icon: 'wallet-outline', iconBg: '#FEF2F2', iconColor: '#DC2626' },
   ];
 
   const quickActions = [
@@ -153,6 +129,15 @@ export default function RetailerDashboard() {
             </View>
           ) : null}
 
+          {(data?.subscriptionStatus ?? user?.subscriptionStatus) === 'TRIAL' && trialDaysLeft !== null && trialDaysLeft <= 4 && trialDaysLeft > 0 && (
+            <TouchableOpacity style={s.trialCard} onPress={() => router.push('/subscription' as any)}>
+              <Ionicons name="time-outline" size={16} color="#C27803" />
+              <Text style={s.trialCardText}>
+                Trial ends in {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} — tap to view plans
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View style={s.kpiGrid}>
             {kpis.map((k, i) => (
               <View key={i} style={s.kpiCard}>
@@ -202,10 +187,10 @@ export default function RetailerDashboard() {
             </TouchableOpacity>
           </View>
           {[
-  { name: 'Walk-in sale', time: 'Today · 9:41 AM · Cash', amount: '+$84.50', positive: true, by: 'Grace Owusu' },
-  { name: 'Stock replenishment', time: 'Yesterday · 3:12 PM', amount: '-$640.00', positive: false, by: 'You' },
-  { name: 'Walk-in sale', time: 'Yesterday · 11:05 AM · Card', amount: '+$32.00', positive: true, by: 'Grace Owusu' },
-].map((t, i) => (
+            { name: 'Walk-in sale', time: 'Today · 9:41 AM · Cash', amount: '+$84.50', positive: true, by: 'Grace Owusu' },
+            { name: 'Stock replenishment', time: 'Yesterday · 3:12 PM', amount: '-$640.00', positive: false, by: 'You' },
+            { name: 'Walk-in sale', time: 'Yesterday · 11:05 AM · Card', amount: '+$32.00', positive: true, by: 'Grace Owusu' },
+          ].map((t, i) => (
             <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
               <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
                 <Ionicons
@@ -216,7 +201,7 @@ export default function RetailerDashboard() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.txnName}>{t.name}</Text>
-               <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+                <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
               </View>
               <Text style={[s.txnAmount, { color: t.positive ? '#059669' : '#0F172A' }]}>
                 {t.amount}
@@ -247,6 +232,8 @@ const s = StyleSheet.create({
   body: { padding: 14, marginTop: -20 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', borderRadius: 10, padding: 10, marginBottom: 12 },
   errorText: { fontSize: 12, color: '#DC2626', flex: 1 },
+  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.25)', padding: 12, marginBottom: 12 },
+  trialCardText: { fontSize: 12, color: '#C27803', fontWeight: '500', flex: 1 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
   kpiCard: { width: '47.5%', backgroundColor: '#fff', borderRadius: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 14 },
   kpiIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },

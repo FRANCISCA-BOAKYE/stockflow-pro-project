@@ -47,41 +47,20 @@ export default function ManufacturerDashboard() {
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
+  const trialDaysLeft = (() => {
+    const startedAt = data?.trialStartedAt ?? user?.trialStartedAt;
+    if (!startedAt) return null;
+    const start = new Date(startedAt);
+    const daysElapsed = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const left = 14 - daysElapsed;
+    return left;
+  })();
+
   const kpis = [
-    {
-      label: 'RAW MATERIALS',
-      value: data?.totalMaterials ?? '—',
-      sub: 'in stock',
-      icon: 'flask-outline',
-      iconBg: '#EFF6FF',
-      iconColor: '#1A56DB',
-    },
-    {
-      label: 'LOW STOCK',
-      value: data?.lowStockCount ?? '—',
-      sub: 'need restocking',
-      icon: 'warning-outline',
-      iconBg: '#FFFBEB',
-      iconColor: '#C27803',
-    },
-    {
-      label: 'PRODUCTION RUNS',
-      value: data?.productionRunsThisMonth ?? '—',
-      sub: 'this month',
-      icon: 'construct-outline',
-      iconBg: '#ECFDF5',
-      iconColor: '#059669',
-    },
-    {
-      label: 'CREDIT OWED',
-      value: data?.totalCreditOwedByWholesalers != null
-        ? `$${data.totalCreditOwedByWholesalers.toFixed(2)}`
-        : '$0.00',
-      sub: 'by wholesalers',
-      icon: 'wallet-outline',
-      iconBg: '#FEF2F2',
-      iconColor: '#DC2626',
-    },
+    { label: 'RAW MATERIALS', value: data?.totalMaterials ?? '—', sub: 'in stock', icon: 'flask-outline', iconBg: '#EFF6FF', iconColor: '#1A56DB' },
+    { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: '#FFFBEB', iconColor: '#C27803' },
+    { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth ?? '—', sub: 'this month', icon: 'construct-outline', iconBg: '#ECFDF5', iconColor: '#059669' },
+    { label: 'CREDIT OWED', value: data?.totalCreditOwedByWholesalers != null ? `$${data.totalCreditOwedByWholesalers.toFixed(2)}` : '$0.00', sub: 'by wholesalers', icon: 'wallet-outline', iconBg: '#FEF2F2', iconColor: '#DC2626' },
   ];
 
   const quickActions = [
@@ -151,6 +130,15 @@ export default function ManufacturerDashboard() {
             </View>
           ) : null}
 
+          {(data?.subscriptionStatus ?? user?.subscriptionStatus) === 'TRIAL' && trialDaysLeft !== null && trialDaysLeft <= 4 && trialDaysLeft > 0 && (
+            <TouchableOpacity style={s.trialCard} onPress={() => router.push('/subscription' as any)}>
+              <Ionicons name="time-outline" size={16} color="#C27803" />
+              <Text style={s.trialCardText}>
+                Trial ends in {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} — tap to view plans
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View style={s.kpiGrid}>
             {kpis.map((k, i) => (
               <View key={i} style={s.kpiCard}>
@@ -193,26 +181,26 @@ export default function ManufacturerDashboard() {
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Recent activity</Text>
           </View>
-    {[
-  { name: 'Production run #24', time: 'Today · 8:00 AM', detail: '500 units', positive: true, by: 'James Mensah' },
-  { name: 'Material restock', time: 'Yesterday · 2:30 PM', detail: 'Steel Rods 6mm', positive: false, by: 'Grace Owusu' },
-  { name: 'Dispatch to Apex', time: 'Yesterday · 10:00 AM', detail: '$12,400', positive: true, by: 'Kwesi Appiah' },
-].map((t, i) => (
-  <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
-    <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
-      <Ionicons
-        name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
-        size={16}
-        color={t.positive ? '#059669' : '#64748B'}
-      />
-    </View>
-    <View style={{ flex: 1 }}>
-      <Text style={s.txnName}>{t.name}</Text>
-      <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-    </View>
-    <Text style={s.txnDetail}>{t.detail}</Text>
-  </View>
-))}
+          {[
+            { name: 'Production run #24', time: 'Today · 8:00 AM', detail: '500 units', positive: true, by: 'James Mensah' },
+            { name: 'Material restock', time: 'Yesterday · 2:30 PM', detail: 'Steel Rods 6mm', positive: false, by: 'Grace Owusu' },
+            { name: 'Dispatch to Apex', time: 'Yesterday · 10:00 AM', detail: '$12,400', positive: true, by: 'Kwesi Appiah' },
+          ].map((t, i) => (
+            <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
+              <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
+                <Ionicons
+                  name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
+                  size={16}
+                  color={t.positive ? '#059669' : '#64748B'}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.txnName}>{t.name}</Text>
+                <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+              </View>
+              <Text style={s.txnDetail}>{t.detail}</Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -223,73 +211,37 @@ const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F4F8' },
   loadingText: { marginTop: 12, fontSize: 14, color: '#64748B' },
-  hero: {
-    backgroundColor: '#1A56DB',
-    padding: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
+  hero: { backgroundColor: '#1A56DB', padding: 20, paddingTop: 24, paddingBottom: 40 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greeting: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 3 },
   userName: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2, letterSpacing: -0.3 },
   bizName: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
-  avatar: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  trialPill: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9,
-  },
+  trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9 },
   trialText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
   heroLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
   heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
   body: { padding: 14, marginTop: -20 },
-  errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#FEF2F2', borderRadius: 10, padding: 10, marginBottom: 12,
-  },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', borderRadius: 10, padding: 10, marginBottom: 12 },
   errorText: { fontSize: 12, color: '#DC2626', flex: 1 },
+  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.25)', padding: 12, marginBottom: 12 },
+  trialCardText: { fontSize: 12, color: '#C27803', fontWeight: '500', flex: 1 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
-  kpiCard: {
-    width: '47.5%', backgroundColor: '#fff',
-    borderRadius: 16, borderWidth: 0.5,
-    borderColor: 'rgba(0,0,0,0.07)', padding: 14,
-  },
+  kpiCard: { width: '47.5%', backgroundColor: '#fff', borderRadius: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 14 },
   kpiIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   kpiLabel: { fontSize: 9, color: '#64748B', fontWeight: '500', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 },
   kpiValue: { fontSize: 22, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
   kpiSub: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
-  alertCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FFFBEB', borderRadius: 12,
-    borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.2)',
-    padding: 12, marginBottom: 16,
-  },
+  alertCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.2)', padding: 12, marginBottom: 16 },
   alertText: { fontSize: 12, color: '#C27803', fontWeight: '500', flex: 1 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sectionTitle: { fontSize: 13, fontWeight: '600', color: '#0F172A', marginBottom: 10, marginTop: 4 },
   actionsGrid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  actionCard: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 13,
-    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)',
-    padding: 12, alignItems: 'center', gap: 5,
-  },
+  actionCard: { flex: 1, backgroundColor: '#fff', borderRadius: 13, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 12, alignItems: 'center', gap: 5 },
   actionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { fontSize: 9, fontWeight: '500', color: '#64748B', textAlign: 'center' },
-  txn: {
-    backgroundColor: '#fff', borderRadius: 12,
-    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)',
-    padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10,
-  },
+  txn: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   txnIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   txnName: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
   txnTime: { fontSize: 10, color: '#94A3B8', marginTop: 1 },
