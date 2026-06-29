@@ -7,12 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 
 const MENU_ITEMS = [
-  { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF' },
-  { label: 'Receive Stock', icon: 'arrow-down-circle-outline', color: '#059669', bg: '#ECFDF5' },
-  { label: 'Invoices', icon: 'receipt-outline', color: '#C27803', bg: '#FFFBEB' },
-  { label: 'Marketplace', icon: 'storefront-outline', color: '#8B5CF6', bg: '#F5F3FF' },
-  { label: 'Linked Partners', icon: 'link-outline', color: '#0EA5E9', bg: '#EFF6FF' },
-  { label: 'Subscription', icon: 'card-outline', color: '#6B7280', bg: '#F3F4F6' },
+  { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
+  { label: 'Receive Stock', icon: 'arrow-down-circle-outline', color: '#059669', bg: '#ECFDF5', route: '/receive-stock' },
+  { label: 'Invoices', icon: 'receipt-outline', color: '#C27803', bg: '#FFFBEB', route: '/invoices' },
+  { label: 'Marketplace', icon: 'storefront-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/marketplace' },
+  { label: 'Linked Partners', icon: 'link-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/(wholesaler)/linked-partners' },
+  { label: 'Subscription', icon: 'card-outline', color: '#6B7280', bg: '#F3F4F6', route: '/subscription' },
 ];
 
 export default function WholesalerMoreScreen() {
@@ -24,12 +24,10 @@ export default function WholesalerMoreScreen() {
     : 'U';
 
   const statusColor = user?.subscriptionStatus === 'ACTIVE' ? '#059669'
-    : user?.subscriptionStatus === 'TRIAL' ? '#C27803'
-    : '#DC2626';
+    : user?.subscriptionStatus === 'TRIAL' ? '#C27803' : '#DC2626';
 
   const statusLabel = user?.subscriptionStatus === 'ACTIVE' ? 'Active'
-    : user?.subscriptionStatus === 'TRIAL' ? 'Trial active'
-    : 'Expired';
+    : user?.subscriptionStatus === 'TRIAL' ? 'Trial active' : 'Expired';
 
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure you want to log out?', [
@@ -61,13 +59,17 @@ export default function WholesalerMoreScreen() {
               <Text style={[s.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
             </View>
           </View>
-          <View style={s.editBtn}>
-            <Ionicons name="pencil-outline" size={16} color="#6B7280" />
-          </View>
+          <TouchableOpacity style={s.editBtn} onPress={() => router.push('/profile')}>
+  <Ionicons name="pencil-outline" size={16} color="#6B7280" />
+</TouchableOpacity>
         </View>
         <View style={s.menuCard}>
           {MENU_ITEMS.map((item, index) => (
-            <TouchableOpacity key={item.label} style={[s.menuItem, index < MENU_ITEMS.length - 1 && s.menuBorder]}>
+            <TouchableOpacity
+              key={item.label}
+              style={[s.menuItem, index < MENU_ITEMS.length - 1 && s.menuBorder]}
+              onPress={() => router.push(item.route as any)}
+            >
               <View style={[s.menuIcon, { backgroundColor: item.bg }]}>
                 <Ionicons name={item.icon as any} size={18} color={item.color} />
               </View>

@@ -37,10 +37,5 @@ Content-Type: application/json
 }
 
 ### Then login
-POST https://stockflow-backend-qwpt.onrender.com/auth/login
-Content-Type: application/json
+GET https://stockflow-backend-qwpt.onrender.com/marketplace/listings
 
-{
-  "email": "francisca@acme.com",
-  "password": "Password123!"
-}
