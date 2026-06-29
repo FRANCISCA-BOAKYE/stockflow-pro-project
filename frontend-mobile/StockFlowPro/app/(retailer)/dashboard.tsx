@@ -202,10 +202,10 @@ export default function RetailerDashboard() {
             </TouchableOpacity>
           </View>
           {[
-            { name: 'Walk-in sale', time: 'Today · 9:41 AM · Cash', amount: '+$84.50', positive: true },
-            { name: 'Stock replenishment', time: 'Yesterday · 3:12 PM', amount: '-$640.00', positive: false },
-            { name: 'Walk-in sale', time: 'Yesterday · 11:05 AM · Card', amount: '+$32.00', positive: true },
-          ].map((t, i) => (
+  { name: 'Walk-in sale', time: 'Today · 9:41 AM · Cash', amount: '+$84.50', positive: true, by: 'Grace Owusu' },
+  { name: 'Stock replenishment', time: 'Yesterday · 3:12 PM', amount: '-$640.00', positive: false, by: 'You' },
+  { name: 'Walk-in sale', time: 'Yesterday · 11:05 AM · Card', amount: '+$32.00', positive: true, by: 'Grace Owusu' },
+].map((t, i) => (
             <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
               <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
                 <Ionicons
@@ -216,7 +216,7 @@ export default function RetailerDashboard() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.txnName}>{t.name}</Text>
-                <Text style={s.txnTime}>{t.time}</Text>
+               <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
               </View>
               <Text style={[s.txnAmount, { color: t.positive ? '#059669' : '#0F172A' }]}>
                 {t.amount}
