@@ -85,12 +85,12 @@ export default function DashboardPage() {
 
   const stats = statsByTier[tier] || statsByTier.RETAILER
 
-  const quickLinks = [
-    { label: "Manage sub-accounts", icon: Users, desc: "View team members and their roles" },
-    { label: "Invoices", icon: FileText, desc: "View and generate invoices" },
-    { label: "Credit accounts", icon: CreditCard, desc: "Track money owed and owing" },
-    { label: "Marketplace listing", icon: Store, desc: "Edit your public business profile" },
-  ]
+ const quickLinks = [
+  { label: "Manage sub-accounts", icon: Users, desc: "View team members and their roles", href: "/accounts" },
+  { label: "Invoices", icon: FileText, desc: "View and generate invoices", href: "/invoices" },
+  { label: "Credit accounts", icon: CreditCard, desc: "Track money owed and owing", href: "/credit" },
+  { label: "Marketplace listing", icon: Store, desc: "Edit your public business profile", href: "/marketplace" },
+]
 
   return (
     <div className="min-h-screen bg-secondary/20">
@@ -136,15 +136,17 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Manage your business</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickLinks.map(link => (
-              <Card key={link.label} className="hover:border-primary/50 transition-colors cursor-pointer">
-                <CardContent className="pt-6">
-                  <link.icon className="h-6 w-6 text-primary mb-3" />
-                  <p className="font-medium text-sm">{link.label}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{link.desc}</p>
-                </CardContent>
-              </Card>
-            ))}
+          {quickLinks.map(link => (
+  <Link key={link.label} href={link.href}>
+    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+      <CardContent className="pt-6">
+        <link.icon className="h-6 w-6 text-primary mb-3" />
+        <p className="font-medium text-sm">{link.label}</p>
+        <p className="text-xs text-muted-foreground mt-1">{link.desc}</p>
+      </CardContent>
+    </Card>
+  </Link>
+))}
           </div>
         </div>
 

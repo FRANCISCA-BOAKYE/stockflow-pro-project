@@ -45,7 +45,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
+    <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-border" style={{ zIndex: 9999 }}>
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
         <Link href="/" className="flex items-center gap-2">
           <Logo />
@@ -77,39 +77,49 @@ export function Navbar() {
           )}
         </div>
       </nav>
+
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/30" onClick={() => setMobileMenuOpen(false)} />
-          <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white p-6">
-            <div className="flex items-center justify-between mb-8">
-              <Link href="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                <Logo />
-                <span className="font-semibold text-lg">StockFlow Pro</span>
-              </Link>
-              <button onClick={() => setMobileMenuOpen(false)}><X className="h-6 w-6" /></button>
-            </div>
-            <div className="space-y-2 mb-6">
-              {navigation.map((item) => (
-                <Link key={item.name} href={item.href} className="block px-3 py-2 text-base font-medium rounded-lg hover:bg-secondary" onClick={() => setMobileMenuOpen(false)}>
-                  {item.name}
+        <>
+          <div
+            className="lg:hidden fixed inset-0 bg-black/60"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ zIndex: 10000 }}
+          />
+          <div
+            className="lg:hidden fixed top-0 right-0 bottom-0 w-full max-w-sm overflow-y-auto"
+            style={{ backgroundColor: '#ffffff', boxShadow: '-10px 0 30px rgba(0,0,0,0.2)', zIndex: 10001 }}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-8">
+                <Link href="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
+                  <Logo />
+                  <span className="font-semibold text-lg">StockFlow Pro</span>
                 </Link>
-              ))}
-            </div>
-            <div className="space-y-3">
-              {isLoggedIn ? (
-                <>
-                  <Button className="w-full" asChild><Link href="/dashboard">Dashboard</Link></Button>
-                  <Button variant="outline" className="w-full" onClick={handleLogout}>Logout</Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" className="w-full" asChild><Link href="/login">Sign in</Link></Button>
-                  <Button className="w-full" asChild><Link href="/signup">Start Free Trial</Link></Button>
-                </>
-              )}
+                <button onClick={() => setMobileMenuOpen(false)}><X className="h-6 w-6" /></button>
+              </div>
+              <div className="space-y-2 mb-6">
+                {navigation.map((item) => (
+                  <Link key={item.name} href={item.href} className="block px-3 py-2 text-base font-medium rounded-lg hover:bg-secondary" onClick={() => setMobileMenuOpen(false)}>
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+              <div className="space-y-3">
+                {isLoggedIn ? (
+                  <>
+                    <Button className="w-full" asChild><Link href="/dashboard">Dashboard</Link></Button>
+                    <Button variant="outline" className="w-full" onClick={handleLogout}>Logout</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" className="w-full" asChild><Link href="/login">Sign in</Link></Button>
+                    <Button className="w-full" asChild><Link href="/signup">Start Free Trial</Link></Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   )
