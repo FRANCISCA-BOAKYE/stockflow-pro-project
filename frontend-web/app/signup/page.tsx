@@ -1,175 +1,136 @@
 "use client"
-
 import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { 
-  Factory, 
-  Truck, 
-  Store, 
-  Check, 
-  ArrowRight, 
-  ArrowLeft,
-  CreditCard,
-  Download,
-  Mail,
-  Building2,
-  User,
-  Phone,
-  MapPin,
-  Shield
-} from "lucide-react"
+import { Factory, Truck, Store, Check, ArrowRight, ArrowLeft, Mail, Building2, User, Lock, Users } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+
+const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
 
 const tiers = [
-  {
-    id: "manufacturer",
-    name: "Manufacturer",
-    icon: Factory,
-    description: "Production, inventory listing, and wholesale distribution",
-    color: "text-chart-1",
-    bgColor: "bg-chart-1/10",
-  },
-  {
-    id: "wholesaler",
-    name: "Wholesaler",
-    icon: Truck,
-    description: "Bulk ordering, distribution, and retailer connections",
-    color: "text-chart-2",
-    bgColor: "bg-chart-2/10",
-  },
-  {
-    id: "retailer",
-    name: "Retailer",
-    icon: Store,
-    description: "POS, inventory management, and sales tracking",
-    color: "text-chart-5",
-    bgColor: "bg-chart-5/10",
-  },
+  { id: "MANUFACTURER", name: "Manufacturer", icon: Factory, description: "Materials, recipes, production planning, finished goods, dispatch", color: "text-blue-600", bg: "bg-blue-50" },
+  { id: "WHOLESALER", name: "Wholesaler", icon: Truck, description: "Warehouse management, receiving, selling to retailers, credit", color: "text-amber-600", bg: "bg-amber-50" },
+  { id: "RETAILER", name: "Retailer", icon: Store, description: "Products, POS, stock tracking, credit owed to wholesalers", color: "text-green-600", bg: "bg-green-50" },
 ]
 
 const planPrices: Record<string, Record<string, number>> = {
-  retailer: { standard: 17, premium: 30 },
-  wholesaler: { standard: 45, premium: 75 },
-  manufacturer: { standard: 80, premium: 110 },
+  RETAILER: { STANDARD: 17, PREMIUM: 30 },
+  WHOLESALER: { STANDARD: 45, PREMIUM: 75 },
+  MANUFACTURER: { STANDARD: 80, PREMIUM: 110 },
+}
+
+const SUB_ACCOUNT_ROLES: Record<string, { name: string; roles: string[] }> = {
+  MANUFACTURER: { name: "Company Admin", roles: ["Production Supervisor", "Store Keeper", "POS Operator"] },
+  WHOLESALER: { name: "Warehouse Admin", roles: ["Receiving Staff", "Sales Staff"] },
+  RETAILER: { name: "Shop Owner", roles: ["Shop Staff"] },
+}
+
+const ACCOUNT_LIMITS: Record<string, Record<string, number>> = {
+  MANUFACTURER: { STANDARD: 5, PREMIUM: 10 },
+  WHOLESALER: { STANDARD: 6, PREMIUM: 8 },
+  RETAILER: { STANDARD: 2, PREMIUM: 5 },
+}
+
+function slugifyEmail(name: string, domain: string, index: number) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, ".")
+  return `${base}${index > 0 ? index + 1 : ""}@${domain}`
+}
+
+function generateSubAccounts(tier: string, plan: string, adminEmail: string) {
+  const limit = ACCOUNT_LIMITS[tier]?.[plan] ?? 1
+  const roleConfig = SUB_ACCOUNT_ROLES[tier] ?? { name: "Admin", roles: ["Staff"] }
+  const domain = adminEmail.includes("@") ? adminEmail.split("@")[1] : "business.com"
+
+  const accounts: { name: string; role: string; email: string; isAdmin: boolean }[] = [
+    { name: "You", role: roleConfig.name, email: adminEmail, isAdmin: true },
+  ]
+
+  let roleIndex = 0
+  while (accounts.length < limit) {
+    const role = roleConfig.roles[roleIndex % roleConfig.roles.length]
+    const seatNumber = Math.floor(roleIndex / roleConfig.roles.length)
+    accounts.push({ name: `${role} ${accounts.length}`, role, email: slugifyEmail(role, domain, seatNumber), isAdmin: false })
+    roleIndex++
+  }
+  return accounts
 }
 
 function SignupContent() {
   const searchParams = useSearchParams()
-  const initialTier = searchParams.get("tier") || ""
-  const initialPlan = searchParams.get("plan") || ""
-  
   const [step, setStep] = useState(1)
-  const [selectedTier, setSelectedTier] = useState(initialTier)
-  const [selectedPlan, setSelectedPlan] = useState(initialPlan)
-  const [formData, setFormData] = useState({
-    businessName: "",
-    email: "",
-    phone: "",
-    location: "",
-    contactPerson: "",
-  })
-  const [isComplete, setIsComplete] = useState(false)
-
-  const totalSteps = 5
-  const progress = (step / totalSteps) * 100
-
-  const handleNext = () => {
-    if (step < totalSteps) {
-      setStep(step + 1)
-    }
-  }
-
-  const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1)
-    }
-  }
-
-  const handleComplete = () => {
-    setIsComplete(true)
-    setStep(5)
-  }
+  const [selectedTier, setSelectedTier] = useState(searchParams.get("tier")?.toUpperCase() || "")
+  const [selectedPlan, setSelectedPlan] = useState(searchParams.get("plan")?.toUpperCase() || "")
+  const [formData, setFormData] = useState({ businessName: "", adminName: "", email: "", password: "" })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [registered, setRegistered] = useState<any>(null)
 
   const canProceed = () => {
-    switch (step) {
-      case 1: return !!selectedTier
-      case 2: return !!selectedPlan
-      case 3: return formData.businessName && formData.email && formData.phone && formData.location && formData.contactPerson
-      case 4: return true // Payment UI only
-      default: return false
-    }
+    if (step === 1) return !!selectedTier
+    if (step === 2) return !!selectedPlan
+    if (step === 3) return !!(formData.businessName && formData.adminName && formData.email && formData.password)
+    return false
   }
 
-  // Generate mock credentials
-  const credentials = {
-    adminEmail: formData.email || "admin@yourbusiness.com",
-    adminPassword: "SF-" + Math.random().toString(36).substring(2, 10).toUpperCase(),
-    subAccounts: [
-      { role: "Manager", email: `manager@${formData.businessName?.toLowerCase().replace(/\s/g, "") || "business"}.com`, password: "MGR-" + Math.random().toString(36).substring(2, 8).toUpperCase() },
-      { role: "Staff", email: `staff@${formData.businessName?.toLowerCase().replace(/\s/g, "") || "business"}.com`, password: "STF-" + Math.random().toString(36).substring(2, 8).toUpperCase() },
-    ]
+  const handleRegister = async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessName: formData.businessName, tierType: selectedTier, subscriptionPlan: selectedPlan, adminName: formData.adminName, adminEmail: formData.email, adminPassword: formData.password }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || d.message || "Registration failed") }
+
+      const subAccounts = generateSubAccounts(selectedTier, selectedPlan, formData.email)
+      setRegistered({ email: formData.email, password: formData.password, businessName: formData.businessName, tier: selectedTier, plan: selectedPlan, subAccounts })
+      setStep(4)
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.")
+    } finally { setLoading(false) }
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-24 pb-16">
-        <div className="mx-auto max-w-3xl px-6 lg:px-8">
-          {/* Progress bar */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground">Step {step} of {totalSteps}</span>
-              <span className="text-sm text-muted-foreground">{Math.round(progress)}% complete</span>
+        <div className="mx-auto max-w-2xl px-6">
+          {step < 4 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Step {step} of 3</span>
+                <span className="text-sm text-muted-foreground">{Math.round((step / 3) * 100)}% complete</span>
+              </div>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${(step / 3) * 100}%` }} />
+              </div>
             </div>
-            <div className="h-2 bg-secondary rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+          )}
 
-          {/* Step 1: Choose Tier */}
           {step === 1 && (
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Choose your business type</CardTitle>
-                <CardDescription>Select the tier that best describes your business</CardDescription>
+                <CardDescription>Select the tier that matches your business</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {tiers.map((tier) => (
-                  <button
-                    key={tier.id}
-                    onClick={() => setSelectedTier(tier.id)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-start gap-4 ${
-                      selectedTier === tier.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <div className={`h-12 w-12 rounded-xl ${tier.bgColor} ${tier.color} flex items-center justify-center flex-shrink-0`}>
+                  <button key={tier.id} onClick={() => setSelectedTier(tier.id)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-start gap-4 ${selectedTier === tier.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                    <div className={`h-12 w-12 rounded-xl ${tier.bg} ${tier.color} flex items-center justify-center flex-shrink-0`}>
                       <tier.icon className="h-6 w-6" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-foreground">{tier.name}</h3>
-                        {selectedTier === tier.id && (
-                          <Check className="h-5 w-5 text-primary" />
-                        )}
+                        <h3 className="font-semibold">{tier.name}</h3>
+                        {selectedTier === tier.id && <Check className="h-5 w-5 text-primary" />}
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
                     </div>
@@ -179,291 +140,140 @@ function SignupContent() {
             </Card>
           )}
 
-          {/* Step 2: Choose Plan */}
           {step === 2 && selectedTier && (
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Choose your plan</CardTitle>
-                <CardDescription>Both plans include a 14-day free trial</CardDescription>
+                <CardDescription>Both plans include a 14-day free trial — no card required</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  {["standard", "premium"].map((plan) => (
-                    <button
-                      key={plan}
-                      onClick={() => setSelectedPlan(plan)}
-                      className={`p-6 rounded-xl border-2 transition-all text-left ${
-                        selectedPlan === plan 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
+              <CardContent>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {["STANDARD", "PREMIUM"].map((plan) => (
+                    <button key={plan} onClick={() => setSelectedPlan(plan)}
+                      className={`p-6 rounded-xl border-2 transition-all text-left ${selectedPlan === plan ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
                       <div className="flex items-center justify-between mb-4">
-                        <Badge variant={plan === "premium" ? "default" : "secondary"} className="capitalize">
-                          {plan}
-                        </Badge>
-                        {selectedPlan === plan && (
-                          <Check className="h-5 w-5 text-primary" />
-                        )}
+                        <Badge variant={plan === "PREMIUM" ? "default" : "secondary"} className="capitalize">{plan.toLowerCase()}</Badge>
+                        {selectedPlan === plan && <Check className="h-5 w-5 text-primary" />}
                       </div>
                       <div className="mb-2">
-                        <span className="text-3xl font-bold text-foreground">${planPrices[selectedTier][plan]}</span>
+                        <span className="text-3xl font-bold">${planPrices[selectedTier]?.[plan]}</span>
                         <span className="text-muted-foreground">/month</span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {plan === "premium" ? "Full features, unlimited access" : "Essential features for getting started"}
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Users className="h-3 w-3" />{ACCOUNT_LIMITS[selectedTier]?.[plan]} sub-accounts included
                       </p>
                     </button>
                   ))}
                 </div>
-                <p className="text-center text-sm text-muted-foreground">
-                  You can upgrade or downgrade at any time
-                </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 3: Business Details */}
           {step === 3 && (
             <Card>
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Business details</CardTitle>
-                <CardDescription>Tell us about your business</CardDescription>
+                <CardTitle className="text-2xl">Create your account</CardTitle>
+                <CardDescription>Enter business and admin details</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="businessName">Business Name</Label>
+                  <Label>Business name</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="businessName"
-                      placeholder="Your Business Name"
-                      className="pl-10"
-                      value={formData.businessName}
-                      onChange={(e) => setFormData({...formData, businessName: e.target.value})}
-                    />
+                    <Input className="pl-10" value={formData.businessName} onChange={(e) => setFormData({ ...formData, businessName: e.target.value })} />
                   </div>
                 </div>
-                
                 <div className="space-y-2">
-                  <Label htmlFor="email">Business Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="email"
-                      type="email"
-                      placeholder="contact@yourbusiness.com"
-                      className="pl-10"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="phone"
-                      placeholder="+1 (555) 123-4567"
-                      className="pl-10"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="location">Business Location</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="location"
-                      placeholder="City, Country"
-                      className="pl-10"
-                      value={formData.location}
-                      onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="contactPerson">Contact Person</Label>
+                  <Label>Your full name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="contactPerson"
-                      placeholder="Full Name"
-                      className="pl-10"
-                      value={formData.contactPerson}
-                      onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
-                    />
+                    <Input className="pl-10" value={formData.adminName} onChange={(e) => setFormData({ ...formData, adminName: e.target.value })} />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Business email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="email" className="pl-10" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="password" className="pl-10" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+                  </div>
+                </div>
+                {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3 border border-red-100">{error}</div>}
+                <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-700">
+                  {selectedTier} · {selectedPlan} · ${planPrices[selectedTier]?.[selectedPlan]}/month · {ACCOUNT_LIMITS[selectedTier]?.[selectedPlan]} sub-accounts
+                  <p className="text-green-600 font-medium mt-1">14-day free trial — $0.00 due today</p>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 4: Payment */}
-          {step === 4 && !isComplete && (
+          {step === 4 && registered && (
             <Card>
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Payment details</CardTitle>
-                <CardDescription>Your card will not be charged during the trial</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Order summary */}
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <h4 className="font-medium text-foreground mb-3">Order Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground capitalize">{selectedTier} {selectedPlan}</span>
-                      <span className="text-foreground">${planPrices[selectedTier]?.[selectedPlan]}/mo</span>
-                    </div>
-                    <div className="flex justify-between text-green-600">
-                      <span>14-day free trial</span>
-                      <span>-${planPrices[selectedTier]?.[selectedPlan]}</span>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between font-medium">
-                      <span className="text-foreground">Due today</span>
-                      <span className="text-foreground">$0.00</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cardName">Name on Card</Label>
-                    <Input id="cardName" placeholder="John Doe" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Card Number</Label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="cardNumber" placeholder="4242 4242 4242 4242" className="pl-10" />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="expiry">Expiry Date</Label>
-                      <Input id="expiry" placeholder="MM/YY" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cvc">CVC</Label>
-                      <Input id="cvc" placeholder="123" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="h-4 w-4" />
-                  <span>Your payment info is securely encrypted</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 5: Success */}
-          {step === 5 && isComplete && (
-            <Card>
-              <CardHeader className="text-center">
-                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+                <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                   <Check className="h-8 w-8 text-green-600" />
                 </div>
                 <CardTitle className="text-2xl">Welcome to StockFlow Pro!</CardTitle>
-                <CardDescription>Your account has been created successfully</CardDescription>
+                <CardDescription>All sub-account credentials are below. Save them — download the mobile app to log in.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <h4 className="font-medium text-foreground mb-3">Your Credentials</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Admin Login</p>
-                      <p className="text-sm font-mono text-foreground">{credentials.adminEmail}</p>
-                      <p className="text-sm font-mono text-foreground">{credentials.adminPassword}</p>
-                    </div>
-                    <Separator />
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Sub-Accounts</p>
-                      {credentials.subAccounts.map((account, index) => (
-                        <div key={index} className="mb-2">
-                          <p className="text-xs text-muted-foreground">{account.role}</p>
-                          <p className="text-sm font-mono text-foreground">{account.email}</p>
-                          <p className="text-sm font-mono text-foreground">{account.password}</p>
+                <div className="bg-secondary/50 rounded-xl p-5 space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase">Business</p>
+                  <p className="font-semibold">{registered.businessName}</p>
+                  <p className="text-sm text-muted-foreground capitalize">{registered.tier} · {registered.plan} plan · {registered.subAccounts.length} accounts</p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase mb-3">Account credentials</p>
+                  <div className="space-y-2">
+                    {registered.subAccounts.map((acc: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{acc.isAdmin ? "Admin (You)" : acc.role}</span>
+                            {acc.isAdmin && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+                          </div>
+                          <p className="text-xs font-mono text-muted-foreground mt-0.5">{acc.email}</p>
                         </div>
-                      ))}
-                    </div>
+                        <p className="text-xs font-mono text-muted-foreground">
+                          {acc.isAdmin ? registered.password : "Set on first login"}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button className="flex-1" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PDF
-                  </Button>
-                  <Button className="flex-1" variant="outline">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Email Credentials
-                  </Button>
-                </div>
-
                 <Separator />
+                <p className="text-sm text-green-600 font-medium">14-day free trial starts the moment the admin logs in for the first time.</p>
 
-                <div className="text-center">
-                  <Button size="lg" asChild>
-                    <Link href="/dashboard">
-                      Go to Dashboard
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Link>
-                  </Button>
-                </div>
+                <Button size="lg" className="w-full" asChild>
+                  <Link href="/login">Sign in to your account<ArrowRight className="h-4 w-4 ml-2" /></Link>
+                </Button>
               </CardContent>
             </Card>
           )}
 
-          {/* Navigation buttons */}
-          {!isComplete && (
+          {step < 4 && (
             <div className="flex items-center justify-between mt-8">
-              <Button 
-                variant="ghost" 
-                onClick={handleBack}
-                disabled={step === 1}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+              <Button variant="ghost" onClick={() => setStep(s => s - 1)} disabled={step === 1}>
+                <ArrowLeft className="h-4 w-4 mr-2" />Back
               </Button>
-              
-              {step < 4 ? (
-                <Button 
-                  onClick={handleNext}
-                  disabled={!canProceed()}
-                >
-                  Continue
-                  <ArrowRight className="h-4 w-4 ml-2" />
+              {step < 3 ? (
+                <Button onClick={() => setStep(s => s + 1)} disabled={!canProceed()}>
+                  Continue<ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button 
-                  onClick={handleComplete}
-                >
-                  Start Free Trial
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                <Button onClick={handleRegister} disabled={!canProceed() || loading}>
+                  {loading ? "Creating account..." : "Create account"}<ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               )}
             </div>
-          )}
-
-          {/* Login link */}
-          {step === 1 && (
-            <p className="text-center text-sm text-muted-foreground mt-8">
-              Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline font-medium">
-                Sign in
-              </Link>
-            </p>
           )}
         </div>
       </main>
@@ -473,11 +283,7 @@ function SignupContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    }>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
       <SignupContent />
     </Suspense>
   )

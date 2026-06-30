@@ -35,11 +35,8 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Invalid email or password")
-      }
       const data = await res.json()
+      if (!res.ok) throw new Error(data.message || data.error || "Invalid email or password")
       localStorage.setItem("sf_token", data.token)
       localStorage.setItem("sf_user", JSON.stringify(data))
       router.push("/dashboard")
@@ -55,7 +52,7 @@ export default function LoginPage() {
       <Navbar />
       <main className="pt-24 pb-16 flex items-center justify-center min-h-[calc(100vh-6rem)]">
         <div className="mx-auto max-w-md w-full px-6">
-          <Card className="border-border/50 shadow-lg">
+          <Card className="shadow-lg">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">Welcome back</CardTitle>
               <CardDescription>Sign in to your StockFlow Pro account</CardDescription>
@@ -74,7 +71,7 @@ export default function LoginPage() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" className="pl-10 pr-10" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
