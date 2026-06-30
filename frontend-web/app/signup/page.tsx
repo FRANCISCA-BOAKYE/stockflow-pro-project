@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { sendEmail, welcomeEmailHtml } from "@/lib/email"
 
 const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
 
@@ -80,6 +81,14 @@ function SignupContent() {
       const subAccounts = generateSubAccounts(selectedTier, selectedPlan, formData.email)
       setRegistered({ email: formData.email, password: formData.password, businessName: formData.businessName, tier: selectedTier, plan: selectedPlan, subAccounts })
       setStep(4)
+
+      // Send welcome email
+      sendEmail(
+        formData.email,
+        `Welcome to StockFlow Pro — ${formData.businessName}`,
+        welcomeEmailHtml(formData.businessName, selectedTier, selectedPlan, formData.email, formData.password)
+      ).catch(() => {})
+
     } catch (err: any) {
       setError(err.message || "Something went wrong.")
     } finally { setLoading(false) }
@@ -89,7 +98,6 @@ function SignupContent() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel */}
       <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 flex-col justify-between p-12 sticky top-0 h-screen">
         <Link href="/" className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center">
@@ -113,19 +121,14 @@ function SignupContent() {
               {step === 4 && "You're all set!"}
             </h2>
             <p className="text-blue-200 text-sm leading-relaxed">
-              {step === 1 && "Select the tier that best matches your business type. You can always upgrade later."}
+              {step === 1 && "Select the tier that best matches your business type."}
               {step === 2 && "Both plans start with a 14-day free trial. No card required."}
               {step === 3 && "Your admin account will be created with sub-accounts for your team."}
-              {step === 4 && "Save your credentials and download the mobile app to start managing your business."}
+              {step === 4 && "Check your email for your credentials. Download the mobile app to get started."}
             </p>
           </div>
           <div className="space-y-3">
-            {[
-              "14-day free trial included",
-              "No credit card required",
-              "Data always safe",
-              "Cancel anytime",
-            ].map(f => (
+            {["14-day free trial included", "No credit card required", "Data always safe", "Cancel anytime"].map(f => (
               <div key={f} className="flex items-center gap-3">
                 <div className="h-6 w-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
                   <Check className="h-3 w-3 text-emerald-400" />
@@ -138,7 +141,6 @@ function SignupContent() {
         <p className="text-slate-500 text-sm">© 2026 StockFlow Pro</p>
       </div>
 
-      {/* Right panel */}
       <div className="flex-1 flex flex-col min-h-screen">
         <div className="flex-1 px-6 py-12 lg:px-12 max-w-xl mx-auto w-full">
           <div className="lg:hidden mb-8 flex items-center justify-between">
@@ -151,7 +153,6 @@ function SignupContent() {
             <span className="text-sm text-slate-500">Step {step} of 3</span>
           </div>
 
-          {/* Step 1 — Tier */}
           {step === 1 && (
             <div>
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Choose your business type</h1>
@@ -176,7 +177,6 @@ function SignupContent() {
             </div>
           )}
 
-          {/* Step 2 — Plan */}
           {step === 2 && selectedTier && (
             <div>
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Choose your plan</h1>
@@ -202,7 +202,6 @@ function SignupContent() {
             </div>
           )}
 
-          {/* Step 3 — Details */}
           {step === 3 && (
             <div>
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Create your account</h1>
@@ -245,14 +244,14 @@ function SignupContent() {
             </div>
           )}
 
-          {/* Step 4 — Success */}
           {step === 4 && registered && (
             <div>
               <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/30">
                 <Check className="h-8 w-8 text-white" />
               </div>
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome to StockFlow Pro!</h1>
-              <p className="text-slate-500 mb-8 text-sm">Save your credentials below — they're only shown once.</p>
+              <p className="text-slate-500 mb-2 text-sm">Your credentials have been sent to <strong>{registered.email}</strong></p>
+              <p className="text-slate-500 mb-8 text-sm">They're also shown below for your reference.</p>
 
               <div className="bg-slate-900 rounded-2xl p-6 mb-6">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Business</p>
@@ -285,7 +284,6 @@ function SignupContent() {
             </div>
           )}
 
-          {/* Navigation */}
           {step < 4 && (
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
               <button onClick={() => setStep(s => s - 1)} disabled={step === 1}
