@@ -2,7 +2,10 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Shield, Clock, Check } from "lucide-react"
+import { Shield, Clock, Check } from "lucide-react"
+import { PaystackButton } from "@/components/paystack-button"
+
+const PAYSTACK_KEY = "pk_test_6620d84161debea0ad30c0617bde2eea7de28051"
 
 const PLANS_BY_TIER: Record<string, { name: string; price: number; features: string[] }[]> = {
   MANUFACTURER: [
@@ -39,6 +42,7 @@ export default function TrialExpiredPage() {
   const router = useRouter()
   const [tier, setTier] = useState("RETAILER")
   const [businessName, setBusinessName] = useState("")
+  const [userEmail, setUserEmail] = useState("")
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -46,6 +50,7 @@ export default function TrialExpiredPage() {
       const u = JSON.parse(stored)
       setTier(u.tierType || "RETAILER")
       setBusinessName(u.businessName || "")
+      setUserEmail(u.email || "")
     }
   }, [])
 
@@ -57,25 +62,27 @@ export default function TrialExpiredPage() {
     router.replace("/login")
   }
 
+  const handlePaymentSuccess = (reference: string) => {
+    alert(`Payment successful! Reference: ${reference}. Your account will be activated shortly.`)
+    router.push("/dashboard")
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 50%, #1a0533 100%)', display: 'flex', flexDirection: 'column' }}>
       <style>{`@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
 
-      {/* Floating bubbles */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         {[
           { w: 300, h: 300, top: '-80px', left: '-80px', color: 'rgba(59,130,246,0.1)' },
           { w: 200, h: 200, bottom: '10%', right: '-60px', color: 'rgba(99,102,241,0.1)' },
           { w: 150, h: 150, top: '40%', left: '5%', color: 'rgba(139,92,246,0.08)' },
         ].map((b, i) => (
-          <div key={i} style={{ position: 'absolute', width: b.w, height: b.h, borderRadius: '50%', backgroundColor: b.color, top: b.top, left: b.left, right: b.right, bottom: b.bottom, filter: 'blur(40px)', animation: `float ${5 + i * 2}s ease-in-out infinite` }} />
+          <div key={i} style={{ position: 'absolute', width: b.w, height: b.h, borderRadius: '50%', backgroundColor: b.color, top: b.top, left: b.left, right: (b as any).right, bottom: (b as any).bottom, filter: 'blur(40px)', animation: `float ${5 + i * 2}s ease-in-out infinite` }} />
         ))}
       </div>
 
-      {/* Grid */}
       <div style={{ position: 'fixed', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
 
-      {/* Header */}
       <header style={{ position: 'relative', zIndex: 10, padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
           <Logo />
@@ -88,7 +95,6 @@ export default function TrialExpiredPage() {
 
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', position: 'relative', zIndex: 10 }}>
         <div style={{ width: '100%', maxWidth: '900px' }}>
-          {/* Top section */}
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <div style={{ width: '72px', height: '72px', borderRadius: '20px', backgroundColor: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
               <Clock style={{ width: '32px', height: '32px', color: '#f59e0b' }} />
@@ -99,8 +105,6 @@ export default function TrialExpiredPage() {
             <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '480px', margin: '0 auto 24px' }}>
               Your 14-day free trial is over. Choose a plan to restore full access instantly.
             </p>
-
-            {/* Data safe banner */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', padding: '14px 24px', borderRadius: '16px', backgroundColor: 'rgba(5,150,105,0.1)', border: '1px solid rgba(5,150,105,0.3)', maxWidth: '500px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: 'rgba(5,150,105,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Shield style={{ width: '18px', height: '18px', color: '#34d399' }} />
@@ -112,7 +116,6 @@ export default function TrialExpiredPage() {
             </div>
           </div>
 
-          {/* Plans */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' }}>
             {plans.map((plan, i) => (
               <div key={plan.name} style={{
@@ -122,34 +125,40 @@ export default function TrialExpiredPage() {
                 position: 'relative', overflow: 'hidden',
               }}>
                 {i === 1 && <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.08)' }} />}
-                {i === 1 && <div style={{ position: 'absolute', marginBottom: '12px' }}><span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>Most popular</span></div>}
-                <div style={{ marginTop: i === 1 ? '28px' : 0 }}>
-                  <p style={{ fontSize: '12px', fontWeight: 700, color: i === 1 ? 'rgba(255,255,255,0.6)' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{plan.name}</p>
-                  <div style={{ marginBottom: '20px' }}>
-                    <span style={{ fontSize: '48px', fontWeight: 800, color: '#ffffff' }}>${plan.price}</span>
-                    <span style={{ fontSize: '14px', color: i === 1 ? 'rgba(255,255,255,0.5)' : '#475569' }}>/month</span>
+                {i === 1 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}>Most popular</span>
                   </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {plan.features.map(f => (
-                      <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: i === 1 ? 'rgba(255,255,255,0.85)' : '#94a3b8' }}>
-                        <div style={{ width: '18px', height: '18px', borderRadius: '6px', backgroundColor: i === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(26,86,219,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Check style={{ width: '10px', height: '10px', color: i === 1 ? '#ffffff' : '#1a56db' }} />
-                        </div>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href="/pricing" style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    padding: '13px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
-                    textDecoration: 'none', transition: 'all 0.2s',
+                )}
+                <p style={{ fontSize: '12px', fontWeight: 700, color: i === 1 ? 'rgba(255,255,255,0.6)' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{plan.name}</p>
+                <div style={{ marginBottom: '20px' }}>
+                  <span style={{ fontSize: '48px', fontWeight: 800, color: '#ffffff' }}>${plan.price}</span>
+                  <span style={{ fontSize: '14px', color: i === 1 ? 'rgba(255,255,255,0.5)' : '#475569' }}>/month</span>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {plan.features.map(f => (
+                    <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: i === 1 ? 'rgba(255,255,255,0.85)' : '#94a3b8' }}>
+                      <div style={{ width: '18px', height: '18px', borderRadius: '6px', backgroundColor: i === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(26,86,219,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Check style={{ width: '10px', height: '10px', color: i === 1 ? '#ffffff' : '#1a56db' }} />
+                      </div>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <PaystackButton
+                  email={userEmail || "user@business.com"}
+                  amount={plan.price}
+                  publicKey={PAYSTACK_KEY}
+                  onSuccess={handlePaymentSuccess}
+                  onClose={() => {}}
+                  label={`Subscribe — $${plan.price}/month`}
+                  style={{
                     backgroundColor: i === 1 ? '#ffffff' : 'rgba(255,255,255,0.08)',
                     color: i === 1 ? '#1a56db' : '#ffffff',
                     border: i === 1 ? 'none' : '1px solid rgba(255,255,255,0.15)',
-                  }}>
-                    Subscribe now <ArrowRight style={{ width: '14px', height: '14px' }} />
-                  </Link>
-                </div>
+                    background: i === 1 ? '#ffffff' : undefined,
+                  }}
+                />
               </div>
             ))}
           </div>

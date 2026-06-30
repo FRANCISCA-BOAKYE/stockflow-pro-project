@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Mail, User, Shield, Send } from "lucide-react"
+import { sendEmail, inviteEmailHtml } from "@/lib/email"
 
 const ROLES: Record<string, string[]> = {
   MANUFACTURER: ["Production Supervisor", "Store Keeper", "POS Operator"],
@@ -16,6 +17,7 @@ export default function InvitePage() {
   const [email, setEmail] = useState("")
   const [role, setRole] = useState("")
   const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -25,8 +27,17 @@ export default function InvitePage() {
     setRole(ROLES[u.tierType]?.[0] || "Staff")
   }, [])
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!name || !email || !role) return
+    setLoading(true)
+    try {
+      await sendEmail(
+        email,
+        `You've been invited to join ${user.businessName} on StockFlow Pro`,
+        inviteEmailHtml(user.businessName, role, user.name || "Your admin")
+      )
+    } catch (e) {}
+    setLoading(false)
     setSent(true)
   }
 
@@ -91,14 +102,15 @@ export default function InvitePage() {
                   </select>
                 </div>
               </div>
-              <button onClick={handleSend} disabled={!name || !email || !role}
+              <button onClick={handleSend} disabled={!name || !email || !role || loading}
                 style={{ height: '50px', borderRadius: '14px', background: 'linear-gradient(135deg, #1a56db, #4f46e5)', color: '#ffffff', fontWeight: 700, fontSize: '15px', border: 'none', cursor: name && email && role ? 'pointer' : 'not-allowed', opacity: name && email && role ? 1 : 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 16px rgba(26,86,219,0.3)' }}>
-                <Send style={{ width: '16px', height: '16px' }} />Send invitation
+                {loading ? <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <><Send style={{ width: '16px', height: '16px' }} />Send invitation</>}
               </button>
             </div>
           </div>
         )}
       </main>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

@@ -1,7 +1,12 @@
+"use client"
+import { useState } from "react"
 import Link from "next/link"
 import { Check, ArrowRight, Zap, Store, Truck, Factory } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { PaystackButton } from "@/components/paystack-button"
+
+const PAYSTACK_KEY = "pk_test_6620d84161debea0ad30c0617bde2eea7de28051"
 
 const PLANS = [
   {
@@ -46,6 +51,8 @@ const PLANS = [
 ]
 
 export default function PricingPage() {
+  const [email, setEmail] = useState("")
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -68,6 +75,21 @@ export default function PricingPage() {
             </div>
           </div>
         </section>
+
+        {/* Email input for payment */}
+        <div className="bg-slate-100 py-6 px-6 text-center border-b border-slate-200">
+          <p className="text-sm text-slate-600 mb-3 font-medium">Already have an account? Enter your email to pay directly:</p>
+          <div className="flex gap-3 max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="flex-1 h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-blue-500"
+            />
+            {email && <span className="flex items-center px-4 rounded-xl bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200">Ready to pay</span>}
+          </div>
+        </div>
 
         {/* Plans */}
         <section className="py-24 px-6 lg:px-8 bg-slate-50">
@@ -109,12 +131,32 @@ export default function PricingPage() {
                           </li>
                         ))}
                       </ul>
+
+                      {/* Free trial button */}
                       <Link
                         href={`/signup?tier=${tierGroup.tier.toUpperCase()}&plan=${plan.name.toUpperCase()}`}
-                        className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold text-sm transition-all ${i === 1 ? 'bg-white text-slate-900 hover:bg-slate-50 shadow-lg' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                        className={`flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold text-sm transition-all mb-3 ${i === 1 ? 'bg-white text-slate-900 hover:bg-slate-50 shadow-lg' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                       >
                         Start free trial <ArrowRight className="h-4 w-4" />
                       </Link>
+
+                      {/* Paystack pay now */}
+                      <PaystackButton
+                        email={email || "user@business.com"}
+                        amount={plan.price}
+                        publicKey={PAYSTACK_KEY}
+                        onSuccess={(ref) => alert(`Payment successful! Reference: ${ref}. Sign in to access your account.`)}
+                        onClose={() => {}}
+                        label={`Pay now — $${plan.price}/month`}
+                        style={{
+                          background: i === 1 ? 'rgba(255,255,255,0.15)' : 'rgba(26,86,219,0.08)',
+                          color: i === 1 ? '#ffffff' : '#1a56db',
+                          border: `1px solid ${i === 1 ? 'rgba(255,255,255,0.3)' : 'rgba(26,86,219,0.2)'}`,
+                          boxShadow: 'none',
+                          fontSize: '13px',
+                          padding: '11px',
+                        }}
+                      />
                     </div>
                   ))}
                 </div>
@@ -132,7 +174,7 @@ export default function PricingPage() {
             </div>
             <div className="space-y-4">
               {[
-                { q: "What happens when my trial ends?", a: "Your data is completely safe and nothing is deleted. Full access returns the moment you subscribe. You will see a clear notice on your dashboard when your trial is ending." },
+                { q: "What happens when my trial ends?", a: "Your data is completely safe and nothing is deleted. Full access returns the moment you subscribe." },
                 { q: "Can I add team members?", a: "Yes. Every plan includes sub-accounts with role-specific access. Standard Retailer gets 2, Premium gets 5. Manufacturer Premium gets up to 10 accounts." },
                 { q: "Do I need a credit card to start?", a: "No. The 14-day free trial starts from your first login and requires no payment information whatsoever." },
                 { q: "Can I change my plan later?", a: "Yes. You can upgrade from Standard to Premium at any time from your subscription page inside the app." },
@@ -155,11 +197,8 @@ export default function PricingPage() {
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
               <div className="relative">
                 <h2 className="text-4xl font-bold text-white mb-4">Ready to get started?</h2>
-                <p className="text-blue-200 text-lg mb-8 max-w-xl mx-auto">Join businesses using StockFlow Pro to manage their supply chains. 14-day free trial, no card required.</p>
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center gap-2 bg-white text-slate-900 font-bold px-8 py-4 rounded-2xl hover:bg-slate-50 transition-colors shadow-xl text-base"
-                >
+                <p className="text-blue-200 text-lg mb-8 max-w-xl mx-auto">14-day free trial, no card required.</p>
+                <Link href="/signup" className="inline-flex items-center gap-2 bg-white text-slate-900 font-bold px-8 py-4 rounded-2xl hover:bg-slate-50 transition-colors shadow-xl text-base">
                   Start free trial <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
