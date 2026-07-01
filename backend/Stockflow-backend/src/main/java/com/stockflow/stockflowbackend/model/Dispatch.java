@@ -39,13 +39,11 @@ public class Dispatch {
     @Column(name = "payment_mode", nullable = false, length = 20)
     private String paymentMode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "credit_record_id")
-    private CreditRecord creditRecord;
+    @Column(name = "credit_record_id")
+    private Long creditRecordId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invoice_id")
-    private Invoice invoice;
+    @Column(name = "invoice_id")
+    private Long invoiceId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recorded_by", nullable = false)
