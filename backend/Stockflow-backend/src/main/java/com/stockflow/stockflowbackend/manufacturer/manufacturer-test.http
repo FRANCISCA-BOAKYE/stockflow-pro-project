@@ -1,0 +1,44 @@
+### Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{"email": "ethel@test.com", "password": "Password123!"}
+
+### Add a material
+POST http://localhost:8080/manufacturer/materials
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{"name": "Cotton Fabric", "unit": "metres",
+  "quantity": 3000, "minThreshold": 100, "costPerUnit": 2.50}
+
+### Get all materials
+GET http://localhost:8080/manufacturer/materials
+Authorization: Bearer PASTE_TOKEN_HERE
+
+### Create a recipe
+POST http://localhost:8080/manufacturer/recipes
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{"productName": "Oxford Shirt", "unitLabel": "shirt",
+  "groupLabel": "box", "unitsPerGroup": 24,
+  "materials": [{"materialId": 1, "quantityPerUnit": 1.8}]}
+
+### Calculate production
+POST http://localhost:8080/manufacturer/production/calculate
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{"recipeId": 1, "targetGroups": 10}
+
+### Confirm production
+POST http://localhost:8080/manufacturer/production/confirm
+Content-Type: application/json
+Authorization: Bearer PASTE_TOKEN_HERE
+
+{"recipeId": 1, "targetGroups": 10}
+
+### Get finished goods
+GET http://localhost:8080/manufacturer/finished-goods
+Authorization: Bearer PASTE_TOKEN_HERE

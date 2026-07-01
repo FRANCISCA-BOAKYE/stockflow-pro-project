@@ -1,0 +1,7 @@
+### Register test account
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{"businessName": "Test Shop", "tierType": "RETAILER",
+ "subscriptionPlan": "STANDARD", "adminName": "Priscilla",
+ "adminEmail": "priscilla@shop.com", "adminPassword": "Password123!"}
