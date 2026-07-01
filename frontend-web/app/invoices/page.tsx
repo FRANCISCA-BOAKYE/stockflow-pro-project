@@ -1,377 +1,143 @@
 "use client"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, FileText, Calendar, TrendingUp, Download } from "lucide-react"
 
-import { useState } from "react"
-import Link from "next/link"
-import { 
-  Search, 
-  Download, 
-  Filter,
-  ChevronDown,
-  FileText,
-  Calendar,
-  ArrowUpDown,
-  MoreHorizontal,
-  Eye,
-  Send,
-  Printer
-} from "lucide-react"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-interface Invoice {
-  id: string
-  invoiceNumber: string
-  buyer: string
-  seller: string
-  amount: number
-  paymentMode: string
-  dueDate: string
-  status: "paid" | "pending" | "overdue" | "cancelled"
-  createdAt: string
+
+
+const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  PAID: { bg: '#ecfdf5', text: '#059669', border: '#a7f3d0', dot: '#059669' },
+  UNPAID: { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0', dot: '#94a3b8' },
+  OVERDUE: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', dot: '#dc2626' },
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: "1",
-    invoiceNumber: "INV-2024-001",
-    buyer: "Metro Supermarkets",
-    seller: "Pacific Electronics",
-    amount: 12500.00,
-    paymentMode: "Bank Transfer",
-    dueDate: "2024-02-15",
-    status: "paid",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    invoiceNumber: "INV-2024-002",
-    buyer: "QuickMart Stores",
-    seller: "Global Food Distributors",
-    amount: 8750.50,
-    paymentMode: "Credit",
-    dueDate: "2024-02-20",
-    status: "pending",
-    createdAt: "2024-01-20",
-  },
-  {
-    id: "3",
-    invoiceNumber: "INV-2024-003",
-    buyer: "Thompson Retail Group",
-    seller: "Textile Masters Inc",
-    amount: 25000.00,
-    paymentMode: "Net 30",
-    dueDate: "2024-01-25",
-    status: "overdue",
-    createdAt: "2023-12-25",
-  },
-  {
-    id: "4",
-    invoiceNumber: "INV-2024-004",
-    buyer: "BuildRight Materials",
-    seller: "Industrial Machines Co",
-    amount: 45000.00,
-    paymentMode: "Bank Transfer",
-    dueDate: "2024-03-01",
-    status: "pending",
-    createdAt: "2024-02-01",
-  },
-  {
-    id: "5",
-    invoiceNumber: "INV-2024-005",
-    buyer: "PharmaCare Distributors",
-    seller: "Consumer Goods Factory",
-    amount: 6200.00,
-    paymentMode: "Cash",
-    dueDate: "2024-02-10",
-    status: "paid",
-    createdAt: "2024-01-10",
-  },
-  {
-    id: "6",
-    invoiceNumber: "INV-2024-006",
-    buyer: "TechWholesale UK",
-    seller: "AutoParts Global",
-    amount: 18900.00,
-    paymentMode: "Credit",
-    dueDate: "2024-02-28",
-    status: "pending",
-    createdAt: "2024-01-28",
-  },
-  {
-    id: "7",
-    invoiceNumber: "INV-2024-007",
-    buyer: "Office Supplies Central",
-    seller: "Apparel Manufacturing Ltd",
-    amount: 3400.00,
-    paymentMode: "Net 15",
-    dueDate: "2024-01-30",
-    status: "cancelled",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "8",
-    invoiceNumber: "INV-2024-008",
-    buyer: "Fresh Produce Wholesale",
-    seller: "Pacific Electronics",
-    amount: 9800.00,
-    paymentMode: "Bank Transfer",
-    dueDate: "2024-02-25",
-    status: "paid",
-    createdAt: "2024-01-25",
-  },
-]
-
-const statusColors: Record<string, string> = {
-  paid: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  overdue: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  cancelled: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+const getInvoicesForTier = (tier?: string) => {
+  if (tier === "MANUFACTURER") return [
+    { id: "INV-001", party: "Apex Distributors", date: "Jun 26, 2026", amount: 42000, status: "PAID" },
+    { id: "INV-002", party: "Sunrise Wholesale", date: "Jun 20, 2026", amount: 28500, status: "UNPAID" },
+    { id: "INV-003", party: "Delta Trading Co", date: "Jun 15, 2026", amount: 14800, status: "OVERDUE" },
+    { id: "INV-004", party: "Metro Distributors", date: "Jun 10, 2026", amount: 22000, status: "PAID" },
+  ]
+  if (tier === "WHOLESALER") return [
+    { id: "INV-101", party: "Bright Mart Retail", date: "Jun 26, 2026", amount: 2800, status: "PAID" },
+    { id: "INV-102", party: "Delta Stores", date: "Jun 22, 2026", amount: 1400, status: "UNPAID" },
+    { id: "INV-103", party: "City Mart", date: "Jun 18, 2026", amount: 3200, status: "OVERDUE" },
+  ]
+  return [
+    { id: "INV-201", party: "John Mensah", date: "Jun 26, 2026", amount: 45, status: "PAID" },
+    { id: "INV-202", party: "Abena Asante", date: "Jun 24, 2026", amount: 85.5, status: "UNPAID" },
+    { id: "INV-203", party: "Kofi Boateng", date: "Jun 20, 2026", amount: 120, status: "OVERDUE" },
+  ]
 }
 
-export default function InvoiceHistoryPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [dateRange, setDateRange] = useState<Date | undefined>(undefined)
+export default function InvoicesPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [filter, setFilter] = useState("ALL")
 
-  const filteredInvoices = mockInvoices.filter((invoice) => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const matchesInvoice = invoice.invoiceNumber.toLowerCase().includes(query)
-      const matchesBuyer = invoice.buyer.toLowerCase().includes(query)
-      const matchesSeller = invoice.seller.toLowerCase().includes(query)
-      if (!matchesInvoice && !matchesBuyer && !matchesSeller) return false
-    }
+  useEffect(() => {
+    const stored = localStorage.getItem("sf_user")
+    if (!stored) { router.replace("/login"); return }
+    setUser(JSON.parse(stored))
+  }, [])
 
-    // Status filter
-    if (statusFilter !== "all" && invoice.status !== statusFilter) {
-      return false
-    }
+  if (!user) return null
 
-    return true
-  })
-
-  const stats = {
-    total: mockInvoices.length,
-    paid: mockInvoices.filter(i => i.status === "paid").length,
-    pending: mockInvoices.filter(i => i.status === "pending").length,
-    overdue: mockInvoices.filter(i => i.status === "overdue").length,
-    totalAmount: mockInvoices.reduce((sum, i) => sum + i.amount, 0),
-  }
+  const allInvoices = getInvoicesForTier(user.tierType)
+  const filtered = filter === "ALL" ? allInvoices : allInvoices.filter(i => i.status === filter)
+  const total = allInvoices.reduce((sum, i) => sum + i.amount, 0)
+  const paid = allInvoices.filter(i => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0)
+  const outstanding = allInvoices.filter(i => i.status !== "PAID").reduce((sum, i) => sum + i.amount, 0)
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      <main className="flex-1 pt-24 pb-16">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', padding: '0 24px', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <button onClick={() => router.push("/dashboard")} style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <ArrowLeft style={{ width: '16px', height: '16px', color: '#64748b' }} />
+            </button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Invoice History</h1>
-              <p className="text-muted-foreground mt-1">View and manage all your invoices</p>
-            </div>
-            <Button>
-              <FileText className="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
-          </div>
-
-          {/* Stats cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Total Invoices</p>
-                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Paid</p>
-                <p className="text-2xl font-bold text-green-600">{stats.paid}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search invoices, buyers, or sellers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Date Range
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <p style={{ fontWeight: 700, fontSize: '16px', color: '#0f172a' }}>Invoices</p>
+              <p style={{ fontSize: '11px', color: '#94a3b8' }}>{allInvoices.length} invoices total</p>
             </div>
           </div>
+          <button onClick={() => router.push("/invoices/print")} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '12px', background: 'linear-gradient(135deg, #1a56db, #4f46e5)', color: '#ffffff', fontWeight: 600, fontSize: '13px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(26,86,219,0.3)' }}>
+  <Download style={{ width: '14px', height: '14px' }} />Export
+</button>
+        </div>
+      </header>
 
-          {/* Invoice table */}
-          <Card className="border-border/50">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[140px]">Invoice #</TableHead>
-                      <TableHead>Buyer</TableHead>
-                      <TableHead>Seller</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Payment Mode</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-[100px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInvoices.length > 0 ? (
-                      filteredInvoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
-                          <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                          <TableCell>{invoice.buyer}</TableCell>
-                          <TableCell>{invoice.seller}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            ${invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell>{invoice.paymentMode}</TableCell>
-                          <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className={`capitalize ${statusColors[invoice.status]}`}>
-                              {invoice.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download PDF
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send Reminder
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Printer className="h-4 w-4 mr-2" />
-                                  Print
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                          No invoices found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+      <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
+        {/* Summary cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '28px' }}>
+          {[
+            { label: "Total invoiced", value: `$${total.toLocaleString()}`, icon: FileText, color: '#1a56db', bg: '#eff6ff' },
+            { label: "Paid", value: `$${paid.toLocaleString()}`, icon: TrendingUp, color: '#059669', bg: '#ecfdf5' },
+            { label: "Outstanding", value: `$${outstanding.toLocaleString()}`, icon: Calendar, color: '#dc2626', bg: '#fef2f2' },
+          ].map(s => (
+            <div key={s.label} style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #f1f5f9', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <p style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
+                <div style={{ width: '32px', height: '32px', borderRadius: '9px', backgroundColor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <s.icon style={{ width: '14px', height: '14px', color: s.color }} />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Pagination info */}
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredInvoices.length} of {mockInvoices.length} invoices
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>Previous</Button>
-              <Button variant="outline" size="sm" disabled>Next</Button>
+              <p style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>{s.value}</p>
             </div>
-          </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          {["ALL", "PAID", "UNPAID", "OVERDUE"].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{
+              padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
+              cursor: 'pointer', border: 'none', transition: 'all 0.2s',
+              backgroundColor: filter === f ? '#0f172a' : '#ffffff',
+              color: filter === f ? '#ffffff' : '#64748b',
+              boxShadow: filter === f ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.06)',
+            }}>
+              {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* Invoice list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {filtered.map(inv => {
+            const sc = STATUS_CONFIG[inv.status]
+            return (
+              <div key={inv.id} style={{
+                backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px 24px',
+                border: '1px solid #f1f5f9', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                display: 'flex', alignItems: 'center', gap: '16px',
+                transition: 'all 0.2s', cursor: 'pointer',
+              }}
+                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)'}
+              >
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText style={{ width: '18px', height: '18px', color: '#64748b' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a', marginBottom: '3px' }}>{inv.party}</p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Calendar style={{ width: '11px', height: '11px' }} />{inv.date} · <span style={{ fontFamily: 'monospace' }}>{inv.id}</span>
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a', marginBottom: '6px' }}>${inv.amount.toLocaleString()}</p>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                    {inv.status.charAt(0) + inv.status.slice(1).toLowerCase()}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </main>
-      <Footer />
     </div>
   )
 }

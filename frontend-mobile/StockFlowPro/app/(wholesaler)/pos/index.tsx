@@ -4,6 +4,8 @@ import {
   StyleSheet, SafeAreaView, ScrollView, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../../store/authStore';
+import PaystackPayment from '../../../components/PaystackPayment';
 
 const STOCK = [
   { id: '1', name: 'Coca-Cola 500ml (Case of 24)', price: 28.00, quantity: 340 },
@@ -15,6 +17,7 @@ const STOCK = [
 
 const PAYMENT_MODES = [
   { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
+  { key: 'CARD', label: 'Card', icon: 'card-outline' },
   { key: 'BANK_TRANSFER', label: 'Bank Transfer', icon: 'swap-horizontal-outline' },
   { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
   { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
@@ -23,6 +26,7 @@ const PAYMENT_MODES = [
 const MIN_QTY = 10;
 
 export default function WholesalerPOSScreen() {
+  const { user } = useAuthStore();
   const [customer, setCustomer] = useState('');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<any>(null);
@@ -30,6 +34,7 @@ export default function WholesalerPOSScreen() {
   const [payment, setPayment] = useState('CASH');
   const [dueDate, setDueDate] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [showPaystack, setShowPaystack] = useState(false);
 
   const results = search.length > 1
     ? STOCK.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -50,6 +55,7 @@ export default function WholesalerPOSScreen() {
       Alert.alert('Missing info', 'Please enter a due date for credit payment.');
       return;
     }
+    if (payment === 'CARD') { setShowPaystack(true); return; }
     Alert.alert(
       'Order confirmed',
       `${customer} — ${selected.name} x${qty} — $${total} via ${payment}`,
@@ -57,8 +63,22 @@ export default function WholesalerPOSScreen() {
     );
   };
 
+  const handlePaystackSuccess = (reference: string) => {
+    setShowPaystack(false);
+    Alert.alert('Payment successful', `${customer} — ${selected.name} x${qty} — $${total}\nRef: ${reference}`, [
+      { text: 'OK', onPress: () => { setCustomer(''); setSelected(null); setQty(MIN_QTY); setSearch(''); setPayment('CASH'); } }
+    ]);
+  };
+
   return (
     <SafeAreaView style={s.page}>
+      <PaystackPayment
+        visible={showPaystack}
+        email={user?.email || 'customer@business.com'}
+        amount={parseFloat(total)}
+        onSuccess={handlePaystackSuccess}
+        onClose={() => setShowPaystack(false)}
+      />
       <View style={s.header}>
         <Text style={s.title}>Bulk Orders</Text>
         <Text style={s.sub}>Sell to retailers</Text>
@@ -101,6 +121,10 @@ export default function WholesalerPOSScreen() {
         {selected && (
           <View style={s.card}>
             <Text style={s.prodName}>{selected.name}</Text>
+            <View style={s.reserveRow}>
+              <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
+              <Text style={s.reserveText}> {qty} units reserved · {selected.quantity - qty} available</Text>
+            </View>
             <View style={s.availRow}>
               <Ionicons name="checkmark-circle-outline" size={13} color="#059669" />
               <Text style={s.prodAvail}> Available: {selected.quantity} units</Text>
@@ -131,6 +155,16 @@ export default function WholesalerPOSScreen() {
             ))}
           </View>
         </View>
+
+        {payment === 'CARD' && (
+          <View style={s.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
+              <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>Secure card payment via Paystack</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: '#94A3B8' }}>Tap "Confirm Order" to open the payment form.</Text>
+          </View>
+        )}
 
         {payment === 'MOBILE_MONEY' && (
           <View style={s.card}>
@@ -206,6 +240,8 @@ const s = StyleSheet.create({
   prodName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
   availRow: { flexDirection: 'row', alignItems: 'center' },
   prodAvail: { fontSize: 11, color: '#059669', fontWeight: '500' },
+  reserveRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 8, padding: 8 },
+  reserveText: { fontSize: 10.5, color: '#1A56DB' },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   stepLabel: { fontSize: 13, color: '#374151', fontWeight: '500' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },
