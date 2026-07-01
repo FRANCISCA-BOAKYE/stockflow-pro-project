@@ -62,11 +62,12 @@ export default function TrialExpiredPage() {
     router.replace("/login")
   }
 
-  const handlePaymentSuccess = (reference: string) => {
-    alert(`Payment successful! Reference: ${reference}. Your account will be activated shortly.`)
-    router.push("/dashboard")
-  }
-
+ const handlePaymentSuccess = (reference: string) => {
+  alert(`Payment successful! Reference: ${reference}. Please sign in again to activate your account.`)
+  localStorage.removeItem("sf_token")
+  localStorage.removeItem("sf_user")
+  router.push("/login")
+}
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 50%, #1a0533 100%)', display: 'flex', flexDirection: 'column' }}>
       <style>{`@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
