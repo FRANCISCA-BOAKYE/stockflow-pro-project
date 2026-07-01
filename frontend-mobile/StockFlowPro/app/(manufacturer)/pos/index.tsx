@@ -7,13 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
 import PaystackPayment from '../../../components/PaystackPayment';
 
-const STOCK = [
-  { id: '1', name: 'Coca-Cola 500ml (Case of 24)', price: 28.00, quantity: 340 },
-  { id: '2', name: 'Mineral Water 1L (Case of 12)', price: 8.00, quantity: 42 },
-  { id: '3', name: 'Flour 50kg Bag', price: 45.00, quantity: 120 },
-  { id: '4', name: 'Cooking Oil 20L Drum', price: 62.00, quantity: 18 },
-  { id: '5', name: 'Rice 50kg Bag', price: 55.00, quantity: 35 },
-];
+const FINISHED_GOODS = [
+  { id: '1', name: 'Steel Rods 6mm (Bundle)', price: 120.00, stock: 200 },
+  { id: '2', name: 'Aluminium Sheets 2mm', price: 85.00, stock: 150 },
+  { id: '3', name: 'Iron Pipes 1inch', price: 45.00, stock: 300 },
+  { id: '4', name: 'Copper Wire 50m', price: 95.00, stock: 80 },
+  { id: '5', name: 'Steel Beams 6m', price: 220.00, stock: 60 },
+]
 
 const PAYMENT_MODES = [
   { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
@@ -21,54 +21,54 @@ const PAYMENT_MODES = [
   { key: 'BANK_TRANSFER', label: 'Bank Transfer', icon: 'swap-horizontal-outline' },
   { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
   { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
-];
+]
 
-const MIN_QTY = 10;
+const MIN_QTY = 5
 
-export default function WholesalerPOSScreen() {
-  const { user } = useAuthStore();
-  const [customer, setCustomer] = useState('');
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<any>(null);
-  const [qty, setQty] = useState(MIN_QTY);
-  const [payment, setPayment] = useState('CASH');
-  const [dueDate, setDueDate] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [showPaystack, setShowPaystack] = useState(false);
+export default function ManufacturerPOSScreen() {
+  const { user } = useAuthStore()
+  const [customer, setCustomer] = useState('')
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<any>(null)
+  const [qty, setQty] = useState(MIN_QTY)
+  const [payment, setPayment] = useState('CASH')
+  const [dueDate, setDueDate] = useState('')
+  const [mobileNumber, setMobileNumber] = useState('')
+  const [showPaystack, setShowPaystack] = useState(false)
 
   const results = search.length > 1
-    ? STOCK.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-    : [];
+    ? FINISHED_GOODS.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : []
 
-  const total = selected ? (selected.price * qty).toFixed(2) : '0.00';
+  const total = selected ? (selected.price * qty).toFixed(2) : '0.00'
 
-  const confirmOrder = () => {
+  const confirmDispatch = () => {
     if (!selected || !customer.trim()) {
-      Alert.alert('Missing info', 'Please enter a customer name and select a product.');
-      return;
+      Alert.alert('Missing info', 'Please enter a customer name and select a product.')
+      return
     }
     if (payment === 'MOBILE_MONEY' && !mobileNumber.trim()) {
-      Alert.alert('Missing info', 'Please enter the mobile money number.');
-      return;
+      Alert.alert('Missing info', 'Please enter the mobile money number.')
+      return
     }
     if (payment === 'CREDIT' && !dueDate.trim()) {
-      Alert.alert('Missing info', 'Please enter a due date for credit payment.');
-      return;
+      Alert.alert('Missing info', 'Please enter a due date for credit payment.')
+      return
     }
-    if (payment === 'CARD') { setShowPaystack(true); return; }
+    if (payment === 'CARD') { setShowPaystack(true); return }
     Alert.alert(
-      'Order confirmed',
+      'Dispatch confirmed',
       `${customer} — ${selected.name} x${qty} — $${total} via ${payment}`,
       [{ text: 'OK', onPress: () => { setCustomer(''); setSelected(null); setQty(MIN_QTY); setSearch(''); setPayment('CASH'); setDueDate(''); setMobileNumber(''); } }]
-    );
-  };
+    )
+  }
 
   const handlePaystackSuccess = (reference: string) => {
-    setShowPaystack(false);
+    setShowPaystack(false)
     Alert.alert('Payment successful', `${customer} — ${selected.name} x${qty} — $${total}\nRef: ${reference}`, [
       { text: 'OK', onPress: () => { setCustomer(''); setSelected(null); setQty(MIN_QTY); setSearch(''); setPayment('CASH'); } }
-    ]);
-  };
+    ])
+  }
 
   return (
     <SafeAreaView style={s.page}>
@@ -80,23 +80,23 @@ export default function WholesalerPOSScreen() {
         onClose={() => setShowPaystack(false)}
       />
       <View style={s.header}>
-        <Text style={s.title}>Bulk Orders</Text>
-        <Text style={s.sub}>Sell to retailers</Text>
+        <Text style={s.title}>POS Dispatch</Text>
+        <Text style={s.sub}>Sell finished goods</Text>
       </View>
       <ScrollView style={s.body} contentContainerStyle={{ gap: 12, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         <View style={s.card}>
           <View style={s.fieldLabelRow}>
             <Ionicons name="business-outline" size={14} color="#6B7280" />
-            <Text style={s.fieldLabel}> Customer (Retailer name)</Text>
+            <Text style={s.fieldLabel}> Customer (Wholesaler name)</Text>
           </View>
           <View style={s.fieldInputRow}>
-            <TextInput style={s.fieldInput} placeholder="e.g. Bright Mart Retail" placeholderTextColor="#9CA3AF" value={customer} onChangeText={setCustomer} />
+            <TextInput style={s.fieldInput} placeholder="e.g. Apex Distributors" placeholderTextColor="#9CA3AF" value={customer} onChangeText={setCustomer} />
           </View>
         </View>
 
         <View style={s.searchBox}>
           <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput style={s.searchInput} placeholder="Search warehouse stock..." placeholderTextColor="#9CA3AF" value={search} onChangeText={text => { setSearch(text); setSelected(null); setQty(MIN_QTY); }} />
+          <TextInput style={s.searchInput} placeholder="Search finished goods..." placeholderTextColor="#9CA3AF" value={search} onChangeText={text => { setSearch(text); setSelected(null); setQty(MIN_QTY); }} />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => { setSearch(''); setSelected(null); }}>
               <Ionicons name="close-circle" size={18} color="#9CA3AF" />
@@ -109,7 +109,7 @@ export default function WholesalerPOSScreen() {
             {results.map(p => (
               <TouchableOpacity key={p.id} style={s.result} onPress={() => { setSelected(p); setSearch(p.name); }}>
                 <View style={s.resultIcon}>
-                  <Ionicons name="archive-outline" size={16} color="#1A56DB" />
+                  <Ionicons name="cube-outline" size={16} color="#1A56DB" />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
                 <Text style={s.resultPrice}>${p.price.toFixed(2)}</Text>
@@ -123,20 +123,16 @@ export default function WholesalerPOSScreen() {
             <Text style={s.prodName}>{selected.name}</Text>
             <View style={s.reserveRow}>
               <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
-              <Text style={s.reserveText}> {qty} units reserved · {selected.quantity - qty} available</Text>
-            </View>
-            <View style={s.availRow}>
-              <Ionicons name="checkmark-circle-outline" size={13} color="#059669" />
-              <Text style={s.prodAvail}> Available: {selected.quantity} units</Text>
+              <Text style={s.reserveText}> {qty} units reserved · {selected.stock - qty} available</Text>
             </View>
             <View style={s.stepperRow}>
               <Text style={s.stepLabel}>Quantity (min {MIN_QTY})</Text>
               <View style={s.stepper}>
-                <TouchableOpacity style={s.stepBtn} onPress={() => setQty(q => Math.max(MIN_QTY, q - 10))}>
+                <TouchableOpacity style={s.stepBtn} onPress={() => setQty(q => Math.max(MIN_QTY, q - 5))}>
                   <Ionicons name="remove" size={18} color="#374151" />
                 </TouchableOpacity>
                 <Text style={s.stepNum}>{qty}</Text>
-                <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => setQty(q => Math.min(selected.quantity, q + 10))}>
+                <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => setQty(q => Math.min(selected.stock, q + 5))}>
                   <Ionicons name="add" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -162,7 +158,7 @@ export default function WholesalerPOSScreen() {
               <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
               <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>Secure card payment via Paystack</Text>
             </View>
-            <Text style={{ fontSize: 11, color: '#94A3B8' }}>Tap "Confirm Order" to open the payment form.</Text>
+            <Text style={{ fontSize: 11, color: '#94A3B8' }}>Tap "Confirm Dispatch" to open the payment form.</Text>
           </View>
         )}
 
@@ -175,7 +171,6 @@ export default function WholesalerPOSScreen() {
             <View style={s.fieldInputRow}>
               <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF" value={mobileNumber} onChangeText={setMobileNumber} keyboardType="phone-pad" />
             </View>
-            <Text style={s.fieldHint}>Customer will receive a payment prompt on their phone</Text>
           </View>
         )}
 
@@ -188,7 +183,6 @@ export default function WholesalerPOSScreen() {
             <View style={s.fieldInputRow}>
               <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF" value={dueDate} onChangeText={setDueDate} />
             </View>
-            <Text style={s.fieldHint}>A credit record will be created for this retailer</Text>
           </View>
         )}
 
@@ -209,13 +203,13 @@ export default function WholesalerPOSScreen() {
       </ScrollView>
 
       <View style={s.footer}>
-        <TouchableOpacity style={[s.confirmBtn, !selected && { opacity: 0.4 }]} onPress={confirmOrder} disabled={!selected}>
+        <TouchableOpacity style={[s.confirmBtn, !selected && { opacity: 0.4 }]} onPress={confirmDispatch} disabled={!selected}>
           <Ionicons name="checkmark-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={s.confirmText}>Confirm Order · ${total}</Text>
+          <Text style={s.confirmText}>Confirm Dispatch · ${total}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
-  );
+  )
 }
 
 const s = StyleSheet.create({
@@ -229,7 +223,6 @@ const s = StyleSheet.create({
   fieldLabel: { fontSize: 12, fontWeight: '500', color: '#374151' },
   fieldInputRow: { borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.1)', borderRadius: 10, overflow: 'hidden' },
   fieldInput: { padding: 10, fontSize: 13, color: '#0F172A' },
-  fieldHint: { fontSize: 11, color: '#9CA3AF', fontStyle: 'italic' },
   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
   searchInput: { flex: 1, paddingVertical: 8, fontSize: 13, color: '#374151' },
   resultsBox: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', overflow: 'hidden' },
@@ -238,8 +231,6 @@ const s = StyleSheet.create({
   resultName: { flex: 1, fontSize: 13, color: '#0F172A' },
   resultPrice: { fontSize: 13, fontWeight: '600', color: '#1A56DB' },
   prodName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  availRow: { flexDirection: 'row', alignItems: 'center' },
-  prodAvail: { fontSize: 11, color: '#059669', fontWeight: '500' },
   reserveRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 8, padding: 8 },
   reserveText: { fontSize: 10.5, color: '#1A56DB' },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -261,6 +252,6 @@ const s = StyleSheet.create({
   totalLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
   totalAmt: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
   footer: { padding: 12, backgroundColor: '#fff', borderTopWidth: 0.5, borderTopColor: '#E5E7EB' },
-  confirmBtn: { backgroundColor: '#059669', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   confirmText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-});
+})
