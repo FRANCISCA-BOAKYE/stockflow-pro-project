@@ -66,7 +66,7 @@ export default function ManufacturerDashboard() {
   const quickActions = [
     { label: 'Production', icon: 'construct-outline', bg: '#EFF6FF', color: '#1A56DB', route: '/(manufacturer)/production' },
     { label: 'Materials', icon: 'flask-outline', bg: '#ECFDF5', color: '#059669', route: '/(manufacturer)/materials' },
-    { label: 'Dispatch', icon: 'cube-outline', bg: '#FFFBEB', color: '#C27803', route: null },
+    { label: 'Dispatch', icon: 'cube-outline', bg: '#FFFBEB', color: '#C27803', route: '/(manufacturer)/dispatch' },
     { label: 'Credit', icon: 'wallet-outline', bg: '#FEF2F2', color: '#DC2626', route: '/(manufacturer)/credit' },
   ];
 
