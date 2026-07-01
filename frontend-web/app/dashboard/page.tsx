@@ -1,521 +1,201 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import {
-  Package,
-  DollarSign,
-  AlertTriangle,
-  TrendingUp,
-  Clock,
-  Truck,
-  FileText,
-  Users,
-  Factory,
-  Store,
-  Bell,
-  Settings,
-  Menu,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  BarChart3,
-  CreditCard,
-  Calendar,
-  ShoppingCart
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { useRouter } from "next/navigation"
+import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell } from "lucide-react"
 
-// Shared dashboard sidebar component
-function DashboardSidebar({ tier }: { tier: "manufacturer" | "wholesaler" | "retailer" }) {
-  const TierIcon = tier === "manufacturer" ? Factory : tier === "wholesaler" ? Truck : Store
-  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1)
-  
-  const navItems = {
-    manufacturer: [
-      { icon: BarChart3, label: "Dashboard", active: true },
-      { icon: Package, label: "Inventory" },
-      { icon: Factory, label: "Production" },
-      { icon: Users, label: "Wholesalers" },
-      { icon: FileText, label: "Invoices" },
-      { icon: CreditCard, label: "Credit" },
-      { icon: TrendingUp, label: "Analytics" },
-    ],
-    wholesaler: [
-      { icon: BarChart3, label: "Dashboard", active: true },
-      { icon: Package, label: "Inventory" },
-      { icon: ShoppingCart, label: "Orders" },
-      { icon: Users, label: "Partners" },
-      { icon: FileText, label: "Invoices" },
-      { icon: CreditCard, label: "Credit" },
-      { icon: Truck, label: "Deliveries" },
-    ],
-    retailer: [
-      { icon: BarChart3, label: "Dashboard", active: true },
-      { icon: Package, label: "Inventory" },
-      { icon: ShoppingCart, label: "POS" },
-      { icon: Users, label: "Suppliers" },
-      { icon: FileText, label: "Invoices" },
-      { icon: TrendingUp, label: "Sales" },
-      { icon: Calendar, label: "Reports" },
-    ],
-  }
+const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
 
-  return (
-    <aside className="w-64 bg-card border-r border-border flex-shrink-0 hidden lg:flex flex-col">
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">SF</span>
-          </div>
-          <div>
-            <p className="font-semibold text-foreground">StockFlow Pro</p>
-            <Badge variant="secondary" className="text-xs capitalize">{tierName}</Badge>
-          </div>
-        </div>
-      </div>
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems[tier].map((item) => (
-          <button
-            key={item.label}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-              item.active 
-                ? "bg-primary text-primary-foreground" 
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            }`}
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </button>
-        ))}
-      </nav>
-      <div className="p-4 border-t border-border">
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          <Settings className="h-4 w-4" />
-          Settings
-        </button>
-      </div>
-    </aside>
-  )
-}
-
-// Dashboard header
-function DashboardHeader({ businessName }: { businessName: string }) {
-  return (
-    <header className="bg-card border-b border-border px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="lg:hidden">
-            <Menu className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold text-foreground">{businessName}</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">JD</AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline text-sm">John Doe</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Billing</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </header>
-  )
-}
-
-// Stat card component
-function StatCard({ 
-  title, 
-  value, 
-  change, 
-  trend, 
-  icon: Icon 
-}: { 
-  title: string
-  value: string
-  change?: string
-  trend?: "up" | "down"
-  icon: React.ElementType
-}) {
-  return (
-    <Card className="border-border/50">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
-            {change && (
-              <div className={`flex items-center gap-1 mt-1 text-sm ${
-                trend === "up" ? "text-green-600" : "text-red-600"
-              }`}>
-                {trend === "up" ? (
-                  <ArrowUpRight className="h-4 w-4" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4" />
-                )}
-                {change}
-              </div>
-            )}
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center">
-            <Icon className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// Manufacturer Dashboard
-function ManufacturerDashboard() {
-  const alerts = [
-    { message: "Low stock: Raw Material A (50 units remaining)", type: "warning" },
-    { message: "Production batch #234 completed", type: "success" },
-    { message: "New order from Global Distributors", type: "info" },
-  ]
-
-  const recentTransactions = [
-    { id: "TXN-001", partner: "Pacific Distributors", amount: 45000, status: "completed" },
-    { id: "TXN-002", partner: "Metro Wholesale", amount: 28500, status: "pending" },
-    { id: "TXN-003", partner: "Quick Supply Co", amount: 12000, status: "completed" },
-  ]
-
-  return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Stock Value" value="$847,500" change="+12.5%" trend="up" icon={Package} />
-        <StatCard title="Credit Balance" value="$125,000" change="-8.2%" trend="down" icon={CreditCard} />
-        <StatCard title="Pending Orders" value="23" change="+5" trend="up" icon={Clock} />
-        <StatCard title="Production Output" value="1,250 units" change="+18%" trend="up" icon={Factory} />
-      </div>
-
-      {/* Main content */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Alerts */}
-        <Card className="lg:col-span-2 border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Low Stock Alerts</CardTitle>
-            <CardDescription>Items that need attention</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { name: "Raw Material A", stock: 50, reorder: 100, progress: 50 },
-                { name: "Component B", stock: 25, reorder: 75, progress: 33 },
-                { name: "Packaging Unit", stock: 200, reorder: 500, progress: 40 },
-              ].map((item) => (
-                <div key={item.name} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{item.name}</span>
-                    <span className="text-muted-foreground">{item.stock} / {item.reorder}</span>
-                  </div>
-                  <Progress value={item.progress} className="h-2" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent activity */}
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {alerts.map((alert, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <AlertTriangle className={`h-4 w-4 mt-0.5 ${
-                    alert.type === "warning" ? "text-amber-500" : 
-                    alert.type === "success" ? "text-green-500" : "text-blue-500"
-                  }`} />
-                  <p className="text-sm text-muted-foreground">{alert.message}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Transactions */}
-      <Card className="border-border/50">
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Recent Transactions</CardTitle>
-            <CardDescription>Latest orders and payments</CardDescription>
-          </div>
-          <Button variant="outline" size="sm">View All</Button>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentTransactions.map((txn) => (
-              <div key={txn.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                <div>
-                  <p className="font-medium text-foreground">{txn.partner}</p>
-                  <p className="text-sm text-muted-foreground">{txn.id}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-foreground">${txn.amount.toLocaleString()}</p>
-                  <Badge variant="secondary" className={txn.status === "completed" ? "text-green-600" : "text-amber-600"}>
-                    {txn.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-// Wholesaler Dashboard
-function WholesalerDashboard() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Inventory" value="12,450 units" change="+5.2%" trend="up" icon={Package} />
-        <StatCard title="Overdue Payments" value="$42,300" change="+12%" trend="up" icon={AlertTriangle} />
-        <StatCard title="Active Retailers" value="156" change="+8" trend="up" icon={Users} />
-        <StatCard title="Monthly Revenue" value="$284,000" change="+22%" trend="up" icon={DollarSign} />
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Delivery Schedule</CardTitle>
-            <CardDescription>Upcoming deliveries this week</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { retailer: "QuickMart Stores", date: "Today, 2:00 PM", items: 45 },
-                { retailer: "Metro Supermarket", date: "Tomorrow, 10:00 AM", items: 120 },
-                { retailer: "Corner Shop Plus", date: "Wed, 3:00 PM", items: 30 },
-              ].map((delivery, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                  <div>
-                    <p className="font-medium text-foreground">{delivery.retailer}</p>
-                    <p className="text-sm text-muted-foreground">{delivery.date}</p>
-                  </div>
-                  <Badge variant="secondary">{delivery.items} items</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Credit Summary</CardTitle>
-            <CardDescription>Outstanding balances</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { name: "Metro Supermarket", balance: 15000, limit: 25000 },
-                { name: "QuickMart Stores", balance: 8500, limit: 15000 },
-                { name: "Corner Shop Plus", balance: 3200, limit: 5000 },
-              ].map((credit) => (
-                <div key={credit.name} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{credit.name}</span>
-                    <span className="text-muted-foreground">${credit.balance.toLocaleString()} / ${credit.limit.toLocaleString()}</span>
-                  </div>
-                  <Progress value={(credit.balance / credit.limit) * 100} className="h-2" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-border/50">
-        <CardHeader>
-          <CardTitle className="text-lg">Invoice Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="p-4 bg-secondary/50 rounded-lg">
-              <p className="text-2xl font-bold text-foreground">24</p>
-              <p className="text-sm text-muted-foreground">Total Invoices</p>
-            </div>
-            <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">18</p>
-              <p className="text-sm text-muted-foreground">Paid</p>
-            </div>
-            <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <p className="text-2xl font-bold text-amber-600">4</p>
-              <p className="text-sm text-muted-foreground">Pending</p>
-            </div>
-            <div className="p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <p className="text-2xl font-bold text-red-600">2</p>
-              <p className="text-sm text-muted-foreground">Overdue</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-// Retailer Dashboard
-function RetailerDashboard() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Today's Sales" value="$3,240" change="+15%" trend="up" icon={ShoppingCart} />
-        <StatCard title="Low Stock Items" value="8" change="-3" trend="down" icon={AlertTriangle} />
-        <StatCard title="Active Orders" value="12" icon={Clock} />
-        <StatCard title="Monthly Revenue" value="$48,500" change="+8.5%" trend="up" icon={TrendingUp} />
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Low Stock Alerts</CardTitle>
-            <CardDescription>Products below reorder level</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { name: "Product A - SKU001", stock: 5, reorder: 20 },
-                { name: "Product B - SKU045", stock: 12, reorder: 30 },
-                { name: "Product C - SKU089", stock: 3, reorder: 15 },
-                { name: "Product D - SKU102", stock: 8, reorder: 25 },
-              ].map((item) => (
-                <div key={item.name} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                  <div>
-                    <p className="font-medium text-foreground">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">Reorder at: {item.reorder} units</p>
-                  </div>
-                  <Badge variant="destructive">{item.stock} left</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full justify-between" variant="outline">
-              New Sale <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button className="w-full justify-between" variant="outline">
-              Place Order <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button className="w-full justify-between" variant="outline">
-              View Invoices <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button className="w-full justify-between" variant="outline">
-              Inventory Count <ChevronRight className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-border/50">
-        <CardHeader>
-          <CardTitle className="text-lg">Recent Sales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              { id: "SALE-001", time: "2 mins ago", items: 3, total: 45.50 },
-              { id: "SALE-002", time: "15 mins ago", items: 1, total: 120.00 },
-              { id: "SALE-003", time: "32 mins ago", items: 5, total: 89.99 },
-              { id: "SALE-004", time: "1 hour ago", items: 2, total: 34.00 },
-            ].map((sale) => (
-              <div key={sale.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                <div>
-                  <p className="font-medium text-foreground">{sale.id}</p>
-                  <p className="text-sm text-muted-foreground">{sale.time} - {sale.items} items</p>
-                </div>
-                <p className="font-medium text-foreground">${sale.total.toFixed(2)}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+const Logo = () => (
+  <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+    <rect x="3" y="3" width="84" height="84" rx="20" fill="#0F172A"/>
+    <polygon points="45,22 66,33 66,55 45,66 24,55 24,33" fill="none" stroke="#1A56DB" strokeWidth="0.5" opacity="0.5"/>
+    <polygon points="45,22 66,33 45,44 24,33" fill="url(#d1)" opacity="0.8"/>
+    <polygon points="24,33 45,44 45,66 24,55" fill="url(#d2)" opacity="0.6"/>
+    <polygon points="66,33 45,44 45,66 66,55" fill="#1A56DB" opacity="0.4"/>
+    <circle cx="45" cy="44" r="4" fill="white" opacity="0.9"/>
+    <circle cx="45" cy="44" r="2" fill="#1A56DB"/>
+    <defs>
+      <linearGradient id="d1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#60A5FA"/><stop offset="100%" stopColor="#1A56DB"/></linearGradient>
+      <linearGradient id="d2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3B82F6"/><stop offset="100%" stopColor="#1E3A8A"/></linearGradient>
+    </defs>
+  </svg>
+)
 
 export default function DashboardPage() {
-  const [selectedTier, setSelectedTier] = useState<"manufacturer" | "wholesaler" | "retailer">("retailer")
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  const businessNames = {
-    manufacturer: "Pacific Electronics Manufacturing",
-    wholesaler: "Global Food Distributors",
-    retailer: "QuickMart Retail Store",
+  useEffect(() => {
+    const stored = localStorage.getItem("sf_user")
+    const token = localStorage.getItem("sf_token")
+    if (!stored || !token) { router.replace("/login"); return }
+    const u = JSON.parse(stored)
+    setUser(u)
+    fetch(`${API_BASE_URL}/reports/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setData(d)).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem("sf_token")
+    localStorage.removeItem("sf_user")
+    router.replace("/login")
   }
 
-  return (
-    <div className="min-h-screen bg-background flex">
-      <DashboardSidebar tier={selectedTier} />
-      
-      <div className="flex-1 flex flex-col min-h-screen">
-        <DashboardHeader businessName={businessNames[selectedTier]} />
-        
-        <main className="flex-1 p-6 overflow-auto">
-          {/* Tier selector for demo */}
-          <div className="mb-6">
-            <p className="text-sm text-muted-foreground mb-2">Dashboard Preview:</p>
-            <Tabs value={selectedTier} onValueChange={(v) => setSelectedTier(v as typeof selectedTier)}>
-              <TabsList>
-                <TabsTrigger value="retailer">Retailer</TabsTrigger>
-                <TabsTrigger value="wholesaler">Wholesaler</TabsTrigger>
-                <TabsTrigger value="manufacturer">Manufacturer</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {selectedTier === "manufacturer" && <ManufacturerDashboard />}
-          {selectedTier === "wholesaler" && <WholesalerDashboard />}
-          {selectedTier === "retailer" && <RetailerDashboard />}
-        </main>
-
-        {/* Footer notice */}
-        <div className="p-4 border-t border-border bg-card text-center">
-          <p className="text-sm text-muted-foreground">
-            This is a preview. <Link href="/signup" className="text-primary hover:underline">Start your free trial</Link> to access the full dashboard.
-          </p>
-        </div>
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#1a56db', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: '#64748b', fontSize: '14px' }}>Loading dashboard...</p>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+
+  const tier = user?.tierType || "RETAILER"
+  const initials = user?.name ? user.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) : "U"
+
+  const tierColors: Record<string, { gradient: string; light: string; text: string }> = {
+    MANUFACTURER: { gradient: 'linear-gradient(135deg, #1a56db, #4f46e5)', light: '#eff6ff', text: '#1a56db' },
+    WHOLESALER: { gradient: 'linear-gradient(135deg, #d97706, #ea580c)', light: '#fffbeb', text: '#d97706' },
+    RETAILER: { gradient: 'linear-gradient(135deg, #059669, #10b981)', light: '#ecfdf5', text: '#059669' },
+  }
+  const tc = tierColors[tier] || tierColors.RETAILER
+
+  const statsByTier: Record<string, { title: string; value: string; icon: any; color: string; bg: string }[]> = {
+    MANUFACTURER: [
+      { title: "Raw Materials", value: data?.totalMaterials != null ? String(data.totalMaterials) : "—", icon: Package, color: '#1a56db', bg: '#eff6ff' },
+      { title: "Low Stock", value: data?.lowStockCount != null ? String(data.lowStockCount) : "—", icon: AlertTriangle, color: '#d97706', bg: '#fffbeb' },
+      { title: "Production Runs", value: data?.productionRunsThisMonth != null ? String(data.productionRunsThisMonth) : "—", icon: Factory, color: '#059669', bg: '#ecfdf5' },
+      { title: "Credit Owed", value: data?.totalCreditOwedByWholesalers != null ? `$${Number(data.totalCreditOwedByWholesalers).toFixed(2)}` : "$0.00", icon: CreditCard, color: '#dc2626', bg: '#fef2f2' },
+    ],
+    WHOLESALER: [
+      { title: "Warehouse Stock", value: data?.totalStockItems != null ? String(data.totalStockItems) : "—", icon: Package, color: '#1a56db', bg: '#eff6ff' },
+      { title: "Credit Owed", value: data?.totalCreditOwedByRetailers != null ? `$${Number(data.totalCreditOwedByRetailers).toFixed(2)}` : "$0.00", icon: CreditCard, color: '#dc2626', bg: '#fef2f2' },
+      { title: "Today's Sales", value: data?.todaySalesUsd != null ? `$${Number(data.todaySalesUsd).toFixed(2)}` : "$0.00", icon: TrendingUp, color: '#059669', bg: '#ecfdf5' },
+      { title: "Active Retailers", value: data?.activeRetailers != null ? String(data.activeRetailers) : "—", icon: Users, color: '#d97706', bg: '#fffbeb' },
+    ],
+    RETAILER: [
+      { title: "Today's Sales", value: data?.todaySalesUsd != null ? `$${Number(data.todaySalesUsd).toFixed(2)}` : "$0.00", icon: ShoppingCart, color: '#059669', bg: '#ecfdf5' },
+      { title: "Low Stock", value: data?.lowStockCount != null ? String(data.lowStockCount) : "—", icon: AlertTriangle, color: '#d97706', bg: '#fffbeb' },
+      { title: "Credit Owed", value: data?.totalCreditOwedByCustomers != null ? `$${Number(data.totalCreditOwedByCustomers).toFixed(2)}` : "$0.00", icon: CreditCard, color: '#dc2626', bg: '#fef2f2' },
+      { title: "Total Products", value: data?.totalProducts != null ? String(data.totalProducts) : "—", icon: Package, color: '#1a56db', bg: '#eff6ff' },
+    ],
+  }
+
+  const stats = statsByTier[tier] || statsByTier.RETAILER
+
+  const quickLinks = [
+    { label: "Sub-accounts", icon: Users, desc: "Manage your team", href: "/accounts", color: '#1a56db', bg: '#eff6ff' },
+    { label: "Invoices", icon: FileText, desc: "View & generate", href: "/invoices", color: '#d97706', bg: '#fffbeb' },
+    { label: "Credit accounts", icon: CreditCard, desc: "Track balances", href: "/credit", color: '#dc2626', bg: '#fef2f2' },
+    { label: "Marketplace", icon: Store, desc: "Find partners", href: "/marketplace", color: '#059669', bg: '#ecfdf5' },
+  ]
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* Header */}
+      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Logo />
+            <div>
+              <p style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>{user?.businessName || "Dashboard"}</p>
+              <p style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'capitalize' }}>{tier.toLowerCase()} · {user?.subscriptionPlan} · {user?.subscriptionStatus}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href="/notifications" style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
+              <Bell style={{ width: '16px', height: '16px', color: '#64748b' }} />
+            </Link>
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: tc.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#ffffff' }}>{initials}</div>
+            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#64748b', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}>
+              <LogOut style={{ width: '14px', height: '14px' }} />Log out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
+        {/* Trial banner */}
+        {user?.subscriptionStatus === "TRIAL" && (
+          <div style={{ background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '1px solid #fde68a', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b', flexShrink: 0 }} />
+              <p style={{ fontSize: '13px', color: '#92400e', fontWeight: 500 }}>Your 14-day free trial is active. Your data is always safe, even after the trial ends.</p>
+            </div>
+            <Link href="/pricing" style={{ fontSize: '13px', color: '#d97706', fontWeight: 700, textDecoration: 'none' }}>View plans →</Link>
+          </div>
+        )}
+
+        {/* Hero card */}
+        <div style={{ background: tc.gradient, borderRadius: '24px', padding: '32px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ position: 'absolute', bottom: '-30px', left: '40%', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ position: 'relative' }}>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Good to have you back</p>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>{user?.name || "Welcome"}</h1>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>{user?.businessName} · {tier.toLowerCase()} account</p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          {stats.map(s => (
+            <div key={s.title} style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px', border: '1px solid #f1f5f9', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', transition: 'all 0.2s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'}
+              onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.03)'}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <p style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.title}</p>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <s.icon style={{ width: '16px', height: '16px', color: s.color }} />
+                </div>
+              </div>
+              <p style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile app banner */}
+        <div style={{ backgroundColor: '#0f172a', borderRadius: '20px', padding: '24px 28px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Smartphone style={{ width: '24px', height: '24px', color: '#60a5fa' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 700, color: '#ffffff', fontSize: '15px', marginBottom: '4px' }}>Day-to-day operations happen on the mobile app</p>
+            <p style={{ fontSize: '13px', color: '#475569' }}>POS, inventory, production, and credit accounts are managed from your phone. This web dashboard is your business overview.</p>
+          </div>
+        </div>
+
+        {/* Quick links */}
+        <div style={{ marginBottom: '8px' }}>
+          <p style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>Manage your business</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+            {quickLinks.map(link => (
+              <Link key={link.label} href={link.href} style={{ textDecoration: 'none' }}>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '14px' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = link.color; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 20px rgba(0,0,0,0.06)` }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#f1f5f9'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}
+                >
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: link.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <link.icon style={{ width: '18px', height: '18px', color: link.color }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 600, fontSize: '13px', color: '#0f172a', marginBottom: '2px' }}>{link.label}</p>
+                    <p style={{ fontSize: '11px', color: '#94a3b8' }}>{link.desc}</p>
+                  </div>
+                  <ArrowRight style={{ width: '14px', height: '14px', color: '#cbd5e1' }} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

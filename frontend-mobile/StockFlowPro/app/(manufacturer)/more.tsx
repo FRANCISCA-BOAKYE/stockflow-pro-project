@@ -7,15 +7,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 
 const MENU_ITEMS = [
-  { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF' },
-  { label: 'Finished Goods', icon: 'cube-outline', color: '#059669', bg: '#ECFDF5' },
-  { label: 'Dispatch', icon: 'send-outline', color: '#C27803', bg: '#FFFBEB' },
-  { label: 'Recipes', icon: 'git-branch-outline', color: '#8B5CF6', bg: '#F5F3FF' },
-  { label: 'Sub-accounts', icon: 'people-outline', color: '#0EA5E9', bg: '#EFF6FF' },
-  { label: 'Subscription', icon: 'card-outline', color: '#6B7280', bg: '#F3F4F6' },
+  { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
+  { label: 'POS Dispatch', icon: 'cart-outline', color: '#059669', bg: '#ECFDF5', route: '/(manufacturer)/pos' },
+  { label: 'Finished Goods', icon: 'cube-outline', color: '#059669', bg: '#ECFDF5', route: '/(manufacturer)/finished-goods' },
+  { label: 'Dispatch', icon: 'send-outline', color: '#C27803', bg: '#FFFBEB', route: '/(manufacturer)/dispatch' },
+  { label: 'Recipes', icon: 'git-branch-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/(manufacturer)/recipes' },
+  { label: 'Invoices', icon: 'receipt-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/invoices' },
+  { label: 'Marketplace', icon: 'storefront-outline', color: '#6B7280', bg: '#F3F4F6', route: '/marketplace' },
+  { label: 'Subscription', icon: 'card-outline', color: '#374151', bg: '#F3F4F6', route: '/subscription' },
 ];
 
-export default function MoreScreen() {
+export default function ManufacturerMoreScreen() {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
 
@@ -24,12 +26,10 @@ export default function MoreScreen() {
     : 'U';
 
   const statusColor = user?.subscriptionStatus === 'ACTIVE' ? '#059669'
-    : user?.subscriptionStatus === 'TRIAL' ? '#C27803'
-    : '#DC2626';
+    : user?.subscriptionStatus === 'TRIAL' ? '#C27803' : '#DC2626';
 
   const statusLabel = user?.subscriptionStatus === 'ACTIVE' ? 'Active'
-    : user?.subscriptionStatus === 'TRIAL' ? 'Trial active'
-    : 'Expired';
+    : user?.subscriptionStatus === 'TRIAL' ? 'Trial active' : 'Expired';
 
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure you want to log out?', [
@@ -61,16 +61,16 @@ export default function MoreScreen() {
               <Text style={[s.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
             </View>
           </View>
-          <View style={s.editBtn}>
-            <Ionicons name="pencil-outline" size={16} color="#6B7280" />
-          </View>
+          <TouchableOpacity style={s.editBtn} onPress={() => router.push('/profile')}>
+  <Ionicons name="pencil-outline" size={16} color="#6B7280" />
+</TouchableOpacity>
         </View>
-
         <View style={s.menuCard}>
           {MENU_ITEMS.map((item, index) => (
             <TouchableOpacity
               key={item.label}
               style={[s.menuItem, index < MENU_ITEMS.length - 1 && s.menuBorder]}
+              onPress={() => router.push(item.route as any)}
             >
               <View style={[s.menuIcon, { backgroundColor: item.bg }]}>
                 <Ionicons name={item.icon as any} size={18} color={item.color} />
@@ -80,7 +80,6 @@ export default function MoreScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
         <TouchableOpacity style={s.logoutCard} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color="#DC2626" style={{ marginRight: 8 }} />
           <Text style={s.logoutText}>Log out</Text>
