@@ -19,3 +19,28 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iL
 ### Then login
 GET https://stockflow-backend-qwpt.onrender.com/marketplace/listings
 
+### Register with sub-accounts
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "businessName": "Acme Manufacturing",
+  "tierType": "MANUFACTURER",
+  "subscriptionPlan": "STANDARD",
+  "adminName": "Francisca",
+  "adminEmail": "francisca2@acme.com",
+  "adminPassword": "Password123!"
+}
+
+### Sub-account login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "production.supervisor@acmemanufacturing.com",
+  "password": "TempPass123!"
+}
+
+### Get sub-accounts
+GET http://localhost:8080/auth/sub-accounts
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2EyQGFjbWUuY29tIiwiYnVzaW5lc3NJZCI6MjAsInJvbGUiOiJDT01QQU5ZX0FETUlOIiwiaWF0IjoxNzgyOTUwMTAwLCJleHAiOjE3ODMwMzY1MDB9.UxcAvWcPyb0DRNbY5-OmDinZB6kaUGjH08CIPJeC5An8qXaVwlK8hGnfwwKbZ10l

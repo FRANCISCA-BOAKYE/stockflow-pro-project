@@ -9,9 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
-@NoArgsConstructor
+@Getter @Setter @NoArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "business"})
 public class AppUser {
 
@@ -36,11 +34,20 @@ public class AppUser {
     @Column(nullable = false, length = 50)
     private String role;
 
+    @Column(name = "is_sub_account")
+    private Boolean isSubAccount = false;
+
+    @Column(name = "parent_user_id")
+    private Long parentUserId;
+
+    @Column(name = "sub_account_role", length = 100)
+    private String subAccountRole;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
     @Column(name = "must_change_password", nullable = false)
-    private Boolean mustChangePassword = true;
+    private Boolean mustChangePassword = false;
 
     @Column(name = "expo_push_token", length = 200)
     private String expoPushToken;

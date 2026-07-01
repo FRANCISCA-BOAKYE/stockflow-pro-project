@@ -4,7 +4,6 @@ import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,33 +39,17 @@ public class PaystackWebhookController {
         }
 
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> event = mapper.readValue(rawBody, Map.class);
-            String eventType = (String) event.get("event");
-
-            if ("charge.success".equals(eventType)) {
-                Map<String, Object> data = (Map<String, Object>) event.get("data");
-
-                String email = null;
-                if (data.get("customer") instanceof Map) {
-                    Map<String, Object> customer = (Map<String, Object>) data.get("customer");
-                    email = (String) customer.get("email");
-                }
-                if (email == null) {
-                    email = (String) data.get("customer_email");
-                }
-
-                if (email != null) {
-                    Optional<AppUser> userOpt = userRepository.findByEmail(email);
-                    if (userOpt.isPresent()) {
-                        AppUser user = userOpt.get();
-                        Optional<Business> bizOpt = businessRepository.findById(
-                                user.getBusiness().getId());
-                        if (bizOpt.isPresent()) {
-                            Business business = bizOpt.get();
-                            business.setSubscriptionStatus("ACTIVE");
-                            businessRepository.save(business);
-                        }
+            String email = extractEmail(rawBody);
+            if (email != null) {
+                Optional<AppUser> userOpt = userRepository.findByEmail(email);
+                if (userOpt.isPresent()) {
+                    AppUser user = userOpt.get();
+                    Optional<Business> bizOpt = businessRepository.findById(
+                            user.getBusiness().getId());
+                    if (bizOpt.isPresent()) {
+                        Business business = bizOpt.get();
+                        business.setSubscriptionStatus("ACTIVE");
+                        businessRepository.save(business);
                     }
                 }
             }
@@ -75,6 +58,18 @@ public class PaystackWebhookController {
         }
 
         return ResponseEntity.ok("OK");
+    }
+
+    private String extractEmail(String rawBody) {
+        try {
+            int idx = rawBody.indexOf("\"email\"");
+            if (idx == -1) return null;
+            int start = rawBody.indexOf("\"", idx + 8) + 1;
+            int end = rawBody.indexOf("\"", start);
+            return rawBody.substring(start, end);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private boolean verifySignature(String payload, String signature) {

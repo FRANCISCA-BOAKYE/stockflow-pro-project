@@ -3,9 +3,10 @@ package com.stockflow.stockflowbackend.dto;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Getter @Setter @NoArgsConstructor
-public class LoginResponse {
+public class RegisterResponse {
     private String token;
     private String name;
     private String email;
@@ -15,7 +16,5 @@ public class LoginResponse {
     private String tierType;
     private String subscriptionStatus;
     private String subscriptionPlan;
-    private Boolean isSubAccount;
-    private String adminEmail;
-    private String subAccountRole;
+    private List<SubAccountResponse> subAccounts;
 }
