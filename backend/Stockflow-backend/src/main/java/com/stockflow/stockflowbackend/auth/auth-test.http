@@ -16,10 +16,6 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iL
 {"name": "Cotton Fabric", "unit": "metres",
   "quantity": 3000, "minThreshold": 100, "costPerUnit": 2.50}
 
-### Get recipes
-GET http://localhost:8080/manufacturer/recipes
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS
+### Then login
+GET https://stockflow-backend-qwpt.onrender.com/marketplace/listings
 
-### Get finished goods
-GET http://localhost:8080/manufacturer/finished-goods
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2FAYWNtZS5jb20iLCJidXNpbmVzc0lkIjoxLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImlhdCI6MTc4MjU1MzA1MywiZXhwIjoxNzgyNjM5NDUzfQ.aUl7Tc_Zn-ARcYUS_LoZVh274zD_GUpjMXCoeEuMH-3oJZ0s_cR20na3zenOTrTS

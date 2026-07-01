@@ -1,153 +1,229 @@
 "use client"
-
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
-import { Navbar } from "@/components/navbar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
+
+const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+
+const Logo = () => (
+  <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+    <rect x="3" y="3" width="84" height="84" rx="20" fill="#0F172A"/>
+    <polygon points="45,22 66,33 66,55 45,66 24,55 24,33" fill="none" stroke="#1A56DB" strokeWidth="0.5" opacity="0.5"/>
+    <polygon points="45,22 66,33 45,44 24,33" fill="url(#lg1)" opacity="0.8"/>
+    <polygon points="24,33 45,44 45,66 24,55" fill="url(#lg2)" opacity="0.6"/>
+    <polygon points="66,33 45,44 45,66 66,55" fill="#1A56DB" opacity="0.4"/>
+    <circle cx="45" cy="44" r="4" fill="white" opacity="0.9"/>
+    <circle cx="45" cy="44" r="2" fill="#1A56DB"/>
+    <defs>
+      <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#60A5FA"/><stop offset="100%" stopColor="#1A56DB"/></linearGradient>
+      <linearGradient id="lg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3B82F6"/><stop offset="100%" stopColor="#1E3A8A"/></linearGradient>
+    </defs>
+  </svg>
+)
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [rememberMe, setRememberMe] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Frontend only - would connect to auth
+    setError("")
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || data.error || "Invalid email or password")
+      localStorage.setItem("sf_token", data.token)
+      localStorage.setItem("sf_user", JSON.stringify(data))
+      router.push("/dashboard")
+    } catch (err: any) {
+      setError(err.message || "Login failed. Check your credentials.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main className="pt-24 pb-16 flex items-center justify-center min-h-[calc(100vh-6rem)]">
-        <div className="mx-auto max-w-md w-full px-6 lg:px-8">
-          <Card className="border-border/50 shadow-lg">
-            <CardHeader className="text-center pb-2">
-              <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-4">
-                <span className="text-primary-foreground font-bold text-lg">SF</span>
-              </div>
-              <CardTitle className="text-2xl">Welcome back</CardTitle>
-              <CardDescription>Sign in to your StockFlow Pro account</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      className="pl-10"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
+    <div className="min-h-screen flex">
+      {/* Left — animated dark panel */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12"
+        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 50%, #1a0533 100%)' }}>
+
+        {/* Floating bubbles */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          {[
+            { w: 300, h: 300, top: '-80px', left: '-80px', color: 'rgba(59,130,246,0.15)' },
+            { w: 200, h: 200, top: '30%', right: '-60px', color: 'rgba(99,102,241,0.12)' },
+            { w: 150, h: 150, bottom: '20%', left: '10%', color: 'rgba(139,92,246,0.1)' },
+            { w: 100, h: 100, bottom: '-30px', right: '20%', color: 'rgba(59,130,246,0.08)' },
+            { w: 80, h: 80, top: '60%', left: '60%', color: 'rgba(99,102,241,0.15)' },
+          ].map((b, i) => (
+            <div key={i} style={{
+              position: 'absolute', width: b.w, height: b.h,
+              borderRadius: '50%', backgroundColor: b.color,
+              top: b.top, left: b.left, right: b.right, bottom: b.bottom,
+              filter: 'blur(40px)',
+              animation: `float${i} ${6 + i * 2}s ease-in-out infinite alternate`,
+            }} />
+          ))}
+        </div>
+
+        {/* Grid overlay */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }} />
+
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', position: 'relative', zIndex: 1 }}>
+          <Logo />
+          <span style={{ fontWeight: 700, fontSize: '20px', color: '#ffffff' }}>StockFlow Pro</span>
+        </Link>
+
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', marginBottom: '24px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34d399' }} />
+            <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>Live platform</span>
+          </div>
+          <h2 style={{ fontSize: '40px', fontWeight: 800, color: '#ffffff', lineHeight: 1.2, marginBottom: '20px' }}>
+            Your supply chain,<br />
+            <span style={{ background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              always connected.
+            </span>
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {[
+              { label: "Real-time inventory across all tiers", color: '#60a5fa' },
+              { label: "Credit tracking with automatic due dates", color: '#a78bfa' },
+              { label: "14-day free trial — data always safe", color: '#34d399' },
+            ].map(f => (
+              <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ArrowRight style={{ width: '12px', height: '12px', color: f.color }} />
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link 
-                      href="/forgot-password" 
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      className="pl-10 pr-10"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="remember" 
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                  />
-                  <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground">
-                    Remember me for 30 days
-                  </Label>
-                </div>
-
-                <Button type="submit" className="w-full">
-                  Sign in
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </form>
-
-              <div className="relative my-6">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  or continue with
-                </span>
+                <p style={{ fontSize: '14px', color: '#94a3b8' }}>{f.label}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="w-full">
-                  <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Google
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>
-                  </svg>
-                  Apple
-                </Button>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-center">
-              <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <Link href="/signup" className="text-primary hover:underline font-medium">
-                  Start free trial
-                </Link>
-              </p>
-            </CardFooter>
-          </Card>
-
-          {/* Role indicator */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              Secure login for Manufacturers, Wholesalers, and Retailers
-            </p>
+            ))}
           </div>
         </div>
-      </main>
+        <p style={{ fontSize: '13px', color: '#334155', position: 'relative', zIndex: 1 }}>© 2026 StockFlow Pro · Group 3</p>
+      </div>
+
+      {/* Right — login form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12" style={{ backgroundColor: '#f8fafc' }}>
+        <div style={{ width: '100%', maxWidth: '420px' }}>
+
+          {/* Mobile logo */}
+          <div className="lg:hidden mb-8">
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+              <Logo />
+              <span style={{ fontWeight: 700, fontSize: '18px', color: '#0f172a' }}>StockFlow Pro</span>
+            </Link>
+          </div>
+
+          <div style={{ marginBottom: '32px' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>Welcome back</h1>
+            <p style={{ color: '#64748b', fontSize: '15px' }}>Sign in to your StockFlow Pro account</p>
+          </div>
+
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Email address</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#9ca3af' }} />
+                  <input
+                    type="email"
+                    placeholder="you@business.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    style={{
+                      width: '100%', height: '48px', paddingLeft: '44px', paddingRight: '16px',
+                      borderRadius: '12px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc',
+                      fontSize: '14px', color: '#0f172a', outline: 'none', boxSizing: 'border-box',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#1a56db'}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#9ca3af' }} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    style={{
+                      width: '100%', height: '48px', paddingLeft: '44px', paddingRight: '48px',
+                      borderRadius: '12px', border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc',
+                      fontSize: '14px', color: '#0f172a', outline: 'none', boxSizing: 'border-box',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#1a56db'}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{
+                    position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0
+                  }}>
+                    {showPassword ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px' }}>
+                  <p style={{ color: '#dc2626', fontSize: '13px' }}>{error}</p>
+                </div>
+              )}
+
+              <button type="submit" disabled={loading} style={{
+                width: '100%', height: '50px', borderRadius: '14px',
+                background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
+                color: '#ffffff', fontWeight: 700, fontSize: '15px',
+                border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: '0 4px 20px rgba(26,86,219,0.35)',
+                transition: 'all 0.2s',
+              }}>
+                {loading ? (
+                  <div style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                ) : (
+                  <><span>Sign in</span><ArrowRight style={{ width: '16px', height: '16px' }} /></>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <p style={{ textAlign: 'center', fontSize: '14px', color: '#64748b', marginTop: '24px' }}>
+            Don&apos;t have an account?{' '}
+            <Link href="/signup" style={{ color: '#1a56db', fontWeight: 600, textDecoration: 'none' }}>Start free trial</Link>
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
 }

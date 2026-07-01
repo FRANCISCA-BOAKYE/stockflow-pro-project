@@ -1,327 +1,201 @@
 "use client"
-
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { MarketplaceFilters } from "@/components/marketplace/marketplace-filters"
-import { BusinessCard, Business } from "@/components/marketplace/business-card"
-import { Button } from "@/components/ui/button"
+import { Search, MapPin, Star, ShieldCheck, ArrowRight, Zap } from "lucide-react"
 
-// Mock data for businesses
-const mockBusinesses: Business[] = [
-  {
-    id: "1",
-    name: "Pacific Electronics Manufacturing",
-    type: "manufacturer",
-    tier: "premium",
-    products: ["Smartphones", "Tablets", "Accessories", "Chargers"],
-    priceRange: "$10 - $500",
-    deliveryTerms: "7-14 days",
-    creditTerms: "Net 30",
-    minOrderQuantity: "500 units",
-    location: "San Francisco, CA",
-    phone: "+1 (555) 123-4567",
-    email: "sales@pacificelec.com",
-    rating: 4.8,
-    reviewCount: 156,
-    verified: true,
-  },
-  {
-    id: "2",
-    name: "Global Food Distributors",
-    type: "wholesaler",
-    tier: "premium",
-    products: ["Canned Goods", "Beverages", "Snacks", "Dairy"],
-    priceRange: "$2 - $50",
-    deliveryTerms: "3-5 days",
-    creditTerms: "Net 15",
-    minOrderQuantity: "100 cases",
-    location: "Chicago, IL",
-    phone: "+1 (555) 234-5678",
-    email: "orders@globalfood.com",
-    rating: 4.6,
-    reviewCount: 89,
-    verified: true,
-  },
-  {
-    id: "3",
-    name: "Textile Masters Inc",
-    type: "manufacturer",
-    tier: "standard",
-    products: ["Cotton Fabric", "Polyester", "Silk", "Linen"],
-    priceRange: "$5 - $100/yard",
-    deliveryTerms: "14-21 days",
-    creditTerms: "Net 45",
-    minOrderQuantity: "1000 yards",
-    location: "Mumbai, India",
-    phone: "+91 22 1234 5678",
-    email: "export@textilemasters.in",
-    rating: 4.5,
-    reviewCount: 67,
-    verified: true,
-  },
-  {
-    id: "4",
-    name: "BuildRight Materials",
-    type: "wholesaler",
-    tier: "standard",
-    products: ["Cement", "Steel", "Lumber", "Hardware"],
-    priceRange: "$20 - $2000",
-    deliveryTerms: "5-7 days",
-    creditTerms: "Net 30",
-    minOrderQuantity: "1 ton",
-    location: "Houston, TX",
-    phone: "+1 (555) 345-6789",
-    email: "supply@buildright.com",
-    rating: 4.3,
-    reviewCount: 45,
-    verified: false,
-  },
-  {
-    id: "5",
-    name: "AutoParts Global",
-    type: "manufacturer",
-    tier: "premium",
-    products: ["Brake Pads", "Filters", "Batteries", "Spark Plugs"],
-    priceRange: "$5 - $300",
-    deliveryTerms: "10-15 days",
-    creditTerms: "Net 60",
-    minOrderQuantity: "200 units",
-    location: "Los Angeles, CA",
-    phone: "+1 (555) 456-7890",
-    email: "wholesale@autopartsglobal.com",
-    rating: 4.7,
-    reviewCount: 112,
-    verified: true,
-  },
-  {
-    id: "6",
-    name: "PharmaCare Distributors",
-    type: "wholesaler",
-    tier: "premium",
-    products: ["OTC Medicines", "Supplements", "Medical Supplies"],
-    priceRange: "$3 - $150",
-    deliveryTerms: "2-4 days",
-    creditTerms: "Net 30",
-    minOrderQuantity: "50 units",
-    location: "New York, NY",
-    phone: "+1 (555) 567-8901",
-    email: "orders@pharmacare.com",
-    rating: 4.9,
-    reviewCount: 203,
-    verified: true,
-  },
-  {
-    id: "7",
-    name: "Consumer Goods Factory",
-    type: "manufacturer",
-    tier: "standard",
-    products: ["Kitchenware", "Home Decor", "Storage", "Cleaning"],
-    priceRange: "$1 - $80",
-    deliveryTerms: "21-30 days",
-    creditTerms: "Net 30",
-    minOrderQuantity: "1000 units",
-    location: "Lagos, Nigeria",
-    phone: "+234 1 234 5678",
-    email: "export@cgfactory.ng",
-    rating: 4.2,
-    reviewCount: 34,
-    verified: false,
-  },
-  {
-    id: "8",
-    name: "TechWholesale UK",
-    type: "wholesaler",
-    tier: "premium",
-    products: ["Laptops", "Monitors", "Peripherals", "Networking"],
-    priceRange: "$50 - $2000",
-    deliveryTerms: "5-10 days",
-    creditTerms: "Net 45",
-    minOrderQuantity: "25 units",
-    location: "London, UK",
-    phone: "+44 20 1234 5678",
-    email: "sales@techwholesale.co.uk",
-    rating: 4.6,
-    reviewCount: 78,
-    verified: true,
-  },
-  {
-    id: "9",
-    name: "Industrial Machines Co",
-    type: "manufacturer",
-    tier: "premium",
-    products: ["CNC Machines", "Conveyors", "Packaging Equipment"],
-    priceRange: "$5000 - $500000",
-    deliveryTerms: "45-90 days",
-    creditTerms: "Custom",
-    minOrderQuantity: "1 unit",
-    location: "Chicago, IL",
-    phone: "+1 (555) 678-9012",
-    email: "inquiries@indmachines.com",
-    rating: 4.8,
-    reviewCount: 56,
-    verified: true,
-  },
-  {
-    id: "10",
-    name: "Fresh Produce Wholesale",
-    type: "wholesaler",
-    tier: "standard",
-    products: ["Fruits", "Vegetables", "Organic Produce"],
-    priceRange: "$1 - $20/lb",
-    deliveryTerms: "1-2 days",
-    creditTerms: "COD",
-    minOrderQuantity: "100 lbs",
-    location: "Miami, FL",
-    phone: "+1 (555) 789-0123",
-    email: "orders@freshwholesale.com",
-    rating: 4.4,
-    reviewCount: 92,
-    verified: true,
-  },
-  {
-    id: "11",
-    name: "Apparel Manufacturing Ltd",
-    type: "manufacturer",
-    tier: "standard",
-    products: ["T-Shirts", "Jeans", "Jackets", "Sportswear"],
-    priceRange: "$5 - $100",
-    deliveryTerms: "30-45 days",
-    creditTerms: "Net 30",
-    minOrderQuantity: "500 pieces",
-    location: "Mumbai, India",
-    phone: "+91 22 9876 5432",
-    email: "export@apparelmfg.in",
-    rating: 4.3,
-    reviewCount: 41,
-    verified: false,
-  },
-  {
-    id: "12",
-    name: "Office Supplies Central",
-    type: "wholesaler",
-    tier: "standard",
-    products: ["Stationery", "Furniture", "Tech Accessories"],
-    priceRange: "$1 - $500",
-    deliveryTerms: "3-7 days",
-    creditTerms: "Net 15",
-    minOrderQuantity: "20 items",
-    location: "New York, NY",
-    phone: "+1 (555) 890-1234",
-    email: "bulk@officesupplies.com",
-    rating: 4.5,
-    reviewCount: 67,
-    verified: true,
-  },
+const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+
+interface Listing {
+  id: string
+  name: string
+  type: string
+  location: string
+  products: string[]
+  priceRange: string
+  moq: string
+  deliveryTerms: string
+  creditTerms: string
+  rating: number
+  verified: boolean
+}
+
+const FALLBACK_LISTINGS: Listing[] = [
+  { id: "1", name: "Acme Manufacturing", type: "MANUFACTURER", location: "Kumasi, Ghana", products: ["Steel Parts", "Aluminium Sheets"], priceRange: "$10 – $500", moq: "100 units", deliveryTerms: "7–14 days", creditTerms: "Net 30", rating: 4.8, verified: true },
+  { id: "2", name: "Apex Distributors", type: "WHOLESALER", location: "Accra, Ghana", products: ["Beverages", "Dry Goods"], priceRange: "$5 – $200", moq: "50 units", deliveryTerms: "3–5 days", creditTerms: "Net 15", rating: 4.6, verified: true },
+  { id: "3", name: "Metro Wholesale", type: "WHOLESALER", location: "Tema, Ghana", products: ["Cement", "Steel"], priceRange: "$20 – $2,000", moq: "1 ton", deliveryTerms: "5–7 days", creditTerms: "Net 30", rating: 4.3, verified: false },
+  { id: "4", name: "GoldCoast Manufacturers", type: "MANUFACTURER", location: "Cape Coast, Ghana", products: ["Textiles", "Garments"], priceRange: "$5 – $300", moq: "200 units", deliveryTerms: "10–15 days", creditTerms: "Net 60", rating: 4.7, verified: true },
+  { id: "5", name: "Volta Distributors", type: "WHOLESALER", location: "Ho, Ghana", products: ["Electronics", "Appliances"], priceRange: "$50 – $5,000", moq: "5 units", deliveryTerms: "2–4 days", creditTerms: "Net 30", rating: 4.9, verified: true },
+  { id: "6", name: "Ashanti Steel Works", type: "MANUFACTURER", location: "Kumasi, Ghana", products: ["Steel Rods", "Iron Sheets"], priceRange: "$15 – $800", moq: "500 kg", deliveryTerms: "5–10 days", creditTerms: "Net 45", rating: 4.5, verified: true },
 ]
 
+const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  MANUFACTURER: { label: "Manufacturer", bg: "rgba(239,246,255,1)", text: "#1a56db", border: "rgba(219,234,254,1)" },
+  WHOLESALER: { label: "Wholesaler", bg: "rgba(255,251,235,1)", text: "#c27803", border: "rgba(253,230,138,1)" },
+  RETAILER: { label: "Retailer", bg: "rgba(236,253,245,1)", text: "#059669", border: "rgba(167,243,208,1)" },
+}
+
 export default function MarketplacePage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [businessType, setBusinessType] = useState("all")
-  const [location, setLocation] = useState("All Locations")
-  const [productCategory, setProductCategory] = useState("All Categories")
-  const [visibleCount, setVisibleCount] = useState(6)
+  const [listings, setListings] = useState<Listing[]>(FALLBACK_LISTINGS)
+  const [search, setSearch] = useState("")
+  const [typeFilter, setTypeFilter] = useState("ALL")
 
-  const clearFilters = () => {
-    setSearchQuery("")
-    setBusinessType("all")
-    setLocation("All Locations")
-    setProductCategory("All Categories")
-  }
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/marketplace/listings`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setListings(data.map((item: any) => {
+            const b = item.business || item
+            return {
+              id: String(b.id || item.id),
+              name: b.name || b.businessName || "Business",
+              type: b.tierType || "MANUFACTURER",
+              location: item.location || b.location || "Ghana",
+              products: item.productsOffered ? item.productsOffered.split(",") : item.products || [],
+              priceRange: item.priceRange || "Contact for pricing",
+              moq: item.minOrderQuantity || "Contact seller",
+              deliveryTerms: item.deliveryTerms || "TBD",
+              creditTerms: item.creditTerms || "TBD",
+              rating: 4.5,
+              verified: b.subscriptionStatus === "ACTIVE" || b.subscriptionStatus === "TRIAL",
+            }
+          }))
+        }
+      }).catch(() => {})
+  }, [])
 
-  const filteredBusinesses = useMemo(() => {
-    return mockBusinesses.filter((business) => {
-      // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
-        const matchesName = business.name.toLowerCase().includes(query)
-        const matchesProducts = business.products.some(p => p.toLowerCase().includes(query))
-        if (!matchesName && !matchesProducts) return false
-      }
-
-      // Business type filter
-      if (businessType !== "all" && business.type !== businessType) {
-        return false
-      }
-
-      // Location filter
-      if (location !== "All Locations" && !business.location.includes(location.split(",")[0])) {
-        return false
-      }
-
-      return true
-    })
-  }, [searchQuery, businessType, location, productCategory])
-
-  const visibleBusinesses = filteredBusinesses.slice(0, visibleCount)
-  const hasMore = visibleCount < filteredBusinesses.length
+  const filtered = useMemo(() => listings.filter(l => {
+    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) || l.products.some(p => p.toLowerCase().includes(search.toLowerCase()))
+    const matchType = typeFilter === "ALL" || l.type === typeFilter
+    return matchSearch && matchType
+  }), [listings, search, typeFilter])
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-white">
       <Navbar />
-      <main className="flex-1 pt-24 pb-16">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          {/* Header */}
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Marketplace</h1>
-            <p className="mt-2 text-lg text-muted-foreground">
-              Discover verified manufacturers and wholesalers. Connect and grow your business.
+      <main>
+        <section className="pt-32 pb-16 px-6 lg:px-8 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 50%, #1a0533 100%)' }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', backgroundColor: 'rgba(59,130,246,0.1)', filter: 'blur(60px)' }} />
+          <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '300px', height: '300px', borderRadius: '50%', backgroundColor: 'rgba(99,102,241,0.1)', filter: 'blur(60px)' }} />
+          <div className="mx-auto max-w-4xl text-center relative">
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', marginBottom: '24px' }}>
+              <Zap style={{ width: '14px', height: '14px', color: '#60a5fa' }} />
+              <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>Open marketplace</span>
+            </div>
+            <h1 style={{ fontSize: '48px', fontWeight: 800, color: '#ffffff', marginBottom: '16px', lineHeight: 1.2 }}>
+              Find your next<br />
+              <span style={{ background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                trading partner
+              </span>
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '18px', marginBottom: '32px' }}>
+              Discover verified manufacturers and wholesalers. No account required to browse.
             </p>
+            <div style={{ position: 'relative', maxWidth: '560px', margin: '0 auto' }}>
+              <Search style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search by name or product..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{
+                  width: '100%', height: '56px', paddingLeft: '50px', paddingRight: '20px',
+                  borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)',
+                  fontSize: '15px', color: '#ffffff', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
           </div>
+        </section>
 
-          {/* Filters */}
-          <div className="mb-8">
-            <MarketplaceFilters
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              businessType={businessType}
-              setBusinessType={setBusinessType}
-              location={location}
-              setLocation={setLocation}
-              productCategory={productCategory}
-              setProductCategory={setProductCategory}
-              clearFilters={clearFilters}
-            />
-          </div>
-
-          {/* Results count */}
-          <div className="mb-6">
-            <p className="text-sm text-muted-foreground">
-              Showing {visibleBusinesses.length} of {filteredBusinesses.length} businesses
-            </p>
-          </div>
-
-          {/* Business cards grid */}
-          {filteredBusinesses.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {visibleBusinesses.map((business) => (
-                  <BusinessCard key={business.id} business={business} />
+        <section className="py-12 px-6 lg:px-8 bg-slate-50">
+          <div className="mx-auto max-w-7xl">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {["ALL", "MANUFACTURER", "WHOLESALER"].map(t => (
+                  <button key={t} onClick={() => setTypeFilter(t)} style={{
+                    padding: '8px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', border: 'none', transition: 'all 0.2s',
+                    backgroundColor: typeFilter === t ? '#0f172a' : '#ffffff',
+                    color: typeFilter === t ? '#ffffff' : '#64748b',
+                    boxShadow: typeFilter === t ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.06)',
+                  }}>
+                    {t === "ALL" ? "All businesses" : t.charAt(0) + t.slice(1).toLowerCase()}
+                  </button>
                 ))}
               </div>
-
-              {/* Load more button */}
-              {hasMore && (
-                <div className="mt-10 text-center">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => setVisibleCount((prev) => prev + 6)}
-                  >
-                    Load More Businesses
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-16">
-              <p className="text-lg text-muted-foreground">No businesses found matching your criteria.</p>
-              <Button variant="link" onClick={clearFilters} className="mt-2">
-                Clear filters
-              </Button>
+              <p style={{ fontSize: '13px', color: '#64748b' }}>{filtered.length} businesses found</p>
             </div>
-          )}
-        </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filtered.map(listing => {
+                const tc = TYPE_CONFIG[listing.type] || TYPE_CONFIG.MANUFACTURER
+                return (
+                  <div key={listing.id} style={{
+                    backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px',
+                    border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                    transition: 'all 0.3s', cursor: 'pointer',
+                  }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 30px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: tc.bg, color: tc.text, border: `1px solid ${tc.border}` }}>
+                          {tc.label}
+                        </span>
+                        {listing.verified && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#059669', backgroundColor: '#ecfdf5', padding: '4px 8px', borderRadius: '8px', border: '1px solid #a7f3d0', fontWeight: 600 }}>
+                            <ShieldCheck style={{ width: '11px', height: '11px' }} />Verified
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Star style={{ width: '13px', height: '13px', color: '#f59e0b', fill: '#f59e0b' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{listing.rating}</span>
+                      </div>
+                    </div>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{listing.name}</h3>
+                    <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+                      <MapPin style={{ width: '12px', height: '12px' }} />{listing.location}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                      {listing.products.length > 0 ? listing.products.map(p => (
+                        <span key={p} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 500 }}>{p}</span>
+                      )) : (
+                        <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }}>Contact for product list</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
+                      {[
+                        { label: "Price range", value: listing.priceRange },
+                        { label: "Min. order", value: listing.moq },
+                        { label: "Delivery", value: listing.deliveryTerms },
+                        { label: "Credit terms", value: listing.creditTerms },
+                      ].map(d => (
+                        <div key={d.label}>
+                          <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px', fontWeight: 500 }}>{d.label}</p>
+                          <p style={{ fontSize: '12px', color: '#0f172a', fontWeight: 600 }}>{d.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <button style={{
+                      width: '100%', padding: '12px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
+                      color: '#ffffff', fontWeight: 600, fontSize: '13px',
+                      border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    }}>
+                      Contact <ArrowRight style={{ width: '14px', height: '14px' }} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
       </main>
       <Footer />
     </div>

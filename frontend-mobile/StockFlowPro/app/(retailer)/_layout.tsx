@@ -68,6 +68,10 @@ export default function RetailerLayout() {
           ),
         }}
       />
+
+<Tabs.Screen name="linked-wholesalers/index"
+ options={{ href: null }} />
+
     </Tabs>
   );
 }
