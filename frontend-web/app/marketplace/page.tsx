@@ -45,19 +45,22 @@ export default function MarketplacePage() {
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          setListings(data.map((item: any) => ({
-            id: String(item.id),
-            name: item.businessName || "Business",
-            type: item.tierType || "MANUFACTURER",
-            location: item.location || "Ghana",
-            products: item.productsOffered ? item.productsOffered.split(",") : [],
-            priceRange: item.priceRange || "Contact for pricing",
-            moq: item.minOrderQuantity || "Contact seller",
-            deliveryTerms: item.deliveryTerms || "TBD",
-            creditTerms: item.creditTerms || "TBD",
-            rating: 4.5,
-            verified: true,
-          })))
+          setListings(data.map((item: any) => {
+            const b = item.business || item
+            return {
+              id: String(b.id || item.id),
+              name: b.name || b.businessName || "Business",
+              type: b.tierType || "MANUFACTURER",
+              location: item.location || b.location || "Ghana",
+              products: item.productsOffered ? item.productsOffered.split(",") : item.products || [],
+              priceRange: item.priceRange || "Contact for pricing",
+              moq: item.minOrderQuantity || "Contact seller",
+              deliveryTerms: item.deliveryTerms || "TBD",
+              creditTerms: item.creditTerms || "TBD",
+              rating: 4.5,
+              verified: b.subscriptionStatus === "ACTIVE" || b.subscriptionStatus === "TRIAL",
+            }
+          }))
         }
       }).catch(() => {})
   }, [])
@@ -72,7 +75,6 @@ export default function MarketplacePage() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <main>
-        {/* Hero */}
         <section className="pt-32 pb-16 px-6 lg:px-8 relative overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 50%, #1a0533 100%)' }}>
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -92,8 +94,6 @@ export default function MarketplacePage() {
             <p style={{ color: '#94a3b8', fontSize: '18px', marginBottom: '32px' }}>
               Discover verified manufacturers and wholesalers. No account required to browse.
             </p>
-
-            {/* Search */}
             <div style={{ position: 'relative', maxWidth: '560px', margin: '0 auto' }}>
               <Search style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#94a3b8' }} />
               <input
@@ -112,7 +112,6 @@ export default function MarketplacePage() {
           </div>
         </section>
 
-        {/* Filters + Listings */}
         <section className="py-12 px-6 lg:px-8 bg-slate-50">
           <div className="mx-auto max-w-7xl">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
@@ -159,18 +158,17 @@ export default function MarketplacePage() {
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{listing.rating}</span>
                       </div>
                     </div>
-
                     <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{listing.name}</h3>
                     <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
                       <MapPin style={{ width: '12px', height: '12px' }} />{listing.location}
                     </p>
-
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
-                      {listing.products.map(p => (
+                      {listing.products.length > 0 ? listing.products.map(p => (
                         <span key={p} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 500 }}>{p}</span>
-                      ))}
+                      )) : (
+                        <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }}>Contact for product list</span>
+                      )}
                     </div>
-
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
                       {[
                         { label: "Price range", value: listing.priceRange },
@@ -184,7 +182,6 @@ export default function MarketplacePage() {
                         </div>
                       ))}
                     </div>
-
                     <button style={{
                       width: '100%', padding: '12px', borderRadius: '12px',
                       background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
