@@ -62,13 +62,12 @@ export default function WholesalerDashboard() {
     { label: 'ACTIVE RETAILERS', value: data?.activeRetailers ?? '—', sub: 'partners', icon: 'people-outline', iconBg: '#FFFBEB', iconColor: '#C27803' },
   ];
 
-  const quickActions = [
+const quickActions = [
     { label: 'Warehouse', icon: 'archive-outline', bg: '#EFF6FF', color: '#1A56DB', route: '/(wholesaler)/warehouse' },
     { label: 'Sell', icon: 'cart-outline', bg: '#ECFDF5', color: '#059669', route: '/(wholesaler)/pos' },
     { label: 'Credit', icon: 'wallet-outline', bg: '#FEF2F2', color: '#DC2626', route: '/(wholesaler)/credit' },
-    { label: 'Invoices', icon: 'receipt-outline', bg: '#FFFBEB', color: '#C27803', route: null },
+    { label: 'Invoices', icon: 'receipt-outline', bg: '#FFFBEB', color: '#C27803', route: '/invoices' },
   ];
-
   if (loading) return (
     <View style={s.center}>
       <ActivityIndicator size="large" color="#1A56DB" />
