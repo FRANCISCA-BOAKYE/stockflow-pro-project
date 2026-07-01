@@ -1,153 +1,100 @@
+"use client"
 import Link from "next/link"
-import { 
-  Package, 
-  CreditCard, 
-  FileText, 
-  Factory, 
-  Store, 
-  Truck,
-  Mail,
-  Phone,
-  MapPin
-} from "lucide-react"
 
-const footerNavigation = {
-  product: [
-    { name: "Features", href: "#features" },
-    { name: "Marketplace", href: "/marketplace" },
-    { name: "Pricing", href: "/pricing" },
-    { name: "Integrations", href: "#" },
-  ],
-  company: [
-    { name: "About", href: "#" },
-    { name: "Blog", href: "#" },
-    { name: "Careers", href: "#" },
-    { name: "Press", href: "#" },
-  ],
-  resources: [
-    { name: "Documentation", href: "#" },
-    { name: "Help Center", href: "#" },
-    { name: "API Reference", href: "#" },
-    { name: "Status", href: "#" },
-  ],
-  legal: [
-    { name: "Privacy", href: "#" },
-    { name: "Terms", href: "#" },
-    { name: "Cookie Policy", href: "#" },
-    { name: "Licenses", href: "#" },
-  ],
-}
-
-const businessTypes = [
-  { icon: Factory, label: "Manufacturer" },
-  { icon: Truck, label: "Wholesaler" },
-  { icon: Store, label: "Retailer" },
-]
+const Logo = () => (
+  <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+    <rect x="3" y="3" width="84" height="84" rx="20" fill="#0F172A"/>
+    <polygon points="45,22 66,33 66,55 45,66 24,55 24,33" fill="none" stroke="#1A56DB" strokeWidth="0.5" opacity="0.5"/>
+    <polygon points="45,22 66,33 45,44 24,33" fill="url(#f1)" opacity="0.8"/>
+    <polygon points="24,33 45,44 45,66 24,55" fill="url(#f2)" opacity="0.6"/>
+    <polygon points="66,33 45,44 45,66 66,55" fill="#1A56DB" opacity="0.4"/>
+    <circle cx="45" cy="44" r="4" fill="white" opacity="0.9"/>
+    <circle cx="45" cy="44" r="2" fill="#1A56DB"/>
+    <defs>
+      <linearGradient id="f1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#60A5FA"/><stop offset="100%" stopColor="#1A56DB"/></linearGradient>
+      <linearGradient id="f2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3B82F6"/><stop offset="100%" stopColor="#1E3A8A"/></linearGradient>
+    </defs>
+  </svg>
+)
 
 export function Footer() {
   return (
-    <footer className="bg-primary text-primary-foreground">
-      <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
-        <div className="xl:grid xl:grid-cols-3 xl:gap-8">
-          <div className="space-y-6">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-lg bg-primary-foreground flex items-center justify-center">
-                <span className="text-primary font-bold text-lg">SF</span>
-              </div>
-              <div>
-                <span className="font-bold text-xl">StockFlow Pro</span>
-                <p className="text-xs text-primary-foreground/70">Integrated Supply Chain Management</p>
-              </div>
+    <footer style={{ background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 100%)', padding: '64px 24px 32px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px', marginBottom: '48px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <Logo />
+              <span style={{ fontWeight: 700, fontSize: '17px', color: '#ffffff' }}>StockFlow Pro</span>
             </div>
-            <p className="text-sm text-primary-foreground/80 max-w-xs leading-relaxed">
-              Connecting Manufacturers, Wholesalers, and Retailers with powerful inventory management and supply chain solutions.
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, maxWidth: '220px' }}>
+              Integrated supply chain management for manufacturers, wholesalers, and retailers across Ghana.
             </p>
-            <div className="flex gap-4">
-              {businessTypes.map((type) => (
-                <div key={type.label} className="flex items-center gap-1.5 text-xs text-primary-foreground/70">
-                  <type.icon className="h-4 w-4" />
-                  <span>{type.label}</span>
-                </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+              {['M', 'W', 'R'].map((t, i) => (
+                <div key={t} style={{
+                  width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '11px', fontWeight: 700, color: '#ffffff',
+                  background: i === 0 ? 'linear-gradient(135deg,#1a56db,#4f46e5)' : i === 1 ? 'linear-gradient(135deg,#d97706,#ea580c)' : 'linear-gradient(135deg,#059669,#10b981)'
+                }}>{t}</div>
               ))}
             </div>
           </div>
-          
-          <div className="mt-12 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
-            <div className="md:grid md:grid-cols-2 md:gap-8">
-              <div>
-                <h3 className="text-sm font-semibold">Product</h3>
-                <ul role="list" className="mt-4 space-y-3">
-                  {footerNavigation.product.map((item) => (
-                    <li key={item.name}>
-                      <Link href={item.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-10 md:mt-0">
-                <h3 className="text-sm font-semibold">Company</h3>
-                <ul role="list" className="mt-4 space-y-3">
-                  {footerNavigation.company.map((item) => (
-                    <li key={item.name}>
-                      <Link href={item.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Platform</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[
+                { label: 'Features', href: '/#features' },
+                { label: 'How it works', href: '/#how-it-works' },
+                { label: 'Marketplace', href: '/marketplace' },
+                { label: 'Pricing', href: '/pricing' },
+              ].map(link => (
+                <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
+                  onMouseEnter={(e: any) => e.target.style.color = '#ffffff'}
+                  onMouseLeave={(e: any) => e.target.style.color = '#94a3b8'}>
+                  {link.label}
+                </Link>
+              ))}
             </div>
-            <div className="md:grid md:grid-cols-2 md:gap-8">
-              <div>
-                <h3 className="text-sm font-semibold">Resources</h3>
-                <ul role="list" className="mt-4 space-y-3">
-                  {footerNavigation.resources.map((item) => (
-                    <li key={item.name}>
-                      <Link href={item.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-10 md:mt-0">
-                <h3 className="text-sm font-semibold">Legal</h3>
-                <ul role="list" className="mt-4 space-y-3">
-                  {footerNavigation.legal.map((item) => (
-                    <li key={item.name}>
-                      <Link href={item.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          </div>
+
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Account</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[
+                { label: 'Sign in', href: '/login' },
+                { label: 'Start free trial', href: '/signup' },
+                { label: 'Dashboard', href: '/dashboard' },
+              ].map(link => (
+                <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'none' }}
+                  onMouseEnter={(e: any) => e.target.style.color = '#ffffff'}
+                  onMouseLeave={(e: any) => e.target.style.color = '#94a3b8'}>
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Business tiers</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {['Manufacturer', 'Wholesaler', 'Retailer'].map(t => (
+                <span key={t} style={{ fontSize: '13px', color: '#94a3b8' }}>{t}</span>
+              ))}
+            </div>
+            <div style={{ marginTop: '24px', padding: '16px', borderRadius: '14px', backgroundColor: 'rgba(26,86,219,0.1)', border: '1px solid rgba(26,86,219,0.2)' }}>
+              <p style={{ fontSize: '11px', color: '#60a5fa', fontWeight: 600, marginBottom: '6px' }}>14-day free trial</p>
+              <p style={{ fontSize: '11px', color: '#475569' }}>No card required. Data always safe.</p>
             </div>
           </div>
         </div>
-        
-        <div className="mt-12 border-t border-primary-foreground/20 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex flex-wrap justify-center gap-6 text-sm text-primary-foreground/70">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                <span>support@stockflowpro.com</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                <span>+1 (555) 123-4567</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                <span>San Francisco, CA</span>
-              </div>
-            </div>
-            <p className="text-sm text-primary-foreground/60">
-              &copy; {new Date().getFullYear()} StockFlow Pro. All rights reserved.
-            </p>
-          </div>
+
+        <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: '24px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <p style={{ fontSize: '12px', color: '#334155' }}>© 2026 StockFlow Pro · Group 3 · All rights reserved.</p>
+          <p style={{ fontSize: '12px', color: '#334155' }}>Built with care for Ghana's supply chain.</p>
         </div>
       </div>
     </footer>
