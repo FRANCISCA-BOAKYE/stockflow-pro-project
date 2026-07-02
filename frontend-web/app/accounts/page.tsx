@@ -24,12 +24,36 @@ const TIER_COLORS: Record<string, { gradient: string; light: string; text: strin
 export default function AccountsPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+const [accounts, setAccounts] = useState<any[]>([])
+const [loadingAccounts, setLoadingAccounts] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem("sf_user")
-    if (!stored) { router.replace("/login"); return }
-    setUser(JSON.parse(stored))
-  }, [])
+  const stored = localStorage.getItem("sf_user")
+  const token = localStorage.getItem("sf_token")
+  if (!stored || !token) { router.replace("/login"); return }
+  const u = JSON.parse(stored)
+  setUser(u)
+
+  fetch(`https://stockflow-backend-qwpt.onrender.com/auth/sub-accounts`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        setAccounts([
+          { name: u.name || "You", role: u.role || "Admin", email: u.email, isAdmin: true },
+          ...data.map((acc: any) => ({
+            name: acc.role,
+            role: acc.role,
+            email: acc.email,
+            isAdmin: false,
+          }))
+        ])
+      }
+    })
+    .catch(() => {})
+    .finally(() => setLoadingAccounts(false))
+}, [])
 
   if (!user) return null
 
@@ -40,15 +64,7 @@ export default function AccountsPage() {
   const domain = user.email?.includes("@") ? user.email.split("@")[1] : "business.com"
   const tc = TIER_COLORS[tier] || TIER_COLORS.RETAILER
 
-  const accounts: { name: string; role: string; email: string; isAdmin: boolean }[] = [
-    { name: user.name || "You", role: roleConfig.admin, email: user.email, isAdmin: true }
-  ]
-  let roleIndex = 0
-  while (accounts.length < limit) {
-    const role = roleConfig.staff[roleIndex % roleConfig.staff.length]
-    accounts.push({ name: role, role, email: `${role.toLowerCase().replace(/ /g, ".")}${accounts.length}@${domain}`, isAdmin: false })
-    roleIndex++
-  }
+  
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>

@@ -77,17 +77,35 @@ function SignupContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ businessName: formData.businessName, tierType: selectedTier, subscriptionPlan: selectedPlan, adminName: formData.adminName, adminEmail: formData.email, adminPassword: formData.password }),
       })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || d.message || "Registration failed") }
-      const subAccounts = generateSubAccounts(selectedTier, selectedPlan, formData.email)
-      setRegistered({ email: formData.email, password: formData.password, businessName: formData.businessName, tier: selectedTier, plan: selectedPlan, subAccounts })
-      setStep(4)
+      const json = await res.json()
+if (!res.ok) throw new Error(json.error || json.message || "Registration failed")
 
-      // Send welcome email
-      sendEmail(
-        formData.email,
-        `Welcome to StockFlow Pro — ${formData.businessName}`,
-        welcomeEmailHtml(formData.businessName, selectedTier, selectedPlan, formData.email, formData.password)
-      ).catch(() => {})
+const subAccounts = [
+  { role: json.role || "Admin", email: json.email, isAdmin: true, password: formData.password },
+  ...(json.subAccounts || []).map((acc: any) => ({
+    role: acc.role,
+    email: acc.email,
+    isAdmin: false,
+    password: acc.temporaryPassword,
+  }))
+]
+
+setRegistered({
+  email: formData.email,
+  password: formData.password,
+  businessName: json.businessName || formData.businessName,
+  tier: json.tierType || selectedTier,
+  plan: json.subscriptionPlan || selectedPlan,
+  subAccounts,
+})
+setStep(4)
+
+// Send welcome email
+sendEmail(
+  formData.email,
+  `Welcome to StockFlow Pro — ${formData.businessName}`,
+  welcomeEmailHtml(formData.businessName, selectedTier, selectedPlan, formData.email, formData.password)
+).catch(() => {})
 
     } catch (err: any) {
       setError(err.message || "Something went wrong.")
@@ -270,7 +288,7 @@ function SignupContent() {
                       </div>
                       <p className="text-xs font-mono text-slate-500 mt-0.5">{acc.email}</p>
                     </div>
-                    <p className="text-xs font-mono text-slate-400">{acc.isAdmin ? registered.password : "Set on first login"}</p>
+                    <p className="text-xs font-mono text-slate-400">{acc.isAdmin ? registered.password : acc.password || "TempPass123!"}</p>
                   </div>
                 ))}
               </div>
