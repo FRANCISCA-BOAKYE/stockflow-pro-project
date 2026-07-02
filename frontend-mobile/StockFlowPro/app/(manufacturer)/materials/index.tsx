@@ -78,6 +78,18 @@ export default function MaterialsScreen() {
     }
   };
 
+  const handleDeleteMaterial = async (id: string | number) => {
+    setAddLoading(true);
+    try {
+      await api.delete(`/manufacturer/materials/${id}`);
+      fetchMaterials();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to delete material');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   const filtered = materials.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -148,13 +160,24 @@ export default function MaterialsScreen() {
                       {isLow ? 'Low' : 'OK'}
                     </Text>
                   </View>
-                  <TouchableOpacity style={s.stockInBtn} onPress={() => {
-                    setSelectedMaterial(item);
-                    setShowStockInModal(true);
-                  }}>
-                    <Ionicons name="add" size={14} color="#1A56DB" />
-                    <Text style={s.stockInText}>Stock in</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TouchableOpacity style={s.stockInBtn} onPress={() => {
+                      setSelectedMaterial(item);
+                      setShowStockInModal(true);
+                    }}>
+                      <Ionicons name="add" size={14} color="#1A56DB" />
+                      <Text style={s.stockInText}>Stock in</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.deleteBtn} onPress={() => {
+                      setSelectedMaterial(item);
+                      Alert.alert('Delete material', `Remove "${item.name}"? This cannot be undone.`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => handleDeleteMaterial(item.id) },
+                      ]);
+                    }}>
+                      <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </TouchableOpacity>
             );
@@ -255,6 +278,7 @@ const s = StyleSheet.create({
   badgeTextRed: { color: '#991B1B' },
   stockInBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8 },
   stockInText: { fontSize: 10, color: '#1A56DB', fontWeight: '600' },
+  deleteBtn: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center' },
   fab: { position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: '#1A56DB', borderRadius: 25, alignItems: 'center', justifyContent: 'center', shadowColor: '#1A56DB', shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },

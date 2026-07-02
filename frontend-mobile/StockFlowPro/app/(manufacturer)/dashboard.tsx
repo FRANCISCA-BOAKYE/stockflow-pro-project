@@ -181,26 +181,29 @@ export default function ManufacturerDashboard() {
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Recent activity</Text>
           </View>
-          {[
-            { name: 'Production run #24', time: 'Today · 8:00 AM', detail: '500 units', positive: true, by: 'James Mensah' },
-            { name: 'Material restock', time: 'Yesterday · 2:30 PM', detail: 'Steel Rods 6mm', positive: false, by: 'Grace Owusu' },
-            { name: 'Dispatch to Apex', time: 'Yesterday · 10:00 AM', detail: '$12,400', positive: true, by: 'Kwesi Appiah' },
-          ].map((t, i) => (
-            <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
-              <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
-                <Ionicons
-                  name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
-                  size={16}
-                  color={t.positive ? '#059669' : '#64748B'}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.txnName}>{t.name}</Text>
-                <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-              </View>
-              <Text style={s.txnDetail}>{t.detail}</Text>
+          {(data?.recentActivity ?? []).length === 0 ? (
+            <View style={s.emptyActivity}>
+              <Ionicons name="time-outline" size={24} color="#D1D5DB" />
+              <Text style={s.emptyActivityText}>No recent activity</Text>
             </View>
-          ))}
+          ) : (
+            data?.recentActivity?.map((t: any, i: number) => (
+              <View key={i} style={[s.txn, { marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }]}>
+                <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
+                  <Ionicons
+                    name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
+                    size={16}
+                    color={t.positive ? '#059669' : '#64748B'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.txnName}>{t.name}</Text>
+                  <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+                </View>
+                <Text style={s.txnDetail}>{t.detail}</Text>
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -246,4 +249,6 @@ const s = StyleSheet.create({
   txnName: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
   txnTime: { fontSize: 10, color: '#94A3B8', marginTop: 1 },
   txnDetail: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  emptyActivity: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+  emptyActivityText: { fontSize: 13, color: '#9CA3AF' },
 });

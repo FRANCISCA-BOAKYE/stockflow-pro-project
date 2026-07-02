@@ -32,6 +32,12 @@ public class ManufacturerController {
         return ResponseEntity.ok(manufacturerService.addMaterial(req, getBusinessId(auth)));
     }
 
+    @DeleteMapping("/materials/{id}")
+    public ResponseEntity<?> deleteMaterial(@PathVariable Long id, Authentication auth) {
+        manufacturerService.deleteMaterial(id, getBusinessId(auth));
+        return ResponseEntity.ok(java.util.Map.of("message", "Material deleted"));
+    }
+
     @PostMapping("/materials/stock-in")
     public ResponseEntity<Material> stockIn(
             @RequestBody MaterialStockInRequest req, Authentication auth) {

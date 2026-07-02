@@ -1,30 +1,43 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const GOODS = [
-  { id: '1', name: 'Steel Bracket A', sku: 'SBA-001', stock: 1240, unit: 'units', price: 45.00, category: 'Metal Parts' },
-  { id: '2', name: 'Copper Assembly B', sku: 'CAB-002', stock: 680, unit: 'units', price: 120.00, category: 'Electrical' },
-  { id: '3', name: 'Fabric Panel C', sku: 'FPC-003', stock: 320, unit: 'metres', price: 18.00, category: 'Textile' },
-  { id: '4', name: 'Aluminium Frame D', sku: 'AFD-004', stock: 45, unit: 'units', price: 200.00, category: 'Metal Parts' },
-  { id: '5', name: 'Wire Harness E', sku: 'WHE-005', stock: 890, unit: 'units', price: 35.00, category: 'Electrical' },
-];
+import { api } from '../services/api';
 
 const CATEGORIES = ['All', 'Metal Parts', 'Electrical', 'Textile'];
 
 export default function FinishedGoodsScreen() {
   const router = useRouter();
+  const [goods, setGoods] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filtered = GOODS.filter(g => {
-    const matchSearch = g.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === 'All' || g.category === category;
+  const fetchGoods = useCallback(async () => {
+    try {
+      const res = await api.get('/manufacturer/finished-goods');
+      setGoods(res.data || []);
+    } catch (e) {
+      console.log('Error fetching finished goods:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchGoods(); }, [fetchGoods]);
+
+  const filtered = goods.filter(g => {
+    const matchSearch = (g.name || '').toLowerCase().includes(search.toLowerCase());
+    const categoryField = g.category || g.categoryName || '';
+    const matchCat = category === 'All' || categoryField === category;
     return matchSearch && matchCat;
   });
 
-  const totalValue = filtered.reduce((sum, g) => sum + g.stock * g.price, 0);
+  const totalValue = filtered.reduce((sum, g) => sum + (g.quantityInStock || g.stock || 0) * (g.price || g.unitPrice || 0), 0);
+
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
@@ -52,9 +65,17 @@ export default function FinishedGoodsScreen() {
         </View>
         <FlatList
           data={filtered}
-          keyExtractor={item => item.id}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchGoods(); }} tintColor="#1A56DB" />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="cube-outline" size={40} color="#D1D5DB" />
+              <Text style={s.emptyText}>No finished goods</Text>
+              <Text style={s.emptySub}>Run a production batch first to create finished goods</Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={s.card}>
               <View style={s.cardIcon}>
@@ -62,12 +83,12 @@ export default function FinishedGoodsScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.name}>{item.name}</Text>
-                <Text style={s.sku}>{item.sku} · {item.category}</Text>
-                <Text style={s.stock}>{item.stock} {item.unit} in stock</Text>
+                <Text style={s.sku}>{item.sku || item.id} · {item.category || item.categoryName || ''}</Text>
+                <Text style={s.stock}>{item.quantityInStock || item.stock || 0} {item.unit || 'units'} in stock</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={s.price}>${item.price.toFixed(2)}</Text>
-                <Text style={s.perUnit}>per {item.unit.replace('s', '')}</Text>
+                <Text style={s.price}>${Number(item.price || item.unitPrice || 0).toFixed(2)}</Text>
+                <Text style={s.perUnit}>per {(item.unit || 'units').replace('s', '')}</Text>
               </View>
             </View>
           )}
@@ -82,6 +103,7 @@ export default function FinishedGoodsScreen() {
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
@@ -102,4 +124,7 @@ const s = StyleSheet.create({
   price: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
   perUnit: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
   fab: { position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: '#1A56DB', borderRadius: 25, alignItems: 'center', justifyContent: 'center', elevation: 6 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
 });

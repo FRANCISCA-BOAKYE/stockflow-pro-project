@@ -63,6 +63,15 @@ public class ManufacturerService {
         return materialRepository.findByBusinessId(businessId);
     }
 
+    // DELETE MATERIAL
+    @Transactional
+    public void deleteMaterial(Long materialId, Long businessId) {
+        Material m = materialRepository
+                .findByBusinessIdAndId(businessId, materialId)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        materialRepository.delete(m);
+    }
+
     // STOCK IN MATERIAL
     @Transactional
     public Material stockInMaterial(MaterialStockInRequest req, Long businessId) {

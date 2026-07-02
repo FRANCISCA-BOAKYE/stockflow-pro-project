@@ -1,14 +1,8 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const DISPATCHES = [
-  { id: 'DSP-001', to: 'Apex Distributors', items: 'Steel Bracket A x500', date: 'Jun 26, 2026', status: 'DELIVERED', amount: 22500 },
-  { id: 'DSP-002', to: 'Sunrise Wholesale', items: 'Copper Assembly B x200', date: 'Jun 24, 2026', status: 'IN_TRANSIT', amount: 24000 },
-  { id: 'DSP-003', to: 'Metro Distributors', items: 'Fabric Panel C x150m', date: 'Jun 22, 2026', status: 'PENDING', amount: 2700 },
-  { id: 'DSP-004', to: 'Delta Trading Co', items: 'Wire Harness E x300', date: 'Jun 20, 2026', status: 'DELIVERED', amount: 10500 },
-];
+import { api } from '../services/api';
 
 const STATUS_MAP: Record<string, { bg: string; text: string; label: string; icon: string }> = {
   DELIVERED: { bg: '#D1FAE5', text: '#065F46', label: 'Delivered', icon: 'checkmark-circle-outline' },
@@ -18,6 +12,25 @@ const STATUS_MAP: Record<string, { bg: string; text: string; label: string; icon
 
 export default function DispatchScreen() {
   const router = useRouter();
+  const [dispatches, setDispatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDispatches = useCallback(async () => {
+    try {
+      const res = await api.get('/manufacturer/dispatch');
+      setDispatches(res.data || []);
+    } catch (e) {
+      console.log('Error fetching dispatches:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchDispatches(); }, [fetchDispatches]);
+
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
@@ -35,28 +48,37 @@ export default function DispatchScreen() {
       </View>
       <View style={s.body}>
         <FlatList
-          data={DISPATCHES}
-          keyExtractor={item => item.id}
+          data={dispatches}
+          keyExtractor={item => String(item.id || item.dispatchId)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchDispatches(); }} tintColor="#1A56DB" />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="send-outline" size={40} color="#D1D5DB" />
+              <Text style={s.emptyText}>No dispatches yet</Text>
+              <Text style={s.emptySub}>Dispatches appear when you sell finished goods</Text>
+            </View>
+          }
           renderItem={({ item }) => {
-            const st = STATUS_MAP[item.status];
+            const status = item.status || item.dispatchStatus || 'PENDING';
+            const st = STATUS_MAP[status] || STATUS_MAP.PENDING;
             return (
               <View style={s.card}>
                 <View style={[s.cardIcon, { backgroundColor: st.bg }]}>
                   <Ionicons name={st.icon as any} size={18} color={st.text} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.to}>{item.to}</Text>
-                  <Text style={s.items}>{item.items}</Text>
+                  <Text style={s.to}>{item.wholesalerName || item.buyerName || 'Customer'}</Text>
+                  <Text style={s.items}>{item.productName || `Items`} x{item.quantity || 0}</Text>
                   <View style={s.row}>
                     <Ionicons name="calendar-outline" size={11} color="#9CA3AF" />
-                    <Text style={s.date}> {item.date}</Text>
+                    <Text style={s.date}> {new Date(item.recordedAt || item.date).toLocaleDateString()}</Text>
                   </View>
-                  <Text style={s.dispatchId}>{item.id}</Text>
+                  <Text style={s.dispatchId}>{item.dispatchId || item.id}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={s.amount}>${item.amount.toLocaleString()}</Text>
+                  <Text style={s.amount}>${Number(item.amountUsd || item.amount || 0).toLocaleString()}</Text>
                   <View style={[s.badge, { backgroundColor: st.bg }]}>
                     <Text style={[s.badgeText, { color: st.text }]}>{st.label}</Text>
                   </View>
@@ -72,6 +94,7 @@ export default function DispatchScreen() {
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   addBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
@@ -88,4 +111,7 @@ const s = StyleSheet.create({
   amount: { fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
   badge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   badgeText: { fontSize: 10, fontWeight: '500' },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
 });

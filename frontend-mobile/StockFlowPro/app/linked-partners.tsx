@@ -1,47 +1,83 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const PARTNERS = [
-  { id: '1', name: 'Acme Manufacturing', type: 'MANUFACTURER', location: 'Kumasi, Ghana', products: ['Steel Parts', 'Aluminium'], rating: 4.8, verified: true, linked: true },
-  { id: '2', name: 'BevCo Ltd', type: 'MANUFACTURER', location: 'Accra, Ghana', products: ['Beverages'], rating: 4.6, verified: true, linked: true },
-  { id: '3', name: 'Bright Mart Retail', type: 'RETAILER', location: 'Kumasi, Ghana', products: ['Food', 'Household'], rating: 4.5, verified: true, linked: true },
-  { id: '4', name: 'Delta Stores', type: 'RETAILER', location: 'Tema, Ghana', products: ['Electronics'], rating: 4.3, verified: false, linked: true },
-  { id: '5', name: 'GoldCoast Manufacturers', type: 'MANUFACTURER', location: 'Cape Coast, Ghana', products: ['Textiles'], rating: 4.7, verified: true, linked: false },
-  { id: '6', name: 'City Mart', type: 'RETAILER', location: 'Accra, Ghana', products: ['Food', 'Beverages'], rating: 4.4, verified: false, linked: false },
-];
+import { api } from '../services/api';
 
 const TYPE_COLOR: Record<string, { bg: string; text: string }> = {
   MANUFACTURER: { bg: '#EFF6FF', text: '#1A56DB' },
   RETAILER: { bg: '#ECFDF5', text: '#059669' },
+  WHOLESALER: { bg: '#FEF3C7', text: '#92400E' },
 };
 
 export default function LinkedPartnersScreen() {
   const router = useRouter();
-  const [partners, setPartners] = useState(PARTNERS);
+  const [partners, setPartners] = useState<any[]>([]);
   const [tab, setTab] = useState<'linked' | 'discover'>('linked');
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPartners = useCallback(async () => {
+    try {
+      const res = await api.get('/links/partners');
+      const all = (res.data || []).map((p: any) => {
+        const biz = p.partnerBusiness || p.requesterBusiness;
+        return {
+          id: p.id,
+          linkId: p.id,
+          name: biz?.name || 'Unknown',
+          type: biz?.tierType || '',
+          location: biz?.location || '',
+          products: biz?.categories || [],
+          rating: biz?.rating || 0,
+          verified: biz?.verified || false,
+          linked: p.status === 'ACCEPTED',
+          status: p.status,
+        };
+      });
+      setPartners(all);
+    } catch (e) {
+      console.log('Error fetching partners:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPartners(); }, [fetchPartners]);
 
   const displayed = partners
     .filter(p => tab === 'linked' ? p.linked : !p.linked)
     .filter(p => typeFilter === 'ALL' || p.type === typeFilter);
 
-  const toggleLink = (id: string) => {
+  const toggleLink = async (id: string) => {
     const p = partners.find(p => p.id === id);
     if (!p) return;
     if (p.linked) {
       Alert.alert('Unlink', `Unlink from ${p.name}?`, [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Unlink', style: 'destructive', onPress: () => setPartners(prev => prev.map(x => x.id === id ? { ...x, linked: false } : x)) }
+        { text: 'Unlink', style: 'destructive', onPress: async () => {
+          try {
+            await api.delete(`/links/partners/${id}`);
+            fetchPartners();
+          } catch (e) { console.log('Error unlinking:', e); }
+        }}
       ]);
     } else {
       Alert.alert('Link', `Send link request to ${p.name}?`, [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Send Request', onPress: () => setPartners(prev => prev.map(x => x.id === id ? { ...x, linked: true } : x)) }
+        { text: 'Send Request', onPress: async () => {
+          try {
+            await api.post('/links/request', { partnerLinkId: id });
+            fetchPartners();
+          } catch (e) { console.log('Error sending request:', e); }
+        }}
       ]);
     }
   };
+
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
@@ -64,7 +100,7 @@ export default function LinkedPartnersScreen() {
       </View>
       <View style={s.body}>
         <View style={s.chips}>
-          {['ALL', 'MANUFACTURER', 'RETAILER'].map(f => (
+          {['ALL', 'MANUFACTURER', 'RETAILER', 'WHOLESALER'].map(f => (
             <TouchableOpacity key={f} style={[s.chip, typeFilter === f && s.chipActive]} onPress={() => setTypeFilter(f)}>
               <Text style={[s.chipText, typeFilter === f && s.chipTextActive]}>
                 {f === 'ALL' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
@@ -74,9 +110,10 @@ export default function LinkedPartnersScreen() {
         </View>
         <FlatList
           data={displayed}
-          keyExtractor={item => item.id}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPartners(); }} tintColor="#1A56DB" />}
           ListEmptyComponent={
             <View style={s.empty}>
               <Ionicons name="people-outline" size={40} color="#D1D5DB" />
@@ -84,7 +121,7 @@ export default function LinkedPartnersScreen() {
             </View>
           }
           renderItem={({ item }) => {
-            const tc = TYPE_COLOR[item.type];
+            const tc = TYPE_COLOR[item.type] || { bg: '#F3F4F6', text: '#374151' };
             return (
               <View style={s.card}>
                 <View style={s.cardTop}>
@@ -108,7 +145,7 @@ export default function LinkedPartnersScreen() {
                   <Text style={s.location}> {item.location}</Text>
                 </View>
                 <View style={s.productRow}>
-                  {item.products.map(p => (
+                  {(item.products || []).map((p: string) => (
                     <View key={p} style={s.productChip}>
                       <Text style={s.productChipText}>{p}</Text>
                     </View>
@@ -134,6 +171,7 @@ export default function LinkedPartnersScreen() {
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
@@ -144,7 +182,7 @@ const s = StyleSheet.create({
   tabText: { fontSize: 13, color: '#9CA3AF' },
   tabTextActive: { color: '#1A56DB', fontWeight: '600' },
   body: { flex: 1, padding: 12 },
-  chips: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  chips: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
   chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
   chipActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
   chipText: { fontSize: 12, color: '#374151' },

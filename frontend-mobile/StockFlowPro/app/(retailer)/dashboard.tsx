@@ -186,28 +186,31 @@ export default function RetailerDashboard() {
               <Text style={s.seeAll}>View all</Text>
             </TouchableOpacity>
           </View>
-          {[
-            { name: 'Walk-in sale', time: 'Today · 9:41 AM · Cash', amount: '+$84.50', positive: true, by: 'Grace Owusu' },
-            { name: 'Stock replenishment', time: 'Yesterday · 3:12 PM', amount: '-$640.00', positive: false, by: 'You' },
-            { name: 'Walk-in sale', time: 'Yesterday · 11:05 AM · Card', amount: '+$32.00', positive: true, by: 'Grace Owusu' },
-          ].map((t, i) => (
-            <View key={i} style={[s.txn, { marginBottom: i < 2 ? 6 : 0 }]}>
-              <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
-                <Ionicons
-                  name={t.positive ? 'arrow-down-outline' : 'arrow-up-outline'}
-                  size={16}
-                  color={t.positive ? '#059669' : '#64748B'}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.txnName}>{t.name}</Text>
-                <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-              </View>
-              <Text style={[s.txnAmount, { color: t.positive ? '#059669' : '#0F172A' }]}>
-                {t.amount}
-              </Text>
+          {(data?.recentActivity ?? []).length === 0 ? (
+            <View style={s.emptyActivity}>
+              <Ionicons name="time-outline" size={24} color="#D1D5DB" />
+              <Text style={s.emptyActivityText}>No recent transactions</Text>
             </View>
-          ))}
+          ) : (
+            data?.recentActivity?.map((t: any, i: number) => (
+              <View key={i} style={[s.txn, { marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }]}>
+                <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
+                  <Ionicons
+                    name={t.positive ? 'arrow-down-outline' : 'arrow-up-outline'}
+                    size={16}
+                    color={t.positive ? '#059669' : '#64748B'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.txnName}>{t.name}</Text>
+                  <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+                </View>
+                <Text style={[s.txnAmount, { color: t.positive ? '#059669' : '#0F172A' }]}>
+                  {t.amount || t.detail}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -254,4 +257,6 @@ const s = StyleSheet.create({
   txnName: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
   txnTime: { fontSize: 10, color: '#94A3B8', marginTop: 1 },
   txnAmount: { fontSize: 13, fontWeight: '700' },
+  emptyActivity: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+  emptyActivityText: { fontSize: 13, color: '#9CA3AF' },
 });

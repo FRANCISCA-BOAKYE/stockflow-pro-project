@@ -1,15 +1,9 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const NOTIFICATIONS = [
-  { id: '1', title: 'Low stock alert', body: 'Steel Rods 6mm is below reorder level', time: '2 min ago', type: 'warning', read: false },
-  { id: '2', title: 'Payment received', body: 'Apex Distributors paid $42,000 for INV-001', time: '1 hour ago', type: 'success', read: false },
-  { id: '3', title: 'New order', body: 'Bright Mart placed a bulk order of $2,800', time: '3 hours ago', type: 'info', read: false },
-  { id: '4', title: 'Credit overdue', body: 'Sunrise Wholesale credit of $68,000 is overdue', time: 'Yesterday', type: 'error', read: true },
-  { id: '5', title: 'Production complete', body: 'Production run #24 completed — 500 units', time: 'Yesterday', type: 'success', read: true },
-];
+import { useAuthStore } from '../store/authStore';
+import { api } from '../services/api';
 
 const TYPE_MAP: Record<string, { bg: string; color: string; icon: string }> = {
   warning: { bg: '#FFFBEB', color: '#C27803', icon: 'warning-outline' },
@@ -20,8 +14,86 @@ const TYPE_MAP: Record<string, { bg: string; color: string; icon: string }> = {
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const { user } = useAuthStore();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const buildNotifications = useCallback(async () => {
+    const items: any[] = [];
+    try {
+      if (user?.tierType === 'RETAILER') {
+        const lowStockRes = await api.get('/retailer/products/low-stock');
+        const lowStock = lowStockRes.data || [];
+        lowStock.forEach((p: any) => {
+          items.push({
+            id: `low-${p.id}`,
+            title: 'Low stock alert',
+            body: `${p.name} is below reorder level (${p.quantity} ${p.unit} remaining)`,
+            time: 'Now',
+            type: 'warning',
+            read: false,
+          });
+        });
+      }
+
+      if (user?.tierType === 'MANUFACTURER') {
+        const matsRes = await api.get('/manufacturer/materials');
+        const mats = matsRes.data || [];
+        mats.filter((m: any) => m.quantity < m.minThreshold).forEach((m: any) => {
+          items.push({
+            id: `mat-${m.id}`,
+            title: 'Low material alert',
+            body: `${m.name} is below threshold (${m.quantity} ${m.unit} remaining)`,
+            time: 'Now',
+            type: 'warning',
+            read: false,
+          });
+        });
+      }
+
+      const creditRes = await api.get('/credit/overdue');
+      const overdue = creditRes.data || [];
+      overdue.forEach((c: any) => {
+        items.push({
+          id: `credit-${c.id}`,
+          title: 'Credit overdue',
+          body: `${c.debtorBusinessName} owes $${Number(c.amountUsd).toFixed(2)} — overdue since ${new Date(c.dueDate).toLocaleDateString()}`,
+          time: 'Now',
+          type: 'error',
+          read: false,
+        });
+      });
+
+      const linksRes = await api.get('/links/partners');
+      const pending = (linksRes.data || []).filter((l: any) => l.status === 'PENDING');
+      pending.forEach((l: any) => {
+        const requester = l.requesterBusiness?.name || 'A business';
+        items.push({
+          id: `link-${l.id}`,
+          title: 'New link request',
+          body: `${requester} wants to link with your business`,
+          time: 'Now',
+          type: 'info',
+          read: false,
+        });
+      });
+
+    } catch (e) {
+      console.log('Error building notifications:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+
+    setNotifications(items);
+  }, [user?.tierType]);
+
+  useEffect(() => { buildNotifications(); }, [buildNotifications]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
@@ -44,8 +116,16 @@ export default function NotificationsScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); buildNotifications(); }} tintColor="#1A56DB" />}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <Ionicons name="notifications-outline" size={40} color="#D1D5DB" />
+            <Text style={s.emptyText}>All caught up!</Text>
+            <Text style={s.emptySub}>No alerts right now. Pull down to refresh.</Text>
+          </View>
+        }
         renderItem={({ item }) => {
-          const t = TYPE_MAP[item.type];
+          const t = TYPE_MAP[item.type] || TYPE_MAP.info;
           return (
             <TouchableOpacity
               style={[s.card, !item.read && s.cardUnread]}
@@ -72,6 +152,7 @@ export default function NotificationsScreen() {
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   markBtn: { marginLeft: 'auto', paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#EFF6FF', borderRadius: 20 },
@@ -86,4 +167,7 @@ const s = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1A56DB' },
   body: { fontSize: 12, color: '#6B7280', lineHeight: 17 },
   time: { fontSize: 10, color: '#9CA3AF', marginTop: 4 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
 });

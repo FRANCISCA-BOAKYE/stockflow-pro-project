@@ -1,37 +1,75 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const WHOLESALERS = [
-  { id: '1', name: 'Apex Distributors', location: 'Accra, Ghana', products: ['Beverages', 'Dry Goods', 'Household'], rating: 4.6, verified: true, linked: true, creditLimit: 10000 },
-  { id: '2', name: 'Metro Wholesale', location: 'Tema, Ghana', products: ['Cement', 'Steel', 'Lumber'], rating: 4.3, verified: false, linked: true, creditLimit: 5000 },
-  { id: '3', name: 'Volta Distributors', location: 'Ho, Ghana', products: ['Electronics', 'Appliances'], rating: 4.9, verified: true, linked: false, creditLimit: 0 },
-  { id: '4', name: 'Sunrise Wholesale', location: 'Kumasi, Ghana', products: ['Food', 'Beverages'], rating: 4.5, verified: true, linked: false, creditLimit: 0 },
-];
+import { api } from '../services/api';
 
 export default function LinkedWholesalersScreen() {
   const router = useRouter();
-  const [wholesalers, setWholesalers] = useState(WHOLESALERS);
+  const [wholesalers, setWholesalers] = useState<any[]>([]);
   const [tab, setTab] = useState<'linked' | 'discover'>('linked');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchWholesalers = useCallback(async () => {
+    try {
+      const res = await api.get('/links/partners');
+      const all = (res.data || []).filter((p: any) => {
+        const biz = p.partnerBusiness || p.requesterBusiness;
+        return biz?.tierType === 'WHOLESALER';
+      }).map((p: any) => {
+        const biz = p.partnerBusiness?.tierType === 'WHOLESALER' ? p.partnerBusiness : p.requesterBusiness;
+        return {
+          id: p.id,
+          name: biz?.name || 'Unknown',
+          location: biz?.location || '',
+          products: biz?.categories || [],
+          rating: biz?.rating || 0,
+          verified: biz?.verified || false,
+          linked: p.status === 'ACCEPTED',
+          creditLimit: biz?.creditLimit || 0,
+        };
+      });
+      setWholesalers(all);
+    } catch (e) {
+      console.log('Error fetching wholesalers:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchWholesalers(); }, [fetchWholesalers]);
 
   const displayed = tab === 'linked' ? wholesalers.filter(w => w.linked) : wholesalers.filter(w => !w.linked);
 
-  const toggleLink = (id: string) => {
+  const toggleLink = async (id: string) => {
     const w = wholesalers.find(w => w.id === id);
     if (!w) return;
     if (w.linked) {
       Alert.alert('Unlink', `Unlink from ${w.name}?`, [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Unlink', style: 'destructive', onPress: () => setWholesalers(prev => prev.map(x => x.id === id ? { ...x, linked: false } : x)) }
+        { text: 'Unlink', style: 'destructive', onPress: async () => {
+          try {
+            await api.delete(`/links/partners/${id}`);
+            fetchWholesalers();
+          } catch (e) { console.log('Error unlinking:', e); }
+        }}
       ]);
     } else {
       Alert.alert('Link', `Send link request to ${w.name}?`, [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Send Request', onPress: () => setWholesalers(prev => prev.map(x => x.id === id ? { ...x, linked: true } : x)) }
+        { text: 'Send Request', onPress: async () => {
+          try {
+            await api.post('/links/request', { partnerLinkId: id });
+            fetchWholesalers();
+          } catch (e) { console.log('Error sending request:', e); }
+        }}
       ]);
     }
   };
+
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
@@ -54,9 +92,10 @@ export default function LinkedWholesalersScreen() {
       </View>
       <FlatList
         data={displayed}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.id)}
         contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchWholesalers(); }} tintColor="#1A56DB" />}
         ListEmptyComponent={
           <View style={s.empty}>
             <Ionicons name="people-outline" size={40} color="#D1D5DB" />
@@ -83,7 +122,7 @@ export default function LinkedWholesalersScreen() {
               <Text style={s.location}> {item.location}</Text>
             </View>
             <View style={s.productRow}>
-              {item.products.map(p => (
+              {(item.products || []).map((p: string) => (
                 <View key={p} style={s.productChip}>
                   <Text style={s.productChipText}>{p}</Text>
                 </View>
@@ -92,7 +131,7 @@ export default function LinkedWholesalersScreen() {
             {item.linked && item.creditLimit > 0 && (
               <View style={s.creditRow}>
                 <Ionicons name="wallet-outline" size={12} color="#1A56DB" />
-                <Text style={s.creditText}> Credit limit: ${item.creditLimit.toLocaleString()}</Text>
+                <Text style={s.creditText}> Credit limit: ${Number(item.creditLimit).toLocaleString()}</Text>
               </View>
             )}
             <TouchableOpacity
@@ -113,6 +152,7 @@ export default function LinkedWholesalersScreen() {
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
