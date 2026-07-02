@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -30,5 +31,18 @@ public class AuthController {
     public ResponseEntity<List<SubAccountResponse>> getSubAccounts(Authentication auth) {
         Long businessId = (Long) auth.getDetails();
         return ResponseEntity.ok(authService.getSubAccounts(businessId));
+    }
+
+    @PostMapping("/invite-subaccount")
+    public ResponseEntity<Map<String, Object>> inviteSubAccount(
+            @RequestBody Map<String, String> req,
+            Authentication auth) {
+        Long businessId = (Long) auth.getDetails();
+        return ResponseEntity.ok(authService.inviteSubAccount(
+                req.get("email"),
+                req.get("role"),
+                req.get("password"),
+                businessId
+        ));
     }
 }

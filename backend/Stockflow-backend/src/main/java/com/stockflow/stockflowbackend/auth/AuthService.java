@@ -49,11 +49,8 @@ public class AuthService {
         admin.setIsSubAccount(false);
         AppUser savedAdmin = userRepository.save(admin);
 
-        List<SubAccountResponse> subAccounts = generateSubAccounts(
-                savedBusiness, savedAdmin.getId(), req.getTierType(), req.getSubscriptionPlan());
-
-      String token = jwtUtil.generateToken(
-        savedAdmin.getEmail(), savedBusiness.getId(), "COMPANY_ADMIN");
+        String token = jwtUtil.generateToken(
+                savedAdmin.getEmail(), savedBusiness.getId(), "COMPANY_ADMIN");
 
         RegisterResponse response = new RegisterResponse();
         response.setToken(token);
@@ -65,67 +62,46 @@ public class AuthService {
         response.setTierType(req.getTierType());
         response.setSubscriptionStatus("TRIAL");
         response.setSubscriptionPlan(req.getSubscriptionPlan());
-        response.setSubAccounts(subAccounts);
+        response.setSubAccounts(new ArrayList<>());
 
         return response;
     }
 
-    private List<SubAccountResponse> generateSubAccounts(
-            Business business, Long parentUserId, String tierType, String plan) {
+    @Transactional
+    public Map<String, Object> inviteSubAccount(
+            String email, String role, String password, Long businessId) {
 
-        List<String> roles = getSubAccountRoles(tierType);
-        int maxAccounts = getMaxAccounts(tierType, plan);
-        int subAccountCount = Math.min(roles.size(), maxAccounts - 1);
-
-        List<SubAccountResponse> result = new ArrayList<>();
-        String tempPassword = "TempPass123!";
-        String domain = business.getName()
-                .toLowerCase()
-                .replaceAll("[^a-z0-9]", "") + ".com";
-
-        for (int i = 0; i < subAccountCount; i++) {
-            String role = roles.get(i);
-            String emailPrefix = role.toLowerCase()
-                    .replaceAll("[^a-z0-9]", ".")
-                    .replaceAll("\\.+", ".");
-            String email = emailPrefix + "@" + domain;
-
-            if (userRepository.findByEmail(email).isPresent()) {
-                email = emailPrefix + (i + 2) + "@" + domain;
-            }
-
-            AppUser subUser = new AppUser();
-            subUser.setBusiness(business);
-            subUser.setName(role);
-            subUser.setEmail(email);
-            subUser.setPasswordHash(passwordEncoder.encode(tempPassword));
-            subUser.setRole("SUB_ACCOUNT");
-            subUser.setIsSubAccount(true);
-            subUser.setParentUserId(parentUserId);
-            subUser.setSubAccountRole(role);
-            subUser.setMustChangePassword(true);
-            userRepository.save(subUser);
-
-            SubAccountResponse subResp = new SubAccountResponse();
-            subResp.setRole(role);
-            subResp.setEmail(email);
-            subResp.setTemporaryPassword(tempPassword);
-            subResp.setIsActive(true);
-            result.add(subResp);
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new RuntimeException("Email already exists");
         }
 
-        return result;
-    }
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
 
-    private List<String> getSubAccountRoles(String tierType) {
-        return switch (tierType) {
-            case "MANUFACTURER" -> List.of(
-                    "Production Supervisor", "Store Keeper", "POS Operator", "Store Keeper 2");
-            case "WHOLESALER" -> List.of(
-                    "Warehouse Admin", "Receiving Staff", "Sales Staff");
-            case "RETAILER" -> List.of("Shop Staff");
-            default -> List.of();
-        };
+        List<AppUser> existing = userRepository
+                .findByBusiness_IdAndIsSubAccountTrue(businessId);
+        int maxAccounts = getMaxAccounts(
+                business.getTierType(), business.getSubscriptionPlan());
+        if (existing.size() >= maxAccounts - 1) {
+            throw new RuntimeException("Sub-account limit reached for your plan");
+        }
+
+        AppUser subUser = new AppUser();
+        subUser.setBusiness(business);
+        subUser.setName(role);
+        subUser.setEmail(email);
+        subUser.setPasswordHash(passwordEncoder.encode(password));
+        subUser.setRole("SUB_ACCOUNT");
+        subUser.setIsSubAccount(true);
+        subUser.setSubAccountRole(role);
+        subUser.setMustChangePassword(false);
+        userRepository.save(subUser);
+
+        return Map.of(
+                "success", true,
+                "email", email,
+                "role", role
+        );
     }
 
     private int getMaxAccounts(String tierType, String plan) {
@@ -153,8 +129,9 @@ public class AuthService {
         String effectiveRole = Boolean.TRUE.equals(user.getIsSubAccount())
                 ? "SUB_ACCOUNT" : user.getRole();
 
-      String token = jwtUtil.generateToken(
-        user.getEmail(), business.getId(), effectiveRole);
+        String token = jwtUtil.generateToken(
+                user.getEmail(), business.getId(), effectiveRole);
+
         LoginResponse response = new LoginResponse();
         response.setToken(token);
         response.setName(user.getName());

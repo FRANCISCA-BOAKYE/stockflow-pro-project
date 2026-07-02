@@ -44,3 +44,21 @@ Content-Type: application/json
 ### Get sub-accounts
 GET http://localhost:8080/auth/sub-accounts
 Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJmcmFuY2lzY2EyQGFjbWUuY29tIiwiYnVzaW5lc3NJZCI6MjAsInJvbGUiOiJDT01QQU5ZX0FETUlOIiwiaWF0IjoxNzgyOTUwMTAwLCJleHAiOjE3ODMwMzY1MDB9.UxcAvWcPyb0DRNbY5-OmDinZB6kaUGjH08CIPJeC5An8qXaVwlK8hGnfwwKbZ10l
+
+
+
+### Login first to get token
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{"email": "francisca2@acme.com", "password": "Password123!"}
+### Invite sub-account
+POST http://localhost:8080/auth/invite-subaccount
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0QHRlc3RtZmcuY29tIiwiYnVzaW5lc3NJZCI6MjIsInJvbGUiOiJDT01QQU5ZX0FETUlOIiwiaWF0IjoxNzgyOTg2NjI4LCJleHAiOjE3ODMwNzMwMjh9.dDJG-pOhu7sEGcdffjDYFwbBn2WGVV-Fa1qDC6KGPyEkQpd6RQYjCiVUr59DEWOz
+
+{
+  "email": "james@testmfg.com",
+  "role": "Production Supervisor",
+  "password": "James123!"
+}
