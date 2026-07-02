@@ -62,3 +62,21 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0QHRlc3RtZmcuY29tIiwiY
   "role": "Production Supervisor",
   "password": "James123!"
 }
+
+
+
+
+
+
+###
+POST https://stockflow-backend-qwpt.onrender.com/auth/register
+Content-Type: application/json
+
+{
+"businessName": "Acme Manufacturing",
+"tierType": "MANUFACTURER",
+"subscriptionPlan": "STANDARD",
+"adminName": "Francisca",
+"adminEmail": "francescaboakye51@gmail.com",
+"adminPassword": "Password123!"
+}
