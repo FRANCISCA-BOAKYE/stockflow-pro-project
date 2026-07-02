@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Users, Mail, Shield, UserPlus, Crown } from "lucide-react"
 
 const ACCOUNT_LIMITS: Record<string, Record<string, number>> = {
-  MANUFACTURER: { STANDARD: 5, PREMIUM: 10 },
-  WHOLESALER: { STANDARD: 6, PREMIUM: 8 },
-  RETAILER: { STANDARD: 2, PREMIUM: 5 },
+  MANUFACTURER: { STANDARD: 4, PREMIUM: 9 },
+  WHOLESALER: { STANDARD: 5, PREMIUM: 7 },
+  RETAILER: { STANDARD: 1, PREMIUM: 4 },
 }
 
 const ROLES: Record<string, { admin: string; staff: string[] }> = {

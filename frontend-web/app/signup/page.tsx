@@ -24,9 +24,9 @@ const planPrices: Record<string, Record<string, number>> = {
 }
 
 const ACCOUNT_LIMITS: Record<string, Record<string, number>> = {
-  MANUFACTURER: { STANDARD: 5, PREMIUM: 10 },
-  WHOLESALER: { STANDARD: 6, PREMIUM: 8 },
-  RETAILER: { STANDARD: 2, PREMIUM: 5 },
+  MANUFACTURER: { STANDARD: 4, PREMIUM: 9 },
+  WHOLESALER: { STANDARD: 5, PREMIUM: 7 },
+  RETAILER: { STANDARD: 1, PREMIUM: 4 },
 }
 
 const SUB_ACCOUNT_ROLES: Record<string, { name: string; roles: string[] }> = {
