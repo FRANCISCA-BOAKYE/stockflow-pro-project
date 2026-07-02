@@ -1,31 +1,36 @@
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 
-const getPlansForTier = (tier?: string) => {
-  if (tier === 'MANUFACTURER') {
-    return [
-      { name: 'Standard', price: 80, features: ['5 sub-accounts', 'Material management', 'Recipe setup', 'Production planning', 'Finished goods tracking', 'POS dispatch', 'Credit tracking', 'Marketplace listing'] },
-      { name: 'Premium', price: 110, features: ['10 sub-accounts', 'Everything in Standard', 'Advanced reports', 'Delivery scheduling', 'Invoice generation (WhatsApp/email)'] },
-    ];
-  }
-  if (tier === 'WHOLESALER') {
-    return [
-      { name: 'Standard', price: 45, features: ['6 sub-accounts', 'Warehouse management', 'POS', 'Credit tracking', 'Overdue alerts', 'Tier linking', 'Marketplace listing'] },
-      { name: 'Premium', price: 75, features: ['8 sub-accounts', 'Everything in Standard', 'Advanced reports', 'Delivery scheduling', 'Invoice generation (WhatsApp/email)'] },
-    ];
-  }
-  return [
-    { name: 'Standard', price: 17, features: ['2 sub-accounts', 'Inventory management', 'POS', 'Search & filtering', 'Low-stock alerts', 'Transaction history', 'Credit tracking'] },
-    { name: 'Premium', price: 30, features: ['5 sub-accounts', 'Everything in Standard', 'Customer purchase history', 'Auto-reorder suggestions', 'Advanced sales reports'] },
-  ];
+const PLANS: Record<string, { standard: number; premium: number }> = {
+  MANUFACTURER: { standard: 80, premium: 110 },
+  WHOLESALER: { standard: 45, premium: 75 },
+  RETAILER: { standard: 17, premium: 30 },
+};
+
+const FEATURES: Record<string, string[]> = {
+  MANUFACTURER: ['Raw material tracking', 'Recipe & production planning', 'Finished goods inventory', 'Dispatch management', 'Credit tracking', 'Marketplace listing'],
+  WHOLESALER: ['Warehouse management', 'Bulk receiving & dispatch', 'Retailer credit tracking', 'Linked partner network', 'Marketplace listing'],
+  RETAILER: ['Product inventory', 'Point of sale (POS)', 'Low stock alerts', 'Customer credit accounts', 'Invoice generation'],
 };
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const PLANS = getPlansForTier(user?.tierType);
+  const tier = user?.tierType || 'RETAILER';
+  const plan = user?.subscriptionPlan || 'STANDARD';
+  const status = user?.subscriptionStatus || 'TRIAL';
+  const prices = PLANS[tier] || PLANS.RETAILER;
+  const features = FEATURES[tier] || FEATURES.RETAILER;
+
+  const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
+    TRIAL: { color: '#C27803', bg: '#FFFBEB', label: 'Free trial active' },
+    ACTIVE: { color: '#059669', bg: '#ECFDF5', label: 'Active subscription' },
+    EXPIRED: { color: '#DC2626', bg: '#FEF2F2', label: 'Trial expired' },
+  };
+  const sc = statusConfig[status] || statusConfig.TRIAL;
 
   return (
     <SafeAreaView style={s.page}>
@@ -33,66 +38,72 @@ export default function SubscriptionScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
         </TouchableOpacity>
-        <View>
-          <Text style={s.title}>Subscription</Text>
-          <Text style={s.sub}>Manage your plan</Text>
-        </View>
+        <Text style={s.title}>Subscription</Text>
       </View>
-      <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-        <View style={s.currentCard}>
-          <View style={s.currentTop}>
+
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        {/* Current plan */}
+        <View style={s.planCard}>
+          <View style={s.planTop}>
             <View>
-              <Text style={s.currentLabel}>Current plan</Text>
-              <Text style={s.currentPlan}>{user?.subscriptionPlan || 'STANDARD'}</Text>
+              <Text style={s.planLabel}>Current plan</Text>
+              <Text style={s.planName}>{tier} · {plan}</Text>
             </View>
-            <View style={[s.statusBadge, { backgroundColor: user?.subscriptionStatus === 'TRIAL' ? '#FFFBEB' : '#ECFDF5' }]}>
-              <Text style={[s.statusText, { color: user?.subscriptionStatus === 'TRIAL' ? '#C27803' : '#059669' }]}>
-                {user?.subscriptionStatus || 'TRIAL'}
-              </Text>
+            <View style={[s.statusBadge, { backgroundColor: sc.bg }]}>
+              <Text style={[s.statusText, { color: sc.color }]}>{sc.label}</Text>
             </View>
           </View>
-          {user?.subscriptionStatus === 'TRIAL' && (
-            <View style={s.trialBox}>
+          <View style={s.planPrice}>
+            <Text style={s.price}>${plan === 'STANDARD' ? prices.standard : prices.premium}</Text>
+            <Text style={s.priceUnit}>/month</Text>
+          </View>
+          {status === 'TRIAL' && (
+            <View style={s.trialBanner}>
               <Ionicons name="time-outline" size={14} color="#C27803" />
-              <Text style={s.trialText}>Trial active — upgrade to keep access after trial ends</Text>
+              <Text style={s.trialText}>Your 14-day free trial is active. No payment required yet.</Text>
             </View>
           )}
         </View>
 
-        <Text style={s.sectionLabel}>Available plans</Text>
-        {PLANS.map((plan, i) => (
-          <View key={plan.name} style={[s.planCard, i === 1 && s.planCardPremium]}>
-            {i === 1 && (
-              <View style={s.popularBadge}>
-                <Text style={s.popularText}>Most popular</Text>
-              </View>
-            )}
-            <View style={s.planTop}>
-              <Text style={[s.planName, i === 1 && { color: '#fff' }]}>{plan.name}</Text>
-              <View>
-                <Text style={[s.planPrice, i === 1 && { color: '#fff' }]}>${plan.price}</Text>
-                <Text style={[s.planPer, i === 1 && { color: 'rgba(255,255,255,0.7)' }]}>/month</Text>
-              </View>
+        {/* Features */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>What's included</Text>
+          {features.map((f, i) => (
+            <View key={i} style={s.featureRow}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <Text style={s.featureText}>{f}</Text>
             </View>
-            {plan.features.map(f => (
-              <View key={f} style={s.featureRow}>
-                <Ionicons name="checkmark-circle-outline" size={14} color={i === 1 ? 'rgba(255,255,255,0.8)' : '#059669'} />
-                <Text style={[s.featureText, i === 1 && { color: 'rgba(255,255,255,0.9)' }]}>{f}</Text>
-              </View>
-            ))}
-            <TouchableOpacity
-              style={[s.selectBtn, i === 1 && s.selectBtnPremium]}
-              onPress={() => Alert.alert('Upgrade', `Upgrade to ${plan.name} for $${plan.price}/month?`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Upgrade', onPress: () => Alert.alert('Success', 'Contact support to complete upgrade.') }
-              ])}
-            >
-              <Text style={[s.selectBtnText, i === 1 && { color: '#1A56DB' }]}>
-                {user?.subscriptionPlan === plan.name.toUpperCase() ? 'Current plan' : `Upgrade to ${plan.name}`}
-              </Text>
+          ))}
+        </View>
+
+        {/* Upgrade */}
+        {plan === 'STANDARD' && (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>Upgrade to Premium</Text>
+            <Text style={s.upgradeDesc}>Get more sub-accounts, advanced reports, delivery scheduling and invoice generation.</Text>
+            <View style={s.upgradePrice}>
+              <Text style={s.price}>${prices.premium}</Text>
+              <Text style={s.priceUnit}>/month</Text>
+            </View>
+            <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/pricing')}>
+              <Ionicons name="arrow-up-circle-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={s.upgradeBtnText}>Upgrade on web</Text>
             </TouchableOpacity>
           </View>
-        ))}
+        )}
+
+        {/* Pay */}
+        {status === 'EXPIRED' && (
+          <TouchableOpacity style={s.payBtn} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/trial-expired')}>
+            <Ionicons name="card-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={s.payBtnText}>Subscribe now on web</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={s.note}>
+          <Ionicons name="shield-checkmark-outline" size={14} color="#059669" />
+          <Text style={s.noteText}>Your data is always safe — even if your subscription expires, nothing is deleted.</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -103,28 +114,27 @@ const s = StyleSheet.create({
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  body: { padding: 12, gap: 12, paddingBottom: 100 },
-  currentCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', gap: 12 },
-  currentTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  currentLabel: { fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  currentPlan: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  statusBadge: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 20 },
-  statusText: { fontSize: 12, fontWeight: '600' },
-  trialBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFBEB', borderRadius: 10, padding: 10 },
-  trialText: { fontSize: 12, color: '#C27803', flex: 1 },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  planCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', gap: 10 },
-  planCardPremium: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  popularBadge: { backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
-  popularText: { fontSize: 10, color: '#fff', fontWeight: '600' },
+  planCard: { backgroundColor: '#1A56DB', borderRadius: 20, padding: 20, gap: 12 },
   planTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  planName: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  planPrice: { fontSize: 24, fontWeight: '700', color: '#0F172A', textAlign: 'right' },
-  planPer: { fontSize: 11, color: '#6B7280', textAlign: 'right' },
+  planLabel: { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '500', marginBottom: 3 },
+  planName: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  statusBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20 },
+  statusText: { fontSize: 11, fontWeight: '600' },
+  planPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  price: { fontSize: 36, fontWeight: '800', color: '#fff' },
+  priceUnit: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
+  trialBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 10 },
+  trialText: { fontSize: 11, color: 'rgba(255,255,255,0.8)', flex: 1 },
+  section: { backgroundColor: '#fff', borderRadius: 16, padding: 16, gap: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   featureText: { fontSize: 13, color: '#374151' },
-  selectBtn: { backgroundColor: '#F3F4F6', borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 4 },
-  selectBtnPremium: { backgroundColor: '#fff' },
-  selectBtnText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  upgradeDesc: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  upgradePrice: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  upgradeBtn: { backgroundColor: '#1A56DB', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  upgradeBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  payBtn: { backgroundColor: '#DC2626', borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  payBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  note: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#ECFDF5', borderRadius: 12, padding: 12 },
+  noteText: { fontSize: 12, color: '#065F46', flex: 1, lineHeight: 18 },
 });
