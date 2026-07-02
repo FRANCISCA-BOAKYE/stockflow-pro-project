@@ -1,40 +1,79 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  FlatList, StyleSheet, SafeAreaView
+  FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
+  Alert, Modal, ScrollView, RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { api } from '../../../services/api';
 
-const STOCK = [
-  { id: '1', name: 'Coca-Cola 500ml (Case of 24)', supplier: 'BevCo Ltd', price: 28.00, quantity: 340, category: 'Beverages' },
-  { id: '2', name: 'Mineral Water 1L (Case of 12)', supplier: 'AquaPure', price: 8.00, quantity: 42, category: 'Beverages' },
-  { id: '3', name: 'Flour 50kg Bag', supplier: 'Mill Corp', price: 45.00, quantity: 120, category: 'Dry Goods' },
-  { id: '4', name: 'Cooking Oil 20L Drum', supplier: 'OilTrade', price: 62.00, quantity: 18, category: 'Dry Goods' },
-  { id: '5', name: 'Laundry Detergent 10kg', supplier: 'CleanCo', price: 22.00, quantity: 200, category: 'Household' },
-  { id: '6', name: 'Rice 50kg Bag', supplier: 'GrainCo', price: 55.00, quantity: 35, category: 'Dry Goods' },
-];
-
-const CATEGORIES = ['All', 'Beverages', 'Dry Goods', 'Household'];
-const LOW_THRESHOLD = 50;
+const LOW_THRESHOLD = 20;
 
 export default function WarehouseScreen() {
+  const [stock, setStock] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '' });
 
-  const filtered = STOCK.filter(item => {
-    const matchName = item.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === 'All' || item.category === category;
-    return matchName && matchCat;
-  });
+  const fetchStock = useCallback(async () => {
+    try {
+      const res = await api.get('/wholesaler/stock');
+      setStock(res.data || []);
+    } catch (e) {
+      console.log('Error fetching stock:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
-  const lowCount = STOCK.filter(i => i.quantity < LOW_THRESHOLD).length;
+  useEffect(() => { fetchStock(); }, [fetchStock]);
+
+  const handleAddProduct = async () => {
+    if (!form.name || !form.unit || !form.quantity) {
+      Alert.alert('Missing info', 'Please fill in all required fields.');
+      return;
+    }
+    setAddLoading(true);
+    try {
+      await api.post('/wholesaler/products', {
+        name: form.name,
+        unit: form.unit,
+        quantity: parseInt(form.quantity),
+        minThreshold: form.minThreshold ? parseInt(form.minThreshold) : 20,
+      });
+      setShowAddModal(false);
+      setForm({ name: '', unit: '', quantity: '', minThreshold: '' });
+      fetchStock();
+      Alert.alert('Success', 'Product added to warehouse!');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to add product');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const filtered = stock.filter(item =>
+    item.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const lowCount = stock.filter(i => i.quantity < LOW_THRESHOLD).length;
+
+  if (loading) return (
+    <View style={s.center}>
+      <ActivityIndicator size="large" color="#1A56DB" />
+    </View>
+  );
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <View>
           <Text style={s.title}>Warehouse</Text>
-          <Text style={s.sub}>Bulk stock management</Text>
+          <Text style={s.sub}>{stock.length} products in stock</Text>
         </View>
         {lowCount > 0 && (
           <View style={s.alertPill}>
@@ -43,25 +82,29 @@ export default function WarehouseScreen() {
           </View>
         )}
       </View>
+
       <View style={s.body}>
         <View style={s.searchRow}>
           <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput style={s.searchInput} placeholder="Search warehouse stock..." placeholderTextColor="#9CA3AF" value={search} onChangeText={setSearch} />
+          <TextInput style={s.searchInput} placeholder="Search warehouse stock..." placeholderTextColor="#9CA3AF"
+            value={search} onChangeText={setSearch} />
         </View>
-        <View style={s.chips}>
-          {CATEGORIES.map(cat => (
-            <TouchableOpacity key={cat} style={[s.chip, category === cat && s.chipActive]} onPress={() => setCategory(cat)}>
-              <Text style={[s.chipText, category === cat && s.chipTextActive]}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+
         <FlatList
           data={filtered}
-          keyExtractor={item => item.id}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchStock(); }} tintColor="#1A56DB" />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="archive-outline" size={40} color="#D1D5DB" />
+              <Text style={s.emptyText}>No stock yet</Text>
+              <Text style={s.emptySub}>Tap + to add products to your warehouse</Text>
+            </View>
+          }
           renderItem={({ item }) => {
-            const isLow = item.quantity < LOW_THRESHOLD;
+            const isLow = item.quantity < (item.minThreshold || LOW_THRESHOLD);
             return (
               <View style={s.card}>
                 <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#EFF6FF' }]}>
@@ -69,29 +112,67 @@ export default function WarehouseScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{item.name}</Text>
-                  <View style={s.row}>
-                    <Ionicons name="business-outline" size={11} color="#9CA3AF" />
-                    <Text style={s.supplier}> {item.supplier}</Text>
-                  </View>
-                  <Text style={[s.qty, isLow && { color: '#DC2626' }]}>{item.quantity} units · ${item.price.toFixed(2)}/unit</Text>
+                  <Text style={s.unit}>{item.unit}</Text>
+                  <Text style={[s.qty, isLow && { color: '#DC2626' }]}>
+                    {item.quantity} {item.unit} in stock
+                  </Text>
                 </View>
                 <View style={[s.badge, isLow ? s.badgeRed : s.badgeGreen]}>
-                  <Text style={[s.badgeText, isLow ? s.badgeTextRed : s.badgeTextGreen]}>{isLow ? 'Low stock' : 'In stock'}</Text>
+                  <Text style={[s.badgeText, isLow ? s.badgeTextRed : s.badgeTextGreen]}>
+                    {isLow ? 'Low stock' : 'In stock'}
+                  </Text>
                 </View>
               </View>
             );
           }}
         />
       </View>
-      <TouchableOpacity style={s.fab}>
+
+      <TouchableOpacity style={s.fab} onPress={() => setShowAddModal(true)}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* Add Product Modal */}
+      <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Add to Warehouse</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={s.modalBody}>
+            {[
+              { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola Crate' },
+              { label: 'Unit *', key: 'unit', placeholder: 'e.g. crate, kg, carton' },
+              { label: 'Quantity *', key: 'quantity', placeholder: '100', keyboard: 'numeric' },
+              { label: 'Min threshold', key: 'minThreshold', placeholder: '20', keyboard: 'numeric' },
+            ].map(field => (
+              <View key={field.key} style={{ marginBottom: 16 }}>
+                <Text style={s.fieldLabel}>{field.label}</Text>
+                <TextInput
+                  style={s.fieldInput}
+                  placeholder={field.placeholder}
+                  placeholderTextColor="#9CA3AF"
+                  value={(form as any)[field.key]}
+                  onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                  keyboardType={(field.keyboard as any) || 'default'}
+                />
+              </View>
+            ))}
+            <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddProduct} disabled={addLoading}>
+              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>Add to Warehouse</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
   sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
@@ -100,16 +181,10 @@ const s = StyleSheet.create({
   body: { flex: 1, padding: 12 },
   searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
   searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: '#374151' },
-  chips: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
-  chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  chipActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  chipText: { fontSize: 12, color: '#374151' },
-  chipTextActive: { color: '#fff', fontWeight: '500' },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
   cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  row: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  supplier: { fontSize: 11, color: '#9CA3AF' },
+  unit: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
   qty: { fontSize: 11, color: '#059669', fontWeight: '500', marginTop: 2 },
   badge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   badgeGreen: { backgroundColor: '#D1FAE5' },
@@ -118,4 +193,14 @@ const s = StyleSheet.create({
   badgeTextGreen: { color: '#065F46' },
   badgeTextRed: { color: '#991B1B' },
   fab: { position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: '#1A56DB', borderRadius: 25, alignItems: 'center', justifyContent: 'center', shadowColor: '#1A56DB', shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  modalBody: { padding: 16, paddingBottom: 40 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  confirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

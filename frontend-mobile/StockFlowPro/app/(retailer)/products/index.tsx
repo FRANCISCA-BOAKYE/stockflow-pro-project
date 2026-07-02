@@ -1,42 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  FlatList, StyleSheet, SafeAreaView
+  FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
+  Alert, Modal, ScrollView, RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../../store/authStore';
+import { api } from '../../../services/api';
 
-const PRODUCTS = [
-  { id: '1', name: 'Coca-Cola 500ml', category: 'Beverages', price: 2.50, stock: 120, sku: 'BEV-001' },
-  { id: '2', name: 'Mineral Water 1L', category: 'Beverages', price: 1.00, stock: 4, sku: 'BEV-002' },
-  { id: '3', name: 'Rice 1kg', category: 'Food', price: 3.50, stock: 6, sku: 'FOD-001' },
-  { id: '4', name: 'Bread Loaf', category: 'Food', price: 2.00, stock: 8, sku: 'FOD-002' },
-  { id: '5', name: 'Laundry Detergent 1kg', category: 'Household', price: 5.00, stock: 45, sku: 'HH-001' },
-  { id: '6', name: 'Cooking Oil 1L', category: 'Food', price: 4.00, stock: 30, sku: 'FOD-003' },
-  { id: '7', name: 'Sugar 1kg', category: 'Food', price: 2.50, stock: 2, sku: 'FOD-004' },
-  { id: '8', name: 'Soap Bar', category: 'Household', price: 1.50, stock: 60, sku: 'HH-002' },
-];
-
-const CATEGORIES = ['All', 'Beverages', 'Food', 'Household'];
 const LOW_STOCK = 10;
 
 export default function ProductsScreen() {
+  const { token } = useAuthStore();
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [form, setForm] = useState({ name: '', categoryId: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' });
 
-  const filtered = PRODUCTS.filter(p => {
+  const fetchData = useCallback(async () => {
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        api.get(`/retailer/products${search ? `?search=${search}` : ''}`),
+        api.get('/retailer/categories'),
+      ]);
+      setProducts(prodRes.data?.content || prodRes.data || []);
+      setCategories(catRes.data || []);
+    } catch (e) {
+      console.log('Error fetching products:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [search]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleAddProduct = async () => {
+    if (!form.name || !form.priceUsd || !form.quantity || !form.unit) {
+      Alert.alert('Missing info', 'Please fill in all required fields.');
+      return;
+    }
+    setAddLoading(true);
+    try {
+      await api.post('/retailer/products', {
+        name: form.name,
+        categoryId: form.categoryId ? parseInt(form.categoryId) : null,
+        priceUsd: parseFloat(form.priceUsd),
+        quantity: parseInt(form.quantity),
+        minThreshold: form.minThreshold ? parseInt(form.minThreshold) : 10,
+        unit: form.unit,
+      });
+      setShowAddModal(false);
+      setForm({ name: '', categoryId: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' });
+      fetchData();
+      Alert.alert('Success', 'Product added successfully!');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to add product');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === 'All' || p.category === category;
+    const matchCat = selectedCategory === 'All' || p.categoryName === selectedCategory;
     return matchSearch && matchCat;
   });
 
-  const lowCount = PRODUCTS.filter(p => p.stock < LOW_STOCK).length;
+  const lowCount = products.filter(p => p.isLowStock || p.quantity < LOW_STOCK).length;
+
+  if (loading) return (
+    <View style={s.center}>
+      <ActivityIndicator size="large" color="#1A56DB" />
+    </View>
+  );
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <View>
           <Text style={s.title}>Products</Text>
-          <Text style={s.sub}>Shop inventory</Text>
+          <Text style={s.sub}>{products.length} items in inventory</Text>
         </View>
         {lowCount > 0 && (
           <View style={s.alertPill}>
@@ -45,26 +94,39 @@ export default function ProductsScreen() {
           </View>
         )}
       </View>
+
       <View style={s.body}>
         <View style={s.searchRow}>
           <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
           <TextInput style={s.searchInput} placeholder="Search products..." placeholderTextColor="#9CA3AF"
             value={search} onChangeText={setSearch} />
         </View>
-        <View style={s.chips}>
-          {CATEGORIES.map(cat => (
-            <TouchableOpacity key={cat} style={[s.chip, category === cat && s.chipActive]} onPress={() => setCategory(cat)}>
-              <Text style={[s.chipText, category === cat && s.chipTextActive]}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {['All', ...categories.map((c: any) => c.name)].map(cat => (
+              <TouchableOpacity key={cat} style={[s.chip, selectedCategory === cat && s.chipActive]} onPress={() => setSelectedCategory(cat)}>
+                <Text style={[s.chipText, selectedCategory === cat && s.chipTextActive]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
         <FlatList
           data={filtered}
-          keyExtractor={item => item.id}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#1A56DB" />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="cube-outline" size={40} color="#D1D5DB" />
+              <Text style={s.emptyText}>No products yet</Text>
+              <Text style={s.emptySub}>Tap + to add your first product</Text>
+            </View>
+          }
           renderItem={({ item }) => {
-            const isLow = item.stock < LOW_STOCK;
+            const isLow = item.isLowStock || item.quantity < LOW_STOCK;
             return (
               <View style={s.card}>
                 <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#EFF6FF' }]}>
@@ -72,11 +134,11 @@ export default function ProductsScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{item.name}</Text>
-                  <Text style={s.sku}>{item.sku} · {item.category}</Text>
-                  <Text style={[s.stock, isLow && { color: '#DC2626' }]}>{item.stock} units in stock</Text>
+                  <Text style={s.sku}>{item.categoryName || 'Uncategorized'} · {item.unit}</Text>
+                  <Text style={[s.stock, isLow && { color: '#DC2626' }]}>{item.quantity} {item.unit} in stock</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={s.price}>${item.price.toFixed(2)}</Text>
+                  <Text style={s.price}>${Number(item.priceUsd).toFixed(2)}</Text>
                   <View style={[s.badge, isLow ? s.badgeRed : s.badgeGreen]}>
                     <Text style={[s.badgeText, isLow ? s.badgeTextRed : s.badgeTextGreen]}>
                       {isLow ? 'Low' : 'OK'}
@@ -88,15 +150,70 @@ export default function ProductsScreen() {
           }}
         />
       </View>
-      <TouchableOpacity style={s.fab}>
+
+      <TouchableOpacity style={s.fab} onPress={() => setShowAddModal(true)}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* Add Product Modal */}
+      <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Add Product</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={s.modalBody}>
+            {[
+              { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola 500ml' },
+              { label: 'Price (USD) *', key: 'priceUsd', placeholder: '1.50', keyboard: 'decimal-pad' },
+              { label: 'Quantity *', key: 'quantity', placeholder: '100', keyboard: 'numeric' },
+              { label: 'Unit *', key: 'unit', placeholder: 'e.g. bottle, kg, crate' },
+              { label: 'Min threshold', key: 'minThreshold', placeholder: '10', keyboard: 'numeric' },
+            ].map(field => (
+              <View key={field.key} style={{ marginBottom: 16 }}>
+                <Text style={s.fieldLabel}>{field.label}</Text>
+                <TextInput
+                  style={s.fieldInput}
+                  placeholder={field.placeholder}
+                  placeholderTextColor="#9CA3AF"
+                  value={(form as any)[field.key]}
+                  onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                  keyboardType={(field.keyboard as any) || 'default'}
+                />
+              </View>
+            ))}
+
+            {categories.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={s.fieldLabel}>Category</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {categories.map((cat: any) => (
+                      <TouchableOpacity key={cat.id} style={[s.chip, form.categoryId === String(cat.id) && s.chipActive]}
+                        onPress={() => setForm(f => ({ ...f, categoryId: String(cat.id) }))}>
+                        <Text style={[s.chipText, form.categoryId === String(cat.id) && s.chipTextActive]}>{cat.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+
+            <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddProduct} disabled={addLoading}>
+              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>Add Product</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
   sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
@@ -105,7 +222,6 @@ const s = StyleSheet.create({
   body: { flex: 1, padding: 12 },
   searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
   searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: '#374151' },
-  chips: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
   chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
   chipActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
   chipText: { fontSize: 12, color: '#374151' },
@@ -123,4 +239,14 @@ const s = StyleSheet.create({
   badgeTextGreen: { color: '#065F46' },
   badgeTextRed: { color: '#991B1B' },
   fab: { position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: '#1A56DB', borderRadius: 25, alignItems: 'center', justifyContent: 'center', shadowColor: '#1A56DB', shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  modalBody: { padding: 16, paddingBottom: 40 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  confirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

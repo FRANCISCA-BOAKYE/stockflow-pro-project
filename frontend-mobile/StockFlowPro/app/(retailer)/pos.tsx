@@ -1,59 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView, Alert
+  StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import { api } from '../../services/api';
 import PaystackPayment from '../../components/PaystackPayment';
-
-const PRODUCTS = [
-  { id: '1', name: 'Coca-Cola 500ml', price: 2.50, stock: 120 },
-  { id: '2', name: 'Mineral Water 1L', price: 1.00, stock: 4 },
-  { id: '3', name: 'Rice 1kg', price: 3.50, stock: 6 },
-  { id: '4', name: 'Bread Loaf', price: 2.00, stock: 8 },
-  { id: '5', name: 'Cooking Oil 1L', price: 4.00, stock: 30 },
-  { id: '6', name: 'Sugar 1kg', price: 2.50, stock: 2 },
-];
-
-const PAYMENT_MODES = [
-  { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
-  { key: 'CARD', label: 'Card', icon: 'card-outline' },
-  { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
-  { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
-];
 
 export default function POSScreen() {
   const { user } = useAuthStore();
+  const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [qty, setQty] = useState(1);
   const [payment, setPayment] = useState('CASH');
   const [creditBuyer, setCreditBuyer] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [showPaystack, setShowPaystack] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const results = search.length > 1
-    ? PRODUCTS.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-    : [];
+  const PAYMENT_MODES = [
+    { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
+    { key: 'CARD', label: 'Card', icon: 'card-outline' },
+    { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
+    { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
+  ];
 
-  const total = selected ? (selected.price * qty).toFixed(2) : '0.00';
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await api.get(`/retailer/products${search.length > 1 ? `?search=${search}` : ''}`);
+      setProducts(res.data?.content || res.data || []);
+    } catch (e) {
+      console.log('Error fetching products:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
 
-  const confirmSale = () => {
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  const results = search.length > 1 ? products : [];
+  const total = selected ? (Number(selected.priceUsd) * qty).toFixed(2) : '0.00';
+
+  const confirmSale = async () => {
     if (!selected) { Alert.alert('No product', 'Please select a product.'); return; }
     if (payment === 'CREDIT' && !creditBuyer.trim()) { Alert.alert('Missing info', 'Enter the buyer name for credit.'); return; }
     if (payment === 'MOBILE_MONEY' && !mobileNumber.trim()) { Alert.alert('Missing info', 'Enter the mobile money number.'); return; }
+    if (payment === 'CREDIT' && !dueDate.trim()) { Alert.alert('Missing info', 'Enter a due date for credit.'); return; }
     if (payment === 'CARD') { setShowPaystack(true); return; }
-    Alert.alert('Sale confirmed', `${selected.name} x${qty} — $${total} via ${payment}`, [
-      { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(1); setPayment('CASH'); setCreditBuyer(''); setMobileNumber(''); } }
-    ]);
+    await recordSale('CASH');
   };
 
-  const handlePaystackSuccess = (reference: string) => {
+  const recordSale = async (paymentMode: string) => {
+    setSubmitting(true);
+    try {
+      const body: any = {
+        productId: selected.id,
+        productType: 'RETAIL_PRODUCT',
+        quantity: qty,
+        unitPriceUsd: Number(selected.priceUsd),
+        paymentMode,
+        buyerName: creditBuyer || user?.name || 'Walk-in customer',
+      };
+      if (paymentMode === 'CREDIT') {
+        body.dueDate = dueDate;
+      }
+      const res = await api.post('/pos/retail', body);
+      const inv = res.data;
+      Alert.alert(
+        'Sale confirmed ✓',
+        `${inv.productName} x${qty}\nTotal: $${inv.totalUsd}\nInvoice: ${inv.invoiceNumber}`,
+        [{ text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(1); setPayment('CASH'); setCreditBuyer(''); setDueDate(''); fetchProducts(); } }]
+      );
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Sale failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePaystackSuccess = async (reference: string) => {
     setShowPaystack(false);
-    Alert.alert('Payment successful', `${selected.name} x${qty} — $${total}\nRef: ${reference}`, [
-      { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(1); setPayment('CASH'); } }
-    ]);
+    await recordSale('CARD');
   };
 
   return (
@@ -81,6 +112,8 @@ export default function POSScreen() {
           )}
         </View>
 
+        {loading && <ActivityIndicator color="#1A56DB" style={{ marginTop: 20 }} />}
+
         {results.length > 0 && (
           <View style={s.resultsBox}>
             {results.map(p => (
@@ -89,7 +122,7 @@ export default function POSScreen() {
                   <Ionicons name="cube-outline" size={16} color="#1A56DB" />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
-                <Text style={s.resultPrice}>${p.price.toFixed(2)}</Text>
+                <Text style={s.resultPrice}>${Number(p.priceUsd).toFixed(2)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -98,10 +131,10 @@ export default function POSScreen() {
         {selected && (
           <View style={s.card}>
             <Text style={s.prodName}>{selected.name}</Text>
-            <Text style={s.prodPrice}>${selected.price.toFixed(2)} per unit</Text>
+            <Text style={s.prodPrice}>${Number(selected.priceUsd).toFixed(2)} per {selected.unit}</Text>
             <View style={s.reserveRow}>
               <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
-              <Text style={s.reserveText}> {qty} units reserved · {selected.stock - qty} available</Text>
+              <Text style={s.reserveText}> {qty} units reserved · {selected.quantity - qty} available</Text>
             </View>
             <View style={s.stepperRow}>
               <Text style={s.stepLabel}>Quantity</Text>
@@ -110,7 +143,7 @@ export default function POSScreen() {
                   <Ionicons name="remove" size={18} color="#374151" />
                 </TouchableOpacity>
                 <Text style={s.stepNum}>{qty}</Text>
-                <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => setQty(q => Math.min(selected.stock, q + 1))}>
+                <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => setQty(q => Math.min(selected.quantity, q + 1))}>
                   <Ionicons name="add" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -130,22 +163,17 @@ export default function POSScreen() {
           </View>
         </View>
 
-        {payment === 'CARD' && (
-          <View style={s.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
-              <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>Secure card payment via Paystack</Text>
-            </View>
-            <Text style={{ fontSize: 11, color: '#94A3B8' }}>Tap "Confirm Sale" to open the payment form.</Text>
-          </View>
-        )}
-
         {payment === 'CREDIT' && (
           <View style={s.card}>
             <Text style={s.fieldLabel}>Buyer name</Text>
             <View style={s.fieldInputRow}>
               <TextInput style={s.fieldInput} placeholder="Customer name" placeholderTextColor="#9CA3AF"
                 value={creditBuyer} onChangeText={setCreditBuyer} />
+            </View>
+            <Text style={s.fieldLabel}>Due date</Text>
+            <View style={s.fieldInputRow}>
+              <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
+                value={dueDate} onChangeText={setDueDate} />
             </View>
           </View>
         )}
@@ -156,6 +184,15 @@ export default function POSScreen() {
             <View style={s.fieldInputRow}>
               <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
                 value={mobileNumber} onChangeText={setMobileNumber} keyboardType="phone-pad" />
+            </View>
+          </View>
+        )}
+
+        {payment === 'CARD' && (
+          <View style={s.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
+              <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>Secure card payment via Paystack</Text>
             </View>
           </View>
         )}
@@ -177,9 +214,13 @@ export default function POSScreen() {
       </ScrollView>
 
       <View style={s.footer}>
-        <TouchableOpacity style={[s.confirmBtn, !selected && { opacity: 0.4 }]} onPress={confirmSale} disabled={!selected}>
-          <Ionicons name="checkmark-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={s.confirmText}>Confirm Sale · ${total}</Text>
+        <TouchableOpacity style={[s.confirmBtn, (!selected || submitting) && { opacity: 0.4 }]} onPress={confirmSale} disabled={!selected || submitting}>
+          {submitting ? <ActivityIndicator color="#fff" /> : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={s.confirmText}>Confirm Sale · ${total}</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
