@@ -2,40 +2,41 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-const getInvoicesForTier = (tier?: string) => {
-  if (tier === "MANUFACTURER") return [
-    { id: "INV-001", party: "Apex Distributors", date: "Jun 26, 2026", amount: 42000, status: "PAID" },
-    { id: "INV-002", party: "Sunrise Wholesale", date: "Jun 20, 2026", amount: 28500, status: "UNPAID" },
-    { id: "INV-003", party: "Delta Trading Co", date: "Jun 15, 2026", amount: 14800, status: "OVERDUE" },
-    { id: "INV-004", party: "Metro Distributors", date: "Jun 10, 2026", amount: 22000, status: "PAID" },
-  ]
-  if (tier === "WHOLESALER") return [
-    { id: "INV-101", party: "Bright Mart Retail", date: "Jun 26, 2026", amount: 2800, status: "PAID" },
-    { id: "INV-102", party: "Delta Stores", date: "Jun 22, 2026", amount: 1400, status: "UNPAID" },
-    { id: "INV-103", party: "City Mart", date: "Jun 18, 2026", amount: 3200, status: "OVERDUE" },
-  ]
-  return [
-    { id: "INV-201", party: "John Mensah", date: "Jun 26, 2026", amount: 45, status: "PAID" },
-    { id: "INV-202", party: "Abena Asante", date: "Jun 24, 2026", amount: 85.5, status: "UNPAID" },
-    { id: "INV-203", party: "Kofi Boateng", date: "Jun 20, 2026", amount: 120, status: "OVERDUE" },
-  ]
-}
+const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
 
 export default function PrintInvoicesPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
     if (!stored) { router.replace("/login"); return }
-    setUser(JSON.parse(stored))
-    setTimeout(() => window.print(), 500)
+    const u = JSON.parse(stored)
+    setUser(u)
+    fetchInvoices(u)
   }, [])
 
-  if (!user) return null
+  const fetchInvoices = async (u: any) => {
+    try {
+      const token = localStorage.getItem("sf_token")
+      const headers: any = {}
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch(`${API_BASE_URL}/pos/invoices`, { headers })
+      const data = await res.json()
+      setInvoices(data?.content || data || [])
+      setTimeout(() => window.print(), 500)
+    } catch (e) {
+      setInvoices([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const invoices = getInvoicesForTier(user.tierType)
-  const total = invoices.reduce((sum, i) => sum + i.amount, 0)
+  if (!user || loading) return null
+
+  const total = invoices.reduce((sum: number, i: any) => sum + Number(i.totalUsd || 0), 0)
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: '800px', margin: '0 auto', padding: '48px 32px', color: '#0f172a' }}>
@@ -51,40 +52,47 @@ export default function PrintInvoicesPage() {
         </button>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
-        <thead>
-          <tr style={{ borderBottom: '2px solid #0f172a' }}>
-            {['Invoice ID', 'Party', 'Date', 'Amount', 'Status'].map(h => (
-              <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {invoices.map((inv, i) => (
-            <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-              <td style={{ padding: '14px 12px', fontSize: '13px', fontFamily: 'monospace' }}>{inv.id}</td>
-              <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 600 }}>{inv.party}</td>
-              <td style={{ padding: '14px 12px', fontSize: '13px', color: '#64748b' }}>{inv.date}</td>
-              <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 700 }}>${inv.amount.toLocaleString()}</td>
-              <td style={{ padding: '14px 12px' }}>
-                <span style={{
-                  fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
-                  backgroundColor: inv.status === 'PAID' ? '#ecfdf5' : inv.status === 'OVERDUE' ? '#fef2f2' : '#f8fafc',
-                  color: inv.status === 'PAID' ? '#059669' : inv.status === 'OVERDUE' ? '#dc2626' : '#64748b',
-                }}>
-                  {inv.status}
-                </span>
-              </td>
+      {invoices.length === 0 ? (
+        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No invoices to display.</p>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #0f172a' }}>
+              {['Invoice ID', 'Party', 'Date', 'Amount', 'Status'].map(h => (
+                <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr style={{ borderTop: '2px solid #0f172a' }}>
-            <td colSpan={3} style={{ padding: '14px 12px', fontWeight: 700, fontSize: '14px' }}>Total</td>
-            <td colSpan={2} style={{ padding: '14px 12px', fontWeight: 800, fontSize: '18px', color: '#1a56db' }}>${total.toLocaleString()}</td>
-          </tr>
-        </tfoot>
-      </table>
+          </thead>
+          <tbody>
+            {invoices.map((inv: any, i: number) => {
+              const status = inv.status || (inv.paymentMode === "CREDIT" ? "UNPAID" : "PAID")
+              return (
+                <tr key={inv.transactionId || inv.id || i} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                  <td style={{ padding: '14px 12px', fontSize: '13px', fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
+                  <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 600 }}>{inv.productName || inv.buyerName || "Sale"}</td>
+                  <td style={{ padding: '14px 12px', fontSize: '13px', color: '#64748b' }}>{inv.recordedAt ? new Date(inv.recordedAt).toLocaleDateString() : ""}</td>
+                  <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 700 }}>${Number(inv.totalUsd || 0).toLocaleString()}</td>
+                  <td style={{ padding: '14px 12px' }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
+                      backgroundColor: status === 'PAID' ? '#ecfdf5' : status === 'OVERDUE' ? '#fef2f2' : '#f8fafc',
+                      color: status === 'PAID' ? '#059669' : status === 'OVERDUE' ? '#dc2626' : '#64748b',
+                    }}>
+                      {status}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: '2px solid #0f172a' }}>
+              <td colSpan={3} style={{ padding: '14px 12px', fontWeight: 700, fontSize: '14px' }}>Total</td>
+              <td colSpan={2} style={{ padding: '14px 12px', fontWeight: 800, fontSize: '18px', color: '#1a56db' }}>${total.toLocaleString()}</td>
+            </tr>
+          </tfoot>
+        </table>
+      )}
 
       <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>Generated by StockFlow Pro · {user.businessName} · {new Date().toLocaleDateString()}</p>
     </div>

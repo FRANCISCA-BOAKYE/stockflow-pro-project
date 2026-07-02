@@ -20,15 +20,6 @@ interface Listing {
   verified: boolean
 }
 
-const FALLBACK_LISTINGS: Listing[] = [
-  { id: "1", name: "Acme Manufacturing", type: "MANUFACTURER", location: "Kumasi, Ghana", products: ["Steel Parts", "Aluminium Sheets"], priceRange: "$10 – $500", moq: "100 units", deliveryTerms: "7–14 days", creditTerms: "Net 30", rating: 4.8, verified: true },
-  { id: "2", name: "Apex Distributors", type: "WHOLESALER", location: "Accra, Ghana", products: ["Beverages", "Dry Goods"], priceRange: "$5 – $200", moq: "50 units", deliveryTerms: "3–5 days", creditTerms: "Net 15", rating: 4.6, verified: true },
-  { id: "3", name: "Metro Wholesale", type: "WHOLESALER", location: "Tema, Ghana", products: ["Cement", "Steel"], priceRange: "$20 – $2,000", moq: "1 ton", deliveryTerms: "5–7 days", creditTerms: "Net 30", rating: 4.3, verified: false },
-  { id: "4", name: "GoldCoast Manufacturers", type: "MANUFACTURER", location: "Cape Coast, Ghana", products: ["Textiles", "Garments"], priceRange: "$5 – $300", moq: "200 units", deliveryTerms: "10–15 days", creditTerms: "Net 60", rating: 4.7, verified: true },
-  { id: "5", name: "Volta Distributors", type: "WHOLESALER", location: "Ho, Ghana", products: ["Electronics", "Appliances"], priceRange: "$50 – $5,000", moq: "5 units", deliveryTerms: "2–4 days", creditTerms: "Net 30", rating: 4.9, verified: true },
-  { id: "6", name: "Ashanti Steel Works", type: "MANUFACTURER", location: "Kumasi, Ghana", products: ["Steel Rods", "Iron Sheets"], priceRange: "$15 – $800", moq: "500 kg", deliveryTerms: "5–10 days", creditTerms: "Net 45", rating: 4.5, verified: true },
-]
-
 const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
   MANUFACTURER: { label: "Manufacturer", bg: "rgba(239,246,255,1)", text: "#1a56db", border: "rgba(219,234,254,1)" },
   WHOLESALER: { label: "Wholesaler", bg: "rgba(255,251,235,1)", text: "#c27803", border: "rgba(253,230,138,1)" },
@@ -36,7 +27,8 @@ const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string; bor
 }
 
 export default function MarketplacePage() {
-  const [listings, setListings] = useState<Listing[]>(FALLBACK_LISTINGS)
+  const [listings, setListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("ALL")
 
@@ -63,6 +55,7 @@ export default function MarketplacePage() {
           }))
         }
       }).catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
   const filtered = useMemo(() => listings.filter(l => {
@@ -130,70 +123,80 @@ export default function MarketplacePage() {
               <p style={{ fontSize: '13px', color: '#64748b' }}>{filtered.length} businesses found</p>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map(listing => {
-                const tc = TYPE_CONFIG[listing.type] || TYPE_CONFIG.MANUFACTURER
-                return (
-                  <div key={listing.id} style={{
-                    backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px',
-                    border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                    transition: 'all 0.3s', cursor: 'pointer',
-                  }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 30px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: tc.bg, color: tc.text, border: `1px solid ${tc.border}` }}>
-                          {tc.label}
-                        </span>
-                        {listing.verified && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#059669', backgroundColor: '#ecfdf5', padding: '4px 8px', borderRadius: '8px', border: '1px solid #a7f3d0', fontWeight: 600 }}>
-                            <ShieldCheck style={{ width: '11px', height: '11px' }} />Verified
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>Loading marketplace...</div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
+                <Search style={{ width: '40px', height: '40px', margin: '0 auto 12px', color: '#d1d5db' }} />
+                <p style={{ fontWeight: 600, color: '#374151' }}>No listings found</p>
+                <p style={{ fontSize: '13px', marginTop: '4px' }}>Check back later for businesses in the marketplace.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filtered.map(listing => {
+                  const tc = TYPE_CONFIG[listing.type] || TYPE_CONFIG.MANUFACTURER
+                  return (
+                    <div key={listing.id} style={{
+                      backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px',
+                      border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                      transition: 'all 0.3s', cursor: 'pointer',
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 30px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '8px', backgroundColor: tc.bg, color: tc.text, border: `1px solid ${tc.border}` }}>
+                            {tc.label}
                           </span>
+                          {listing.verified && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#059669', backgroundColor: '#ecfdf5', padding: '4px 8px', borderRadius: '8px', border: '1px solid #a7f3d0', fontWeight: 600 }}>
+                              <ShieldCheck style={{ width: '11px', height: '11px' }} />Verified
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Star style={{ width: '13px', height: '13px', color: '#f59e0b', fill: '#f59e0b' }} />
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{listing.rating}</span>
+                        </div>
+                      </div>
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{listing.name}</h3>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+                        <MapPin style={{ width: '12px', height: '12px' }} />{listing.location}
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                        {listing.products.length > 0 ? listing.products.map(p => (
+                          <span key={p} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 500 }}>{p}</span>
+                        )) : (
+                          <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }}>Contact for product list</span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        <Star style={{ width: '13px', height: '13px', color: '#f59e0b', fill: '#f59e0b' }} />
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{listing.rating}</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
+                        {[
+                          { label: "Price range", value: listing.priceRange },
+                          { label: "Min. order", value: listing.moq },
+                          { label: "Delivery", value: listing.deliveryTerms },
+                          { label: "Credit terms", value: listing.creditTerms },
+                        ].map(d => (
+                          <div key={d.label}>
+                            <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px', fontWeight: 500 }}>{d.label}</p>
+                            <p style={{ fontSize: '12px', color: '#0f172a', fontWeight: 600 }}>{d.value}</p>
+                          </div>
+                        ))}
                       </div>
+                      <button style={{
+                        width: '100%', padding: '12px', borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
+                        color: '#ffffff', fontWeight: 600, fontSize: '13px',
+                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                      }}>
+                        Contact <ArrowRight style={{ width: '14px', height: '14px' }} />
+                      </button>
                     </div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{listing.name}</h3>
-                    <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
-                      <MapPin style={{ width: '12px', height: '12px' }} />{listing.location}
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
-                      {listing.products.length > 0 ? listing.products.map(p => (
-                        <span key={p} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 500 }}>{p}</span>
-                      )) : (
-                        <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }}>Contact for product list</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
-                      {[
-                        { label: "Price range", value: listing.priceRange },
-                        { label: "Min. order", value: listing.moq },
-                        { label: "Delivery", value: listing.deliveryTerms },
-                        { label: "Credit terms", value: listing.creditTerms },
-                      ].map(d => (
-                        <div key={d.label}>
-                          <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px', fontWeight: 500 }}>{d.label}</p>
-                          <p style={{ fontSize: '12px', color: '#0f172a', fontWeight: 600 }}>{d.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <button style={{
-                      width: '100%', padding: '12px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
-                      color: '#ffffff', fontWeight: 600, fontSize: '13px',
-                      border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    }}>
-                      Contact <ArrowRight style={{ width: '14px', height: '14px' }} />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </section>
       </main>
