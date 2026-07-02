@@ -1,53 +1,89 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, ActivityIndicator, RefreshControl, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const INITIAL_THEY_OWE_ME = [
-  { id: '1', name: 'John Mensah', due: 'Jun 30, 2026', amount: 120.00, status: 'DUE_SOON', held: false },
-  { id: '2', name: 'Abena Asante', due: 'Jun 15, 2026', amount: 85.50, status: 'OVERDUE', held: false },
-  { id: '3', name: 'Kofi Boateng', due: 'Jul 10, 2026', amount: 200.00, status: 'OUTSTANDING', held: false },
-  { id: '4', name: 'Ama Owusu', due: 'Jun 1, 2026', amount: 45.00, status: 'SETTLED', held: false },
-];
-
-const I_OWE_THEM = [
-  { id: '5', name: 'Apex Distributors', due: 'Jul 5, 2026', amount: 1800.00, status: 'OUTSTANDING' },
-  { id: '6', name: 'Metro Wholesale', due: 'Jun 25, 2026', amount: 950.00, status: 'DUE_SOON' },
-];
+import { api } from '../../../services/api';
 
 const STATUS_MAP: Record<string, { bg: string; text: string; label: string; icon: string }> = {
   OVERDUE: { bg: '#FEE2E2', text: '#991B1B', label: 'Overdue', icon: 'alert-circle-outline' },
-  DUE_SOON: { bg: '#FEF3C7', text: '#92400E', label: 'Due soon', icon: 'time-outline' },
   OUTSTANDING: { bg: '#F3F4F6', text: '#374151', label: 'Outstanding', icon: 'ellipse-outline' },
   SETTLED: { bg: '#D1FAE5', text: '#065F46', label: 'Settled', icon: 'checkmark-circle-outline' },
 };
 
 export default function RetailerCreditScreen() {
   const [tab, setTab] = useState<'owe_me' | 'i_owe'>('owe_me');
-  const [theyOweMe, setTheyOweMe] = useState(INITIAL_THEY_OWE_ME);
-  const data = tab === 'owe_me' ? theyOweMe : I_OWE_THEM;
-  const total = data.reduce((sum, item) => sum + item.amount, 0);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const toggleHold = (id: string) => {
-    const acct = theyOweMe.find(a => a.id === id);
-    if (!acct) return;
+  const fetchAccounts = useCallback(async () => {
+    try {
+      const res = await api.get('/credit/accounts');
+      setAccounts(res.data || []);
+    } catch (e) {
+      console.log('Error fetching credit accounts:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
+
+  const handleRecordPayment = async () => {
+    if (!paymentAmount || !selectedAccount) return;
+    setSubmitting(true);
+    try {
+      await api.post('/credit/payment', {
+        creditRecordId: selectedAccount.id,
+        amountPaidUsd: parseFloat(paymentAmount),
+      });
+      Alert.alert('Success', 'Payment recorded successfully!');
+      setShowPaymentModal(false);
+      setPaymentAmount('');
+      setSelectedAccount(null);
+      fetchAccounts();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to record payment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleHold = async (account: any) => {
     Alert.alert(
-      acct.held ? 'Remove hold' : 'Place hold',
-      acct.held ? `Remove the credit hold on ${acct.name}?` : `Place a hold on ${acct.name}? This blocks new credit until the balance is cleared.`,
+      account.holdPlaced ? 'Remove hold' : 'Place hold',
+      account.holdPlaced
+        ? `Remove the credit hold on ${account.debtorBusinessName}?`
+        : `Place a hold on ${account.debtorBusinessName}? This blocks new credit until cleared.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: acct.held ? 'Remove hold' : 'Place hold', style: acct.held ? 'default' : 'destructive', onPress: () => setTheyOweMe(prev => prev.map(a => a.id === id ? { ...a, held: !a.held } : a)) }
+        {
+          text: account.holdPlaced ? 'Remove hold' : 'Place hold',
+          style: account.holdPlaced ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              await api.post('/credit/hold', { creditRecordId: account.id });
+              fetchAccounts();
+            } catch (e: any) {
+              Alert.alert('Error', e?.response?.data?.message || 'Action failed');
+            }
+          }
+        }
       ]
     );
   };
 
-  const recordPayment = (id: string) => {
-    const acct = theyOweMe.find(a => a.id === id);
-    if (!acct) return;
-    Alert.alert('Record payment', `Mark ${acct.name}'s balance of $${acct.amount.toLocaleString()} as settled?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => setTheyOweMe(prev => prev.map(a => a.id === id ? { ...a, status: 'SETTLED', held: false } : a)) }
-    ]);
-  };
+  // Split into they owe me vs I owe them based on debtor/creditor
+  const theyOweMe = accounts.filter(a => a.debtorBusinessName !== undefined && a.creditorBusinessName !== undefined);
+  const iOweThem = accounts.filter(a => a.status !== 'SETTLED');
+  const data = tab === 'owe_me' ? theyOweMe : iOweThem;
+  const total = data.filter(a => a.status !== 'SETTLED').reduce((sum, a) => sum + Number(a.amountUsd), 0);
+
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
@@ -55,6 +91,7 @@ export default function RetailerCreditScreen() {
         <Text style={s.title}>Credit accounts</Text>
         <Text style={s.sub}>Customer credit accounts</Text>
       </View>
+
       <View style={s.tabs}>
         <TouchableOpacity style={[s.tab, tab === 'owe_me' && s.tabActive]} onPress={() => setTab('owe_me')}>
           <Ionicons name="arrow-down-circle-outline" size={15} color={tab === 'owe_me' ? '#1A56DB' : '#9CA3AF'} style={{ marginRight: 5 }} />
@@ -65,12 +102,13 @@ export default function RetailerCreditScreen() {
           <Text style={[s.tabText, tab === 'i_owe' && s.tabTextActive]}>I owe them</Text>
         </TouchableOpacity>
       </View>
+
       <View style={s.body}>
         <View style={s.balanceCard}>
           <View style={s.balRow}>
             <View>
               <Text style={s.balLabel}>Total outstanding</Text>
-              <Text style={s.balAmount}>${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+              <Text style={s.balAmount}>${total.toFixed(2)}</Text>
               <Text style={s.balCount}>{data.length} accounts</Text>
             </View>
             <View style={s.balIcon}>
@@ -78,14 +116,24 @@ export default function RetailerCreditScreen() {
             </View>
           </View>
         </View>
+
         <FlatList
           data={data}
-          keyExtractor={item => item.id}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }: { item: any }) => {
-            const st = STATUS_MAP[item.status];
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAccounts(); }} tintColor="#1A56DB" />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Ionicons name="wallet-outline" size={40} color="#D1D5DB" />
+              <Text style={s.emptyText}>No credit accounts</Text>
+              <Text style={s.emptySub}>Credit accounts will appear here when created via POS</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const st = STATUS_MAP[item.status] || STATUS_MAP.OUTSTANDING;
             const showActions = tab === 'owe_me' && item.status !== 'SETTLED';
+            const name = tab === 'owe_me' ? item.debtorBusinessName : item.creditorBusinessName;
             return (
               <View style={s.card}>
                 <View style={s.cardTop}>
@@ -94,8 +142,8 @@ export default function RetailerCreditScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={s.nameRow}>
-                      <Text style={s.acctName}>{item.name}</Text>
-                      {item.held && (
+                      <Text style={s.acctName}>{name}</Text>
+                      {item.holdPlaced && (
                         <View style={s.heldPill}>
                           <Ionicons name="lock-closed-outline" size={9} color="#991B1B" />
                           <Text style={s.heldPillText}>On hold</Text>
@@ -104,11 +152,11 @@ export default function RetailerCreditScreen() {
                     </View>
                     <View style={s.dueRow}>
                       <Ionicons name="calendar-outline" size={11} color="#9CA3AF" />
-                      <Text style={s.acctDue}> Due {item.due}</Text>
+                      <Text style={s.acctDue}> Due {new Date(item.dueDate).toLocaleDateString()}</Text>
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={s.acctAmt}>${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={s.acctAmt}>${Number(item.amountUsd).toFixed(2)}</Text>
                     <View style={[s.badge, { backgroundColor: st.bg }]}>
                       <Text style={[s.badgeText, { color: st.text }]}>{st.label}</Text>
                     </View>
@@ -116,13 +164,13 @@ export default function RetailerCreditScreen() {
                 </View>
                 {showActions && (
                   <View style={s.actionsRow}>
-                    <TouchableOpacity style={s.paymentBtn} onPress={() => recordPayment(item.id)}>
+                    <TouchableOpacity style={s.paymentBtn} onPress={() => { setSelectedAccount(item); setPaymentAmount(String(item.amountUsd)); setShowPaymentModal(true); }}>
                       <Ionicons name="checkmark-circle-outline" size={13} color="#059669" style={{ marginRight: 4 }} />
                       <Text style={s.paymentBtnText}>Record payment</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[s.holdBtn, item.held && s.holdBtnActive]} onPress={() => toggleHold(item.id)}>
-                      <Ionicons name="lock-closed-outline" size={13} color={item.held ? '#fff' : '#DC2626'} style={{ marginRight: 4 }} />
-                      <Text style={[s.holdBtnText, item.held && s.holdBtnTextActive]}>{item.held ? 'Remove hold' : 'Place hold'}</Text>
+                    <TouchableOpacity style={[s.holdBtn, item.holdPlaced && s.holdBtnActive]} onPress={() => handleToggleHold(item)}>
+                      <Ionicons name="lock-closed-outline" size={13} color={item.holdPlaced ? '#fff' : '#DC2626'} style={{ marginRight: 4 }} />
+                      <Text style={[s.holdBtnText, item.holdPlaced && s.holdBtnTextActive]}>{item.holdPlaced ? 'Remove hold' : 'Place hold'}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -131,12 +179,42 @@ export default function RetailerCreditScreen() {
           }}
         />
       </View>
+
+      {/* Payment Modal */}
+      <Modal visible={showPaymentModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPaymentModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Record Payment</Text>
+            <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ padding: 16 }}>
+            <Text style={s.fieldLabel}>Amount paid (USD)</Text>
+            <TextInput
+              style={s.fieldInput}
+              placeholder="Enter amount"
+              placeholderTextColor="#9CA3AF"
+              value={paymentAmount}
+              onChangeText={setPaymentAmount}
+              keyboardType="decimal-pad"
+            />
+            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8, marginBottom: 24 }}>
+              Full balance: ${Number(selectedAccount?.amountUsd || 0).toFixed(2)}
+            </Text>
+            <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleRecordPayment} disabled={submitting}>
+              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Payment</Text>}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
   title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
   sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
@@ -171,4 +249,13 @@ const s = StyleSheet.create({
   holdBtnActive: { backgroundColor: '#DC2626' },
   holdBtnText: { fontSize: 11.5, color: '#DC2626', fontWeight: '600' },
   holdBtnTextActive: { color: '#fff' },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  confirmBtn: { backgroundColor: '#059669', borderRadius: 14, padding: 16, alignItems: 'center' },
+  confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
