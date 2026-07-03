@@ -260,7 +260,7 @@ export default function RecipesScreen() {
               </View>
               <FlatList
                 data={materials}
-                keyExtractor={item => String(item.id)}
+                keyExtractor={(item, index) => item.id ? String(item.id) : String(index)}
                 contentContainerStyle={{ padding: 16, gap: 8 }}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
