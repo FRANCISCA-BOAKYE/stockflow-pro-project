@@ -16,8 +16,10 @@ export default function RecipesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', outputQuantity: '', outputUnit: '' });
-  const [recipeMaterials, setRecipeMaterials] = useState<{ materialId: string; quantityRequired: string }[]>([]);
+  const [form, setForm] = useState({ productName: '', unitLabel: '', groupLabel: '', unitsPerGroup: '' });
+  const [recipeMaterials, setRecipeMaterials] = useState<{ materialId: string; quantityPerUnit: string }[]>([]);
+  const [showMaterialPicker, setShowMaterialPicker] = useState(false);
+  const [pickingForIndex, setPickingForIndex] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -38,7 +40,7 @@ export default function RecipesScreen() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const addMaterialLine = () => {
-    setRecipeMaterials(prev => [...prev, { materialId: '', quantityRequired: '' }]);
+    setRecipeMaterials(prev => [...prev, { materialId: '', quantityPerUnit: '' }]);
   };
 
   const updateMaterialLine = (index: number, field: string, value: string) => {
@@ -49,8 +51,31 @@ export default function RecipesScreen() {
     setRecipeMaterials(prev => prev.filter((_, i) => i !== index));
   };
 
+  const openMaterialPicker = (index: number) => {
+    setPickingForIndex(index);
+    setShowMaterialPicker(true);
+  };
+
+  const selectMaterial = (materialId: string) => {
+    if (pickingForIndex !== null) {
+      updateMaterialLine(pickingForIndex, 'materialId', materialId);
+    }
+    setShowMaterialPicker(false);
+    setPickingForIndex(null);
+  };
+
+  const getSelectedMaterialName = (materialId: string) => {
+    const mat = materials.find(m => String(m.id) === materialId);
+    return mat ? `${mat.name} (${mat.unit})` : '';
+  };
+
+  const getSelectedMaterialUnit = (materialId: string) => {
+    const mat = materials.find(m => String(m.id) === materialId);
+    return mat ? mat.unit : '';
+  };
+
   const handleAddRecipe = async () => {
-    if (!form.name || !form.outputQuantity || !form.outputUnit) {
+    if (!form.productName || !form.unitLabel || !form.groupLabel || !form.unitsPerGroup) {
       Alert.alert('Missing info', 'Please fill in all required fields.');
       return;
     }
@@ -58,19 +83,25 @@ export default function RecipesScreen() {
       Alert.alert('Missing info', 'Please add at least one material.');
       return;
     }
+    const hasEmpty = recipeMaterials.some(m => !m.materialId || !m.quantityPerUnit);
+    if (hasEmpty) {
+      Alert.alert('Missing info', 'Please complete all material entries.');
+      return;
+    }
     setAddLoading(true);
     try {
       await api.post('/manufacturer/recipes', {
-        name: form.name,
-        outputQuantity: parseInt(form.outputQuantity),
-        outputUnit: form.outputUnit,
+        productName: form.productName,
+        unitLabel: form.unitLabel,
+        groupLabel: form.groupLabel,
+        unitsPerGroup: parseInt(form.unitsPerGroup),
         materials: recipeMaterials.map(m => ({
           materialId: parseInt(m.materialId),
-          quantityRequired: parseFloat(m.quantityRequired),
+          quantityPerUnit: parseFloat(m.quantityPerUnit),
         })),
       });
       setShowAddModal(false);
-      setForm({ name: '', outputQuantity: '', outputUnit: '' });
+      setForm({ productName: '', unitLabel: '', groupLabel: '', unitsPerGroup: '' });
       setRecipeMaterials([]);
       fetchData();
       Alert.alert('Success', 'Recipe added successfully!');
@@ -151,26 +182,31 @@ export default function RecipesScreen() {
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}>
             <View>
-              <Text style={s.fieldLabel}>Recipe name *</Text>
-              <TextInput style={s.fieldInput} placeholder="e.g. Cotton T-Shirt" placeholderTextColor="#9CA3AF"
-                value={form.name} onChangeText={v => setForm(f => ({ ...f, name: v }))} />
+              <Text style={s.fieldLabel}>Product name *</Text>
+              <TextInput style={s.fieldInput} placeholder="e.g. Golden Butter Biscuits" placeholderTextColor="#9CA3AF"
+                value={form.productName} onChangeText={v => setForm(f => ({ ...f, productName: v }))} />
             </View>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={s.fieldLabel}>Output quantity *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. 24" placeholderTextColor="#9CA3AF"
-                  value={form.outputQuantity} onChangeText={v => setForm(f => ({ ...f, outputQuantity: v }))} keyboardType="numeric" />
+                <Text style={s.fieldLabel}>Unit label *</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. pack" placeholderTextColor="#9CA3AF"
+                  value={form.unitLabel} onChangeText={v => setForm(f => ({ ...f, unitLabel: v }))} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.fieldLabel}>Output unit *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. units" placeholderTextColor="#9CA3AF"
-                  value={form.outputUnit} onChangeText={v => setForm(f => ({ ...f, outputUnit: v }))} />
+                <Text style={s.fieldLabel}>Group label *</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. carton" placeholderTextColor="#9CA3AF"
+                  value={form.groupLabel} onChangeText={v => setForm(f => ({ ...f, groupLabel: v }))} />
               </View>
+            </View>
+            <View>
+              <Text style={s.fieldLabel}>Units per group *</Text>
+              <TextInput style={s.fieldInput} placeholder="e.g. 24" placeholderTextColor="#9CA3AF"
+                value={form.unitsPerGroup} onChangeText={v => setForm(f => ({ ...f, unitsPerGroup: v }))} keyboardType="numeric" />
             </View>
 
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={s.fieldLabel}>Materials needed</Text>
+                <Text style={s.fieldLabel}>Materials per unit</Text>
                 <TouchableOpacity style={s.addMatBtn} onPress={addMaterialLine}>
                   <Ionicons name="add" size={14} color="#1A56DB" />
                   <Text style={s.addMatBtnText}>Add material</Text>
@@ -182,28 +218,25 @@ export default function RecipesScreen() {
                 </View>
               ) : (
                 recipeMaterials.map((m, i) => (
-                  <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'center' }}>
-                    <View style={{ flex: 2 }}>
-                      <Text style={[s.fieldLabel, { fontSize: 11 }]}>Material</Text>
-                      <View style={[s.fieldInput, { padding: 0 }]}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <View style={{ flexDirection: 'row', gap: 6, padding: 8 }}>
-                            {materials.map((mat: any) => (
-                              <TouchableOpacity key={mat.id} style={[s.matChip, m.materialId === String(mat.id) && s.matChipActive]}
-                                onPress={() => updateMaterialLine(i, 'materialId', String(mat.id))}>
-                                <Text style={[s.matChipText, m.materialId === String(mat.id) && s.matChipTextActive]}>{mat.name}</Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </ScrollView>
+                  <View key={i} style={s.matLineCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.fieldLabel, { fontSize: 11 }]}>Material *</Text>
+                      <TouchableOpacity style={s.matPickerBtn} onPress={() => openMaterialPicker(i)}>
+                        <Text style={[s.matPickerText, !m.materialId && { color: '#9CA3AF' }]}>
+                          {m.materialId ? getSelectedMaterialName(m.materialId) : 'Choose material...'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ width: 100 }}>
+                      <Text style={[s.fieldLabel, { fontSize: 11 }]}>Qty per unit *</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TextInput style={[s.fieldInput, { flex: 1 }]} placeholder="0" placeholderTextColor="#9CA3AF"
+                          value={m.quantityPerUnit} onChangeText={v => updateMaterialLine(i, 'quantityPerUnit', v)} keyboardType="decimal-pad" />
+                        {m.materialId ? <Text style={s.matUnitHint}>{getSelectedMaterialUnit(m.materialId)}</Text> : null}
                       </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.fieldLabel, { fontSize: 11 }]}>Qty</Text>
-                      <TextInput style={s.fieldInput} placeholder="0" placeholderTextColor="#9CA3AF"
-                        value={m.quantityRequired} onChangeText={v => updateMaterialLine(i, 'quantityRequired', v)} keyboardType="decimal-pad" />
-                    </View>
-                    <TouchableOpacity onPress={() => removeMaterialLine(i)} style={{ marginTop: 18 }}>
+                    <TouchableOpacity onPress={() => removeMaterialLine(i)} style={s.matRemoveBtn}>
                       <Ionicons name="trash-outline" size={18} color="#DC2626" />
                     </TouchableOpacity>
                   </View>
@@ -215,6 +248,41 @@ export default function RecipesScreen() {
               {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Save Recipe</Text>}
             </TouchableOpacity>
           </ScrollView>
+
+          {/* Material Picker Modal */}
+          <Modal visible={showMaterialPicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setShowMaterialPicker(false); setPickingForIndex(null); }}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+              <View style={s.modalHeader}>
+                <Text style={s.modalTitle}>Select Material</Text>
+                <TouchableOpacity onPress={() => { setShowMaterialPicker(false); setPickingForIndex(null); }}>
+                  <Ionicons name="close" size={24} color="#374151" />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={materials}
+                keyExtractor={item => String(item.id)}
+                contentContainerStyle={{ padding: 16, gap: 8 }}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={[s.empty, { paddingTop: 40 }]}>
+                    <Text style={s.emptySub}>No materials available. Add materials first.</Text>
+                  </View>
+                }
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={s.matOptionCard} onPress={() => selectMaterial(String(item.id))}>
+                    <View style={[s.matOptionDot, { backgroundColor: item.quantity < item.minThreshold ? '#FEE2E2' : '#D1FAE5' }]}>
+                      <Ionicons name="flask" size={16} color={item.quantity < item.minThreshold ? '#DC2626' : '#059669'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.matOptionName}>{item.name}</Text>
+                      <Text style={s.matOptionUnit}>{item.unit} · {Number(item.quantity).toFixed(0)} in stock</Text>
+                    </View>
+                    <Ionicons name="checkmark-circle" size={20} color="#1A56DB" />
+                  </TouchableOpacity>
+                )}
+              />
+            </SafeAreaView>
+          </Modal>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -248,10 +316,15 @@ const s = StyleSheet.create({
   fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
   addMatBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
   addMatBtnText: { fontSize: 12, color: '#1A56DB', fontWeight: '600' },
-  matChip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  matChipActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  matChipText: { fontSize: 11, color: '#374151' },
-  matChipTextActive: { color: '#fff', fontWeight: '500' },
+  matLineCard: { flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'flex-start', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.05)' },
+  matPickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, backgroundColor: '#fff' },
+  matPickerText: { fontSize: 13, color: '#0F172A', flex: 1 },
+  matUnitHint: { fontSize: 11, color: '#6B7280', marginLeft: 4 },
+  matRemoveBtn: { marginTop: 22, width: 32, height: 32, borderRadius: 10, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center' },
+  matOptionCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.05)' },
+  matOptionDot: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  matOptionName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  matOptionUnit: { fontSize: 11, color: '#6B7280', marginTop: 2 },
   confirmBtn: { backgroundColor: '#8B5CF6', borderRadius: 14, padding: 16, alignItems: 'center' },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
