@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
 import { sendEmail, welcomeEmailHtml } from "@/lib/email"
 import { API_BASE_URL } from "@/lib/api"
 import { MONTHLY_PRICE_USD as planPrices, SUB_ACCOUNT_LIMITS as ACCOUNT_LIMITS } from "@/lib/subscription-plans"
@@ -93,7 +94,7 @@ sendEmail(
   formData.email,
   `Welcome to StockFlow Pro — ${formData.businessName}`,
   welcomeEmailHtml(formData.businessName, selectedTier, selectedPlan, formData.email, formData.password)
-).catch(() => {})
+).catch(() => toast.warning("Account created, but the welcome email failed to send. Your credentials are shown below."))
 
     } catch (err: any) {
       setError(err.message || "Something went wrong.")

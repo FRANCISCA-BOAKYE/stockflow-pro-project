@@ -94,12 +94,7 @@ public class POSService {
         BigDecimal total = request.getUnitPriceUsd()
                 .multiply(BigDecimal.valueOf(request.getQuantity()));
 
-        // 6. Generate invoice number
         Business business = product.getBusiness();
-        Long invoiceCount = invoiceRepository
-                .countBySellerBusinessId(businessId);
-        String invoiceNumber = "SF-" + businessId + "-"
-                + String.format("%05d", invoiceCount + 1);
 
         // 7. Create transaction record
         RetailTransaction tx = new RetailTransaction();
@@ -148,7 +143,6 @@ public class POSService {
         invoiceUser.setId(userId);
 
         Invoice invoice = new Invoice();
-        invoice.setInvoiceNumber(invoiceNumber);
         invoice.setSellerBusiness(business);
         invoice.setTotalUsd(total);
         invoice.setSubtotalUsd(total);
@@ -173,13 +167,14 @@ public class POSService {
             invoice.setBuyerName(request.getBuyerName());
         }
 
-        Invoice savedInvoice = invoiceRepository.save(invoice);
+        Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
+                invoiceRepository, businessId, invoice);
         tx.setInvoiceId(savedInvoice.getId());
         invoiceEmailService.sendIfEligible(savedInvoice, business);
 
         return new POSResponse(
                 tx.getId(),
-                invoiceNumber,
+                savedInvoice.getInvoiceNumber(),
                 product.getName(),
                 request.getQuantity(),
                 request.getUnitPriceUsd(),

@@ -56,24 +56,12 @@ public class ReportService {
     private void buildRetailerDashboard(DashboardResponse response,
                                         Long businessId) {
         // Total active products
-        long totalProducts = productRepository
-                .findByBusinessIdAndIsActiveTrue(businessId,
-                        org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE))
-                .getTotalElements();
-        response.setTotalProducts((int) totalProducts);
+        response.setTotalProducts((int) productRepository
+                .countByBusinessIdAndIsActiveTrue(businessId));
 
         // Low stock count
-        List<?> lowStock = productRepository
-                .findByBusinessIdAndIsActiveTrueAndQuantityLessThanEqual(
-                        businessId, new BigDecimal("999999"))
-                .stream()
-                .filter(p -> {
-                    com.stockflow.stockflowbackend.model.Product product =
-                            (com.stockflow.stockflowbackend.model.Product) p;
-                    return product.getQuantity()
-                            .compareTo(product.getMinThreshold()) <= 0;
-                }).toList();
-        response.setLowStockCount(lowStock.size());
+        response.setLowStockCount(
+                productRepository.findLowStock(businessId).size());
 
         // Credit owed (this business is debtor)
         List<CreditRecord> iOwe = creditRepository
@@ -90,16 +78,9 @@ public class ReportService {
         response.setOverdueAccountsCount((int) overdue);
 
         // Today's sales
-        BigDecimal todaySales = transactionRepository
-                .findByBusinessIdOrderByRecordedAtDesc(businessId,
-                        org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE))
-                .getContent()
-                .stream()
-                .filter(t -> t.getType().equals("OUT")
-                        && t.getRecordedAt().toLocalDate()
-                        .equals(LocalDate.now()))
-                .map(t -> t.getAmountUsd())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        BigDecimal todaySales = transactionRepository.sumSalesInRange(
+                businessId, startOfDay, startOfDay.plusDays(1));
         response.setTodaySalesUsd(todaySales);
     }
 

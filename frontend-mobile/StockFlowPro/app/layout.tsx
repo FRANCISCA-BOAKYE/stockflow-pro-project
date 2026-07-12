@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/authStore';
+import { TIER_DASHBOARD_ROUTES, TIER_GROUP_SEGMENTS } from '../constants/routes';
 
 export default function RootLayout() {
   const { token, user, isLoading, setAuth, clearAuth } = useAuthStore();
@@ -37,15 +38,19 @@ export default function RootLayout() {
       return;
     }
 
-    const tierRoute: Record<string, any> = {
-      MANUFACTURER: '/(manufacturer)/dashboard',
-      WHOLESALER: '/(wholesaler)/dashboard',
-      RETAILER: '/(retailer)/dashboard',
-    };
+    if (inAuth) {
+      router.replace((TIER_DASHBOARD_ROUTES[user?.tierType ?? ''] ?? '/(auth)/login') as any);
+      return;
+    }
 
-    if (!inAuth) return;
-    router.replace(tierRoute[user?.tierType ?? ''] ?? '/(auth)/login');
-  }, [token, user, isLoading]);
+    // Tier guard: block deep-linking into another tier's route group
+    const currentGroup = segments[0];
+    const ownGroup = TIER_GROUP_SEGMENTS[user?.tierType ?? ''];
+    const isAnyTierGroup = Object.values(TIER_GROUP_SEGMENTS).includes(currentGroup as string);
+    if (isAnyTierGroup && currentGroup !== ownGroup && ownGroup) {
+      router.replace(TIER_DASHBOARD_ROUTES[user?.tierType ?? ''] as any);
+    }
+  }, [token, user, isLoading, segments]);
 
   return <Slot />;
 }

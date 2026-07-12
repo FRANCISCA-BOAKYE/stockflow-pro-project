@@ -3,7 +3,9 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell } from "lucide-react"
+import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
+import { clearAuthSession } from "@/lib/auth"
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
@@ -34,12 +36,13 @@ export default function DashboardPage() {
     const u = JSON.parse(stored)
     setUser(u)
     fetch(`${API_BASE_URL}/reports/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => setData(d)).catch(() => {}).finally(() => setLoading(false))
+      .then(r => r.json()).then(d => setData(d))
+      .catch(() => toast.error("Couldn't load dashboard stats. Check your connection and try again."))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem("sf_token")
-    localStorage.removeItem("sf_user")
+    clearAuthSession()
     router.replace("/login")
   }
 

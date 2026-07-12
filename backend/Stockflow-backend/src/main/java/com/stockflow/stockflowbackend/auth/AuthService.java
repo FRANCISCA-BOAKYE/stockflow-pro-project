@@ -8,10 +8,15 @@ import com.stockflow.stockflowbackend.subscription.PlanCatalog;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.security.SecureRandom;
 import java.util.*;
 
 @Service
 public class AuthService {
+
+    private static final String PASSWORD_CHARS =
+            "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final BusinessRepository businessRepository;
@@ -70,7 +75,7 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> inviteSubAccount(
-            String email, String role, String password, Long businessId, String inviterEmail) {
+            String email, String role, Long businessId, String inviterEmail) {
 
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already exists");
@@ -90,23 +95,34 @@ public class AuthService {
         AppUser inviter = userRepository.findByEmail(inviterEmail)
                 .orElseThrow(() -> new RuntimeException("Inviting user not found"));
 
+        String temporaryPassword = generateTemporaryPassword();
+
         AppUser subUser = new AppUser();
         subUser.setBusiness(business);
         subUser.setName(role);
         subUser.setEmail(email);
-        subUser.setPasswordHash(passwordEncoder.encode(password));
+        subUser.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         subUser.setRole("SUB_ACCOUNT");
         subUser.setIsSubAccount(true);
         subUser.setParentUserId(inviter.getId());
         subUser.setSubAccountRole(role);
-        subUser.setMustChangePassword(false);
+        subUser.setMustChangePassword(true);
         userRepository.save(subUser);
 
         return Map.of(
                 "success", true,
                 "email", email,
-                "role", role
+                "role", role,
+                "temporaryPassword", temporaryPassword
         );
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            sb.append(PASSWORD_CHARS.charAt(RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     @Transactional

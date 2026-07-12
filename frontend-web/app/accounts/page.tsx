@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Users, Mail, Shield, UserPlus, Crown } from "lucide-react"
+import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
 import { SUB_ACCOUNT_LIMITS as ACCOUNT_LIMITS } from "@/lib/subscription-plans"
 
@@ -47,7 +48,7 @@ const [loadingAccounts, setLoadingAccounts] = useState(true)
         ])
       }
     })
-    .catch(() => {})
+    .catch(() => toast.error("Couldn't load sub-accounts. Check your connection and try again."))
     .finally(() => setLoadingAccounts(false))
 }, [])
 
@@ -78,7 +79,7 @@ const [loadingAccounts, setLoadingAccounts] = useState(true)
           </div>
          <button onClick={() => {
   if (accounts.length >= limit) {
-    alert(`You have reached the maximum ${limit} accounts for your ${plan} plan. Upgrade to Premium to add more team members.`)
+    toast.warning(`You've reached the maximum ${limit} accounts for your ${plan} plan. Upgrade to Premium to add more team members.`)
     return
   }
   router.push("/invite")

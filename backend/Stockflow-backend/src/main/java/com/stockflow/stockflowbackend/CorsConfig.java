@@ -13,7 +13,8 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*");
+        config.addAllowedOriginPattern("https://stockflowpro-web.netlify.app");
+        config.addAllowedOriginPattern("http://localhost:*");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

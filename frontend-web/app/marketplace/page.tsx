@@ -2,7 +2,8 @@
 import { useState, useMemo, useEffect } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { Search, MapPin, Star, ShieldCheck, ArrowRight, Zap } from "lucide-react"
+import { Search, MapPin, ShieldCheck, ArrowRight, Zap } from "lucide-react"
+import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
 
 interface Listing {
@@ -15,7 +16,6 @@ interface Listing {
   moq: string
   deliveryTerms: string
   creditTerms: string
-  rating: number
   verified: boolean
 }
 
@@ -48,12 +48,11 @@ export default function MarketplacePage() {
               moq: item.minOrderQuantity || "Contact seller",
               deliveryTerms: item.deliveryTerms || "TBD",
               creditTerms: item.creditTerms || "TBD",
-              rating: 4.5,
               verified: b.subscriptionStatus === "ACTIVE" || b.subscriptionStatus === "TRIAL",
             }
           }))
         }
-      }).catch(() => {})
+      }).catch(() => toast.error("Couldn't load the marketplace. Check your connection and try again."))
       .finally(() => setLoading(false))
   }, [])
 
@@ -153,10 +152,6 @@ export default function MarketplacePage() {
                               <ShieldCheck style={{ width: '11px', height: '11px' }} />Verified
                             </span>
                           )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <Star style={{ width: '13px', height: '13px', color: '#f59e0b', fill: '#f59e0b' }} />
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{listing.rating}</span>
                         </div>
                       </div>
                       <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{listing.name}</h3>

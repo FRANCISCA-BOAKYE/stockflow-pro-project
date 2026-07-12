@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Check, ArrowRight, Zap, Store, Truck, Factory } from "lucide-react"
+import { toast } from "sonner"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { PaystackButton } from "@/components/paystack-button"
@@ -145,7 +146,7 @@ export default function PricingPage() {
                         email={email || "user@business.com"}
                         amount={plan.price}
                         publicKey={PAYSTACK_KEY}
-                        onSuccess={(ref) => alert(`Payment successful! Reference: ${ref}. Sign in to access your account.`)}
+                        onSuccess={(ref) => toast.success(`Payment successful! Reference: ${ref}. Sign in to access your account.`)}
                         onClose={() => {}}
                         label={`Pay now — $${plan.price}/month`}
                         style={{

@@ -10,7 +10,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -100,11 +99,8 @@ public class RetailerService {
     @Transactional(readOnly = true)
     public List<ProductResponse> getLowStockProducts(Long businessId) {
         return productRepository
-                .findByBusinessIdAndIsActiveTrueAndQuantityLessThanEqual(
-                        businessId, new BigDecimal("999999"))
+                .findLowStock(businessId)
                 .stream()
-                .filter(p -> p.getQuantity()
-                        .compareTo(p.getMinThreshold()) <= 0)
                 .map(p -> new ProductResponse(p.getId(), p.getName(),
                         p.getCategory() != null
                                 ? p.getCategory().getName() : null,

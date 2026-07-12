@@ -6,6 +6,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { API_BASE_URL } from "@/lib/api"
+import { setAuthSession } from "@/lib/auth"
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
@@ -43,8 +44,7 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || data.error || "Invalid email or password")
-      localStorage.setItem("sf_token", data.token)
-      localStorage.setItem("sf_user", JSON.stringify(data))
+      setAuthSession(data.token, data)
       router.push("/dashboard")
     } catch (err: any) {
       setError(err.message || "Login failed. Check your credentials.")

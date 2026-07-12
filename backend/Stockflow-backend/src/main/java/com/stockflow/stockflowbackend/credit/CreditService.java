@@ -89,7 +89,7 @@ public class CreditService {
         List<CreditAccountResponse> result = new java.util.ArrayList<>();
 
         // Money owed TO this business (this business is creditor)
-        List<CreditRecord> owedToMe = creditRepository.findByCreditorBusinessId(businessId);
+        List<CreditRecord> owedToMe = creditRepository.findByCreditorBusinessIdFetchDebtor(businessId);
         result.addAll(owedToMe.stream().map(r -> new CreditAccountResponse(
                 r.getId(),
                 r.getDebtorBusiness().getId(),
@@ -102,7 +102,7 @@ public class CreditService {
         )).collect(Collectors.toList()));
 
         // Money this business OWES (this business is debtor)
-        List<CreditRecord> iOwe = creditRepository.findByDebtorBusinessId(businessId);
+        List<CreditRecord> iOwe = creditRepository.findByDebtorBusinessIdFetchCreditor(businessId);
         result.addAll(iOwe.stream().map(r -> new CreditAccountResponse(
                 r.getId(),
                 r.getCreditorBusiness().getId(),

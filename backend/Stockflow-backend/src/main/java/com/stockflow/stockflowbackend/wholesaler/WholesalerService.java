@@ -5,6 +5,7 @@ import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
+import com.stockflow.stockflowbackend.pos.InvoiceNumberUtil;
 import com.stockflow.stockflowbackend.pos.InvoiceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,15 +111,7 @@ public class WholesalerService {
             CreditRecord saved = creditRepository.save(credit);
             receipt.setCreditRecordId(saved.getId());
 
-            Long invoiceCount = invoiceRepository
-                    .countBySellerBusinessId(
-                            request.getManufacturerBusinessId());
-            String invoiceNumber = "SF-"
-                    + request.getManufacturerBusinessId()
-                    + "-" + String.format("%05d", invoiceCount + 1);
-
             Invoice invoice = new Invoice();
-            invoice.setInvoiceNumber(invoiceNumber);
             invoice.setSellerBusiness(manufacturer);
             invoice.setBuyerBusiness(product.getBusiness());
             invoice.setSubtotalUsd(request.getAmountUsd());
@@ -128,7 +121,8 @@ public class WholesalerService {
             invoice.setStatus("UNPAID");
             invoice.setCreditRecordId(saved.getId());
             invoice.setGeneratedByUser(user);
-            Invoice savedInvoice = invoiceRepository.save(invoice);
+            Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
+                    invoiceRepository, request.getManufacturerBusinessId(), invoice);
             receipt.setInvoiceId(savedInvoice.getId());
             invoiceEmailService.sendIfEligible(savedInvoice, manufacturer);
         }
@@ -182,13 +176,7 @@ public class WholesalerService {
             CreditRecord saved = creditRepository.save(credit);
             sale.setCreditRecordId(saved.getId());
 
-            Long invoiceCount = invoiceRepository
-                    .countBySellerBusinessId(businessId);
-            String invoiceNumber = "SF-" + businessId
-                    + "-" + String.format("%05d", invoiceCount + 1);
-
             Invoice invoice = new Invoice();
-            invoice.setInvoiceNumber(invoiceNumber);
             invoice.setSellerBusiness(product.getBusiness());
             invoice.setBuyerBusiness(retailer);
             invoice.setSubtotalUsd(request.getAmountUsd());
@@ -198,7 +186,8 @@ public class WholesalerService {
             invoice.setStatus("UNPAID");
             invoice.setCreditRecordId(saved.getId());
             invoice.setGeneratedByUser(user);
-            Invoice savedInvoice = invoiceRepository.save(invoice);
+            Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
+                    invoiceRepository, businessId, invoice);
             sale.setInvoiceId(savedInvoice.getId());
             invoiceEmailService.sendIfEligible(savedInvoice, product.getBusiness());
         }

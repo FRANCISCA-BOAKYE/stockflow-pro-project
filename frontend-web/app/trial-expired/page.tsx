@@ -3,7 +3,9 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Shield, Clock, Check } from "lucide-react"
+import { toast } from "sonner"
 import { PaystackButton } from "@/components/paystack-button"
+import { clearAuthSession } from "@/lib/auth"
 
 const PAYSTACK_KEY = "pk_test_6620d84161debea0ad30c0617bde2eea7de28051"
 
@@ -57,15 +59,13 @@ export default function TrialExpiredPage() {
   const plans = PLANS_BY_TIER[tier] || PLANS_BY_TIER.RETAILER
 
   const handleLogout = () => {
-    localStorage.removeItem("sf_token")
-    localStorage.removeItem("sf_user")
+    clearAuthSession()
     router.replace("/login")
   }
 
  const handlePaymentSuccess = (reference: string) => {
-  alert(`Payment successful! Reference: ${reference}. Please sign in again to activate your account.`)
-  localStorage.removeItem("sf_token")
-  localStorage.removeItem("sf_user")
+  toast.success(`Payment successful! Reference: ${reference}. Please sign in again to activate your account.`)
+  clearAuthSession()
   router.push("/login")
 }
   return (

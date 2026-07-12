@@ -41,7 +41,6 @@ public class AuthController {
         return ResponseEntity.ok(authService.inviteSubAccount(
                 req.get("email"),
                 req.get("role"),
-                req.get("password"),
                 businessId,
                 auth.getName()
         ));

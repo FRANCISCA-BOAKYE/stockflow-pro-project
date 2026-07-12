@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { Menu, X, LogOut } from "lucide-react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
+import { clearAuthSession } from "@/lib/auth"
 
 const navigation = [
   { name: "Features", href: "/#features" },
@@ -132,8 +133,7 @@ export function Navbar() {
   }, [pathname])
 
   const handleLogout = () => {
-    localStorage.removeItem("sf_token")
-    localStorage.removeItem("sf_user")
+    clearAuthSession()
     setIsLoggedIn(false)
     setMobileMenuOpen(false)
     router.push("/login")

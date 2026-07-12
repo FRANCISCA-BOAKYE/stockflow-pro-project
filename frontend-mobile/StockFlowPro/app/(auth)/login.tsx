@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
+import { TIER_DASHBOARD_ROUTES } from '../../constants/routes';
 import Svg, { Rect, Polygon, Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 const Logo = () => (
@@ -52,15 +53,10 @@ export default function Login() {
       const res = await api.post('/auth/login', { email, password });
       const data = res.data;
       await setAuth(data);
-      const tierRoute: Record<string, string> = {
-        MANUFACTURER: '/(manufacturer)/dashboard',
-        WHOLESALER: '/(wholesaler)/dashboard',
-        RETAILER: '/(retailer)/dashboard',
-      };
       if (data.subscriptionStatus === 'EXPIRED') {
         router.replace('/(auth)/trial-expired');
       } else {
-        router.replace(tierRoute[data.tierType] as any);
+        router.replace(TIER_DASHBOARD_ROUTES[data.tierType] as any);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Check your credentials.');
