@@ -4,6 +4,7 @@ import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.POSRequest;
 import com.stockflow.stockflowbackend.dto.POSResponse;
+import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.reservation.ReservationRepository;
 import com.stockflow.stockflowbackend.retailer.ProductRepository;
@@ -23,6 +24,7 @@ public class POSService {
     private final CreditRepository creditRepository;
     private final BusinessRepository businessRepository;
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceEmailService invoiceEmailService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -31,12 +33,14 @@ public class POSService {
                       ReservationRepository reservationRepository,
                       CreditRepository creditRepository,
                       BusinessRepository businessRepository,
-                      InvoiceRepository invoiceRepository) {
+                      InvoiceRepository invoiceRepository,
+                      InvoiceEmailService invoiceEmailService) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.creditRepository = creditRepository;
         this.businessRepository = businessRepository;
         this.invoiceRepository = invoiceRepository;
+        this.invoiceEmailService = invoiceEmailService;
     }
 
     @Transactional
@@ -171,6 +175,7 @@ public class POSService {
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
         tx.setInvoiceId(savedInvoice.getId());
+        invoiceEmailService.sendIfEligible(savedInvoice, business);
 
         return new POSResponse(
                 tx.getId(),

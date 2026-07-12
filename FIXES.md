@@ -19,7 +19,7 @@ This document tracks each issue, its fix, and before/after state.
 
 **Previous state:** Three incompatible limit tables; frontends hardcode different numbers.
 
-**Current state:** `AuthService` now delegates to `PlanCatalog.maxSubAccounts`. `signup/page.tsx` and `accounts/page.tsx` (web) now import `SUB_ACCOUNT_LIMITS`/`MONTHLY_PRICE_USD` from `lib/subscription-plans.ts` instead of hardcoding stale numbers. `subscription.tsx` and `trial-expired.tsx` (mobile) now import from `constants/subscriptionPlans.ts`. `GET /subscription/plans` is now `permitAll` in `SecurityConfig`, and `SubscriptionAccessFilter` is explicitly registered via `addFilterAfter`. `STOCK_RESERVATION` premium gating is enforced in `ReservationController`; the other `PREMIUM_FEATURES` (advanced reports, invoice generation, delivery scheduling) don't yet have a distinct basic/advanced code path to gate without blocking core flows for Standard-tier users — left unenforced pending a product decision on scope.
+**Current state:** `AuthService` now delegates to `PlanCatalog.maxSubAccounts`. `signup/page.tsx` and `accounts/page.tsx` (web) now import `SUB_ACCOUNT_LIMITS`/`MONTHLY_PRICE_USD` from `lib/subscription-plans.ts` instead of hardcoding stale numbers. `subscription.tsx` and `trial-expired.tsx` (mobile) now import from `constants/subscriptionPlans.ts`. `GET /subscription/plans` is now `permitAll` in `SecurityConfig`, and `SubscriptionAccessFilter` is explicitly registered via `addFilterAfter`. `STOCK_RESERVATION` and `INVOICE_DELIVERY` (see Issue #11) premium gating are enforced; `ADVANCED_REPORTS`, `DELIVERY_SCHEDULING`, and `INVOICE_GENERATION` don't have any existing basic-tier implementation to gate against — `INVOICE_GENERATION` in particular is core receipt-keeping used by every tier and can't be restricted without breaking basic sales. Left unenforced pending a product decision on what "advanced reports" and "delivery scheduling" should actually contain.
 
 ---
 
@@ -88,5 +88,13 @@ This document tracks each issue, its fix, and before/after state.
 ## Issue #10 — Backend base URL duplicated across frontends ✅
 
 **Fix:** Added `frontend-web/lib/api.ts` (mirroring the existing `frontend-mobile/services/api.ts` pattern) and updated all pages/screens that hardcoded the literal URL to import from it instead. Mobile `login.tsx` and `marketplace.tsx` now use the shared `api` axios client instead of raw `fetch` + a duplicated URL.
+
+---
+
+## Issue #11 — INVOICE_DELIVERY premium feature had nothing to gate ✅
+
+**Problem:** `PlanCatalog.PREMIUM_FEATURES` lists `INVOICE_DELIVERY` for wholesaler/manufacturer Premium plans, but no invoice delivery mechanism existed anywhere in the codebase to restrict.
+
+**Fix:** Added `email/InvoiceEmailService`, which emails the buyer business's admin a copy of the invoice whenever a B2B invoice is created (`POSService.processRetailSale`, `WholesalerService.receiveFromManufacturer`, `WholesalerService.sellToRetailer`), gated behind `subscriptionService.hasFeature(seller, INVOICE_DELIVERY)`. Reuses the existing nodemailer relay on `frontend-web` (`/api/send-email`) via a plain `java.net.http.HttpClient` call rather than adding a mail dependency to the backend — configurable via `frontend.web.base-url` (`FRONTEND_WEB_URL` env var, defaults to the current Netlify URL). Best-effort: failures are logged and never block the underlying sale. Retail POS sales to walk-in customers (no `buyerBusinessId`) are skipped since there's no business account to email.
 
 ---

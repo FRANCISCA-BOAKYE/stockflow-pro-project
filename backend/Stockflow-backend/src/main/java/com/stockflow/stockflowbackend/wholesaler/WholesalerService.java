@@ -3,6 +3,7 @@ package com.stockflow.stockflowbackend.wholesaler;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
+import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.pos.InvoiceRepository;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class WholesalerService {
     private final BusinessRepository businessRepository;
     private final CreditRepository creditRepository;
     private final InvoiceRepository invoiceRepository;
+    private final InvoiceEmailService invoiceEmailService;
 
     public WholesalerService(
             WarehouseProductRepository warehouseProductRepository,
@@ -29,13 +31,15 @@ public class WholesalerService {
             WholesaleSaleRepository wholesaleSaleRepository,
             BusinessRepository businessRepository,
             CreditRepository creditRepository,
-            InvoiceRepository invoiceRepository) {
+            InvoiceRepository invoiceRepository,
+            InvoiceEmailService invoiceEmailService) {
         this.warehouseProductRepository = warehouseProductRepository;
         this.receiptRepository = receiptRepository;
         this.wholesaleSaleRepository = wholesaleSaleRepository;
         this.businessRepository = businessRepository;
         this.creditRepository = creditRepository;
         this.invoiceRepository = invoiceRepository;
+        this.invoiceEmailService = invoiceEmailService;
     }
 
     @Transactional
@@ -126,6 +130,7 @@ public class WholesalerService {
             invoice.setGeneratedByUser(user);
             Invoice savedInvoice = invoiceRepository.save(invoice);
             receipt.setInvoiceId(savedInvoice.getId());
+            invoiceEmailService.sendIfEligible(savedInvoice, manufacturer);
         }
 
         return receiptRepository.save(receipt);
@@ -195,6 +200,7 @@ public class WholesalerService {
             invoice.setGeneratedByUser(user);
             Invoice savedInvoice = invoiceRepository.save(invoice);
             sale.setInvoiceId(savedInvoice.getId());
+            invoiceEmailService.sendIfEligible(savedInvoice, product.getBusiness());
         }
 
         return wholesaleSaleRepository.save(sale);
