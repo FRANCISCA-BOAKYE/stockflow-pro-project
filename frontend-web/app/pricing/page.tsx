@@ -20,7 +20,7 @@ const PLANS = [
     desc: "Perfect for shops and retail stores",
     plans: [
       { name: "Standard", price: 17, accounts: "2 sub-accounts", features: ["Full inventory management", "POS system", "Search & filtering", "Low-stock alerts", "Transaction history", "Credit tracking", "Dashboard"] },
-      { name: "Premium", price: 30, accounts: "5 sub-accounts", features: ["Everything in Standard", "Customer purchase history", "Auto-reorder suggestions", "Advanced sales reports", "Priority support"] },
+      { name: "Premium", price: 30, accounts: "5 sub-accounts", features: ["Everything in Standard", "Stock reservation", "Priority support"] },
     ],
   },
   {
@@ -33,7 +33,7 @@ const PLANS = [
     desc: "For distributors managing bulk inventory",
     plans: [
       { name: "Standard", price: 45, accounts: "6 sub-accounts", features: ["Full warehouse management", "POS system", "Credit tracking both ways", "Overdue alerts & credit holds", "Tier linking", "Marketplace listing"] },
-      { name: "Premium", price: 75, accounts: "8 sub-accounts", features: ["Everything in Standard", "Advanced analytics", "Delivery scheduling", "Invoice generation", "WhatsApp/email invoices", "Priority support"] },
+      { name: "Premium", price: 75, accounts: "8 sub-accounts", features: ["Everything in Standard", "Email invoices", "Priority support"] },
     ],
   },
   {
@@ -46,7 +46,7 @@ const PLANS = [
     desc: "For production businesses managing materials",
     plans: [
       { name: "Standard", price: 80, accounts: "5 sub-accounts", features: ["Raw material management", "Recipe setup", "Production planning", "Finished goods tracking", "POS dispatch", "Credit tracking", "Marketplace listing"] },
-      { name: "Premium", price: 110, accounts: "10 sub-accounts", features: ["Everything in Standard", "Advanced reports", "Delivery scheduling", "Invoice generation", "WhatsApp/email invoices", "Priority support"] },
+      { name: "Premium", price: 110, accounts: "10 sub-accounts", features: ["Everything in Standard", "Email invoices", "Priority support"] },
     ],
   },
 ]

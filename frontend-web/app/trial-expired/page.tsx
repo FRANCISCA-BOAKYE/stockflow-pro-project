@@ -12,15 +12,15 @@ const PAYSTACK_KEY = "pk_test_6620d84161debea0ad30c0617bde2eea7de28051"
 const PLANS_BY_TIER: Record<string, { name: string; price: number; features: string[] }[]> = {
   MANUFACTURER: [
     { name: "Standard", price: 80, features: ["5 sub-accounts", "Materials & recipes", "Production planning", "Credit tracking"] },
-    { name: "Premium", price: 110, features: ["10 sub-accounts", "Everything in Standard", "Advanced reports", "Invoice generation"] },
+    { name: "Premium", price: 110, features: ["10 sub-accounts", "Everything in Standard", "Email invoices"] },
   ],
   WHOLESALER: [
     { name: "Standard", price: 45, features: ["6 sub-accounts", "Warehouse management", "Credit tracking both ways", "Marketplace listing"] },
-    { name: "Premium", price: 75, features: ["8 sub-accounts", "Everything in Standard", "Advanced reports", "Invoice generation"] },
+    { name: "Premium", price: 75, features: ["8 sub-accounts", "Everything in Standard", "Email invoices"] },
   ],
   RETAILER: [
     { name: "Standard", price: 17, features: ["2 sub-accounts", "POS & inventory", "Credit tracking", "Low-stock alerts"] },
-    { name: "Premium", price: 30, features: ["5 sub-accounts", "Everything in Standard", "Customer history", "Advanced reports"] },
+    { name: "Premium", price: 30, features: ["5 sub-accounts", "Everything in Standard", "Stock reservation"] },
   ],
 }
 

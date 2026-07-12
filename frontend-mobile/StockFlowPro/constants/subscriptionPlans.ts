@@ -21,24 +21,16 @@ export function priceGhs(tier: string, plan: string): number {
   return Math.round(usd * USD_TO_GHS);
 }
 
+/** Only lists features actually enforced in code — see backend PlanCatalog for why. */
 export const PREMIUM_FEATURES: Record<string, string[]> = {
   RETAILER: [
-    'Customer purchase history',
-    'Auto-reorder suggestions',
-    'Advanced sales reports',
     'Stock reservation',
   ],
   WHOLESALER: [
-    'Advanced analytics',
-    'Delivery scheduling',
-    'Invoice generation',
-    'WhatsApp/email invoices',
+    'Email invoices',
   ],
   MANUFACTURER: [
-    'Advanced reports',
-    'Delivery scheduling',
-    'Invoice generation',
-    'WhatsApp/email invoices',
+    'Email invoices',
   ],
 };
 

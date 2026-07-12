@@ -31,24 +31,21 @@ public final class PlanCatalog {
             "RETAILER", "WHOLESALER", "MANUFACTURER");
     public static final Set<String> VALID_PLANS = Set.of("STANDARD", "PREMIUM");
 
-    /** Features included only on PREMIUM (TRIAL gets plan selected at signup). */
+    /**
+     * Features included only on PREMIUM (TRIAL gets plan selected at signup).
+     * Only lists features that are actually enforced in code — CUSTOMER_HISTORY,
+     * AUTO_REORDER, ADVANCED_REPORTS, DELIVERY_SCHEDULING, and INVOICE_GENERATION
+     * have no distinct basic/advanced implementation to gate against, so they are
+     * intentionally left out here rather than advertised as a paid benefit.
+     */
     public static final Map<String, Set<SubscriptionFeature>> PREMIUM_FEATURES = Map.of(
             "RETAILER", Set.of(
-                    SubscriptionFeature.CUSTOMER_HISTORY,
-                    SubscriptionFeature.AUTO_REORDER,
-                    SubscriptionFeature.ADVANCED_REPORTS,
                     SubscriptionFeature.STOCK_RESERVATION
             ),
             "WHOLESALER", Set.of(
-                    SubscriptionFeature.ADVANCED_REPORTS,
-                    SubscriptionFeature.DELIVERY_SCHEDULING,
-                    SubscriptionFeature.INVOICE_GENERATION,
                     SubscriptionFeature.INVOICE_DELIVERY
             ),
             "MANUFACTURER", Set.of(
-                    SubscriptionFeature.ADVANCED_REPORTS,
-                    SubscriptionFeature.DELIVERY_SCHEDULING,
-                    SubscriptionFeature.INVOICE_GENERATION,
                     SubscriptionFeature.INVOICE_DELIVERY
             )
     );
