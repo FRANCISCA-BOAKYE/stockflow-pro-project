@@ -2,6 +2,7 @@ package com.stockflow.stockflowbackend.reservation;
 
 import com.stockflow.stockflowbackend.dto.AvailableStockResponse;
 import com.stockflow.stockflowbackend.dto.CreateReservationRequest;
+import com.stockflow.stockflowbackend.dto.ReservationListItem;
 import com.stockflow.stockflowbackend.dto.ReservationResponse;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class ReservationService {
@@ -90,6 +92,16 @@ public class ReservationService {
 
         return new ReservationResponse(saved.getId(), saved.getQuantity(),
                 saved.getStatus(), saved.getExpiresAt());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservationListItem> getActiveReservations(Long businessId) {
+        return reservationRepository
+                .findByBusinessIdAndStatusOrderByExpiresAtAsc(businessId, "ACTIVE")
+                .stream()
+                .map(r -> new ReservationListItem(r.getId(), r.getProductId(),
+                        r.getProductType(), r.getQuantity(), r.getStatus(), r.getExpiresAt()))
+                .toList();
     }
 
     @Transactional

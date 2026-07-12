@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 const MENU_ITEMS = [
   { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
   { label: 'Stock In', icon: 'arrow-down-circle-outline', color: '#059669', bg: '#ECFDF5', route: '/stock-in' },
+  { label: 'Reservations', icon: 'time-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/(retailer)/reservations' },
   { label: 'Invoices', icon: 'receipt-outline', color: '#C27803', bg: '#FFFBEB', route: '/invoices' },
   { label: 'Marketplace', icon: 'storefront-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/marketplace' },
   { label: 'Linked Wholesalers', icon: 'link-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/(retailer)/linked-wholesalers' },

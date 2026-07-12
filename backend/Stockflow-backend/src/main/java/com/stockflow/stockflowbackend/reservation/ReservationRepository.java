@@ -21,4 +21,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     @Query("SELECT r FROM Reservation r WHERE r.status = 'ACTIVE' AND r.expiresAt < :now")
     List<Reservation> findExpiredReservations(@Param("now") LocalDateTime now);
+
+    List<Reservation> findByBusinessIdAndStatusOrderByExpiresAtAsc(
+            Long businessId, String status);
 }
