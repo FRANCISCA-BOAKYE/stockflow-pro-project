@@ -2,12 +2,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Users, Mail, Shield, UserPlus, Crown } from "lucide-react"
-
-const ACCOUNT_LIMITS: Record<string, Record<string, number>> = {
-  MANUFACTURER: { STANDARD: 4, PREMIUM: 9 },
-  WHOLESALER: { STANDARD: 5, PREMIUM: 7 },
-  RETAILER: { STANDARD: 1, PREMIUM: 4 },
-}
+import { API_BASE_URL } from "@/lib/api"
+import { SUB_ACCOUNT_LIMITS as ACCOUNT_LIMITS } from "@/lib/subscription-plans"
 
 const ROLES: Record<string, { admin: string; staff: string[] }> = {
   MANUFACTURER: { admin: "Company Admin", staff: ["Production Supervisor", "Store Keeper", "POS Operator"] },
@@ -34,7 +30,7 @@ const [loadingAccounts, setLoadingAccounts] = useState(true)
   const u = JSON.parse(stored)
   setUser(u)
 
-  fetch(`https://stockflow-backend-qwpt.onrender.com/auth/sub-accounts`, {
+  fetch(`${API_BASE_URL}/auth/sub-accounts`, {
     headers: { Authorization: `Bearer ${token}` }
   })
     .then(r => r.json())

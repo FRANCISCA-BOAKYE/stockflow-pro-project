@@ -3,18 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Lin
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
-
-const PLANS: Record<string, { standard: number; premium: number }> = {
-  MANUFACTURER: { standard: 80, premium: 110 },
-  WHOLESALER: { standard: 45, premium: 75 },
-  RETAILER: { standard: 17, premium: 30 },
-};
-
-const FEATURES: Record<string, string[]> = {
-  MANUFACTURER: ['Raw material tracking', 'Recipe & production planning', 'Finished goods inventory', 'Dispatch management', 'Credit tracking', 'Marketplace listing'],
-  WHOLESALER: ['Warehouse management', 'Bulk receiving & dispatch', 'Retailer credit tracking', 'Linked partner network', 'Marketplace listing'],
-  RETAILER: ['Product inventory', 'Point of sale (POS)', 'Low stock alerts', 'Customer credit accounts', 'Invoice generation'],
-};
+import { MONTHLY_PRICE_USD, featuresForPlan } from '../constants/subscriptionPlans';
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -22,8 +11,8 @@ export default function SubscriptionScreen() {
   const tier = user?.tierType || 'RETAILER';
   const plan = user?.subscriptionPlan || 'STANDARD';
   const status = user?.subscriptionStatus || 'TRIAL';
-  const prices = PLANS[tier] || PLANS.RETAILER;
-  const features = FEATURES[tier] || FEATURES.RETAILER;
+  const prices = MONTHLY_PRICE_USD[tier] || MONTHLY_PRICE_USD.RETAILER;
+  const features = featuresForPlan(tier, plan);
 
   const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
     TRIAL: { color: '#C27803', bg: '#FFFBEB', label: 'Free trial active' },
@@ -54,7 +43,7 @@ export default function SubscriptionScreen() {
             </View>
           </View>
           <View style={s.planPrice}>
-            <Text style={s.price}>${plan === 'STANDARD' ? prices.standard : prices.premium}</Text>
+            <Text style={s.price}>${plan === 'STANDARD' ? prices.STANDARD : prices.PREMIUM}</Text>
             <Text style={s.priceUnit}>/month</Text>
           </View>
           {status === 'TRIAL' && (
@@ -82,7 +71,7 @@ export default function SubscriptionScreen() {
             <Text style={s.sectionLabel}>Upgrade to Premium</Text>
             <Text style={s.upgradeDesc}>Get more sub-accounts, advanced reports, delivery scheduling and invoice generation.</Text>
             <View style={s.upgradePrice}>
-              <Text style={s.price}>${prices.premium}</Text>
+              <Text style={s.price}>${prices.PREMIUM}</Text>
               <Text style={s.priceUnit}>/month</Text>
             </View>
             <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/pricing')}>

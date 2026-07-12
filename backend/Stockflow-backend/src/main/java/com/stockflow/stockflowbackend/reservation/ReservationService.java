@@ -8,6 +8,7 @@ import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.model.Reservation;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,9 +93,13 @@ public class ReservationService {
     }
 
     @Transactional
-    public void releaseReservation(Long reservationId) {
+    public void releaseReservation(Long reservationId, Long callerBusinessId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found"));
+
+        if (!callerBusinessId.equals(reservation.getBusiness().getId())) {
+            throw new RuntimeException("Unauthorized: this reservation does not belong to your business");
+        }
 
         reservation.setStatus("RELEASED");
         reservationRepository.save(reservation);
@@ -111,6 +116,7 @@ public class ReservationService {
                 totalStock - reserved);
     }
 
+    @Scheduled(fixedRate = 5 * 60 * 1000)
     @Transactional
     public void expireOldReservations() {
         var expired = reservationRepository.findExpiredReservations(LocalDateTime.now());

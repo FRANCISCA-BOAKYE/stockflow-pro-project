@@ -24,14 +24,18 @@ public class CreditController {
 
     @PostMapping("/record")
     public ResponseEntity<CreditRecord> createRecord(
-            @RequestBody CreateCreditRequest request) {
-        return ResponseEntity.ok(creditService.createCreditRecord(request));
+            @RequestBody CreateCreditRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+                creditService.createCreditRecord(request, getBusinessId(authentication)));
     }
 
     @PostMapping("/payment")
     public ResponseEntity<CreditRecord> recordPayment(
-            @RequestBody CreditPaymentRequest request) {
-        return ResponseEntity.ok(creditService.recordPayment(request));
+            @RequestBody CreditPaymentRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+                creditService.recordPayment(request, getBusinessId(authentication)));
     }
 
     @PostMapping("/hold")

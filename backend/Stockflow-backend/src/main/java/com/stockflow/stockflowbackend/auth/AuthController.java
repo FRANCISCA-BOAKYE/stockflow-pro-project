@@ -42,7 +42,8 @@ public class AuthController {
                 req.get("email"),
                 req.get("role"),
                 req.get("password"),
-                businessId
+                businessId,
+                auth.getName()
         ));
     }
 }

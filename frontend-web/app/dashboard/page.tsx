@@ -3,8 +3,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell } from "lucide-react"
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+import { API_BASE_URL } from "@/lib/api"
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">

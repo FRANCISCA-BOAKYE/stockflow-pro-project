@@ -15,9 +15,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final SubscriptionAccessFilter subscriptionAccessFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                          SubscriptionAccessFilter subscriptionAccessFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.subscriptionAccessFilter = subscriptionAccessFilter;
     }
 
     @Bean
@@ -31,10 +34,12 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/marketplace/listings").permitAll()
                         .requestMatchers("/payments/webhook").permitAll()
+                        .requestMatchers("/subscription/plans").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(subscriptionAccessFilter, JwtAuthFilter.class);
 
         return http.build();
     }

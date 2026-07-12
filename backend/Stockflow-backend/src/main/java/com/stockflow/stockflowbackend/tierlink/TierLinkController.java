@@ -31,8 +31,9 @@ public class TierLinkController {
 
     @PostMapping("/accept")
     public ResponseEntity<TierLink> accept(
-            @RequestBody AcceptLinkRequest req) {
-        return ResponseEntity.ok(tierLinkService.acceptRequest(req));
+            @RequestBody AcceptLinkRequest req, Authentication auth) {
+        return ResponseEntity.ok(
+            tierLinkService.acceptRequest(req, getBusinessId(auth)));
     }
 
     @GetMapping("/partners")

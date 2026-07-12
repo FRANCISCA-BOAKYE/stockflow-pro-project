@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Wallet, Calendar, Lock, CheckCircle, TrendingDown } from "lucide-react"
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+import { API_BASE_URL } from "@/lib/api"
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
   OVERDUE: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
@@ -30,7 +29,7 @@ export default function CreditPage() {
   const fetchCreditAccounts = async (u: any) => {
     try {
       const token = localStorage.getItem("sf_token")
-      const res = await fetch(`${API_BASE_URL}/credit/overdue`, {
+      const res = await fetch(`${API_BASE_URL}/credit/accounts`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       const data = await res.json()
@@ -44,9 +43,9 @@ export default function CreditPage() {
 
   if (!user) return null
 
-  const displayed = accounts
-  const total = displayed.reduce((sum, a) => sum + Number(a.amountUsd || a.amount || 0), 0)
-  const overdue = displayed.filter(a => (a.status === "OVERDUE")).reduce((sum, a) => sum + Number(a.amountUsd || a.amount || 0), 0)
+  const displayed = accounts.filter(a => a.direction === (tab === "owe_me" ? "OWED_TO_ME" : "I_OWE"))
+  const total = displayed.reduce((sum, a) => sum + Number(a.amountUsd || 0), 0)
+  const overdue = displayed.filter(a => (a.status === "OVERDUE")).reduce((sum, a) => sum + Number(a.amountUsd || 0), 0)
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
@@ -108,9 +107,9 @@ export default function CreditPage() {
             {/* Accounts */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {displayed.map((acc, i) => {
-                const name = acc.debtorBusinessName || acc.creditorBusinessName || acc.name || 'Account'
-                const due = acc.dueDate ? new Date(acc.dueDate).toLocaleDateString() : acc.due || 'N/A'
-                const amount = Number(acc.amountUsd || acc.amount || 0)
+                const name = acc.partnerBusinessName || 'Account'
+                const due = acc.dueDate ? new Date(acc.dueDate).toLocaleDateString() : 'N/A'
+                const amount = Number(acc.amountUsd || 0)
                 const status = acc.status || 'OUTSTANDING'
                 const sc = STATUS_CONFIG[status] || STATUS_CONFIG.OUTSTANDING
                 return (

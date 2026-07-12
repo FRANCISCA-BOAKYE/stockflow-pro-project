@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation"
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+import { API_BASE_URL } from "@/lib/api"
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">

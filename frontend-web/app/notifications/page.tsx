@@ -2,8 +2,21 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Bell } from "lucide-react"
+import { API_BASE_URL } from "@/lib/api"
 
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+const READ_STORAGE_KEY = "sf_read_notifications"
+
+function getReadIds(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || "[]"))
+  } catch {
+    return new Set()
+  }
+}
+
+function saveReadIds(ids: Set<string>) {
+  localStorage.setItem(READ_STORAGE_KEY, JSON.stringify([...ids]))
+}
 
 const TYPE_CONFIG: Record<string, { bg: string; border: string; icon: string; color: string }> = {
   warning: { bg: '#fffbeb', border: '#fde68a', icon: '⚠️', color: '#d97706' },
@@ -52,7 +65,7 @@ export default function NotificationsPage() {
       const creditRes = await fetch(`${API_BASE_URL}/credit/overdue`, { headers })
       const overdue = await creditRes.json()
       ;(Array.isArray(overdue) ? overdue : []).forEach((c: any) => {
-        items.push({ id: `credit-${c.id}`, title: "Credit overdue", body: `${c.debtorBusinessName} owes $${Number(c.amountUsd).toFixed(2)} — overdue since ${new Date(c.dueDate).toLocaleDateString()}`, time: "Now", type: "error", read: false })
+        items.push({ id: `credit-${c.id}`, title: "Credit overdue", body: `${c.partnerBusinessName} — $${Number(c.amountUsd).toFixed(2)} overdue since ${new Date(c.dueDate).toLocaleDateString()}`, time: "Now", type: "error", read: false })
       })
 
       const linksRes = await fetch(`${API_BASE_URL}/links/partners`, { headers })
@@ -66,7 +79,8 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false)
     }
-    setNotifications(items)
+    const readIds = getReadIds()
+    setNotifications(items.map(n => ({ ...n, read: readIds.has(n.id) })))
   }
 
   if (!user) return null
@@ -86,7 +100,11 @@ export default function NotificationsPage() {
             {unread > 0 && <span style={{ backgroundColor: '#1a56db', color: '#ffffff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px' }}>{unread}</span>}
           </div>
           {unread > 0 && (
-            <button onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+            <button onClick={() => {
+              const readIds = new Set(notifications.map(n => n.id))
+              saveReadIds(readIds)
+              setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+            }}
               style={{ fontSize: '13px', color: '#1a56db', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
               Mark all read
             </button>
@@ -108,7 +126,12 @@ export default function NotificationsPage() {
             {notifications.map(n => {
               const tc = TYPE_CONFIG[n.type] || TYPE_CONFIG.info
               return (
-                <div key={n.id} onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
+                <div key={n.id} onClick={() => {
+                  const readIds = getReadIds()
+                  readIds.add(n.id)
+                  saveReadIds(readIds)
+                  setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+                }}
                   style={{
                     backgroundColor: n.read ? '#ffffff' : tc.bg,
                     border: `1px solid ${n.read ? '#f1f5f9' : tc.border}`,

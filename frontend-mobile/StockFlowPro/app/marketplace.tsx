@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-const API_BASE_URL = 'https://stockflow-backend-qwpt.onrender.com';
+import { api } from '../services/api';
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
   MANUFACTURER: { label: 'Manufacturer', bg: '#EFF6FF', color: '#1A56DB' },
@@ -21,8 +20,8 @@ export default function MarketplaceScreen() {
 
   const fetchListings = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/marketplace/listings`);
-      const data = await res.json();
+      const res = await api.get('/marketplace/listings');
+      const data = res.data;
       if (Array.isArray(data)) {
         setListings(data.map((item: any) => {
           const b = item.business || item;

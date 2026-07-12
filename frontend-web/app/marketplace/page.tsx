@@ -3,8 +3,7 @@ import { useState, useMemo, useEffect } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Search, MapPin, Star, ShieldCheck, ArrowRight, Zap } from "lucide-react"
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+import { API_BASE_URL } from "@/lib/api"
 
 interface Listing {
   id: string

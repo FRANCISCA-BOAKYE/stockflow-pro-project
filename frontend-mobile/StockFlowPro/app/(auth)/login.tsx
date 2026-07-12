@@ -7,9 +7,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import { api } from '../../services/api';
 import Svg, { Rect, Polygon, Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-
-const API_BASE_URL = 'https://stockflow-backend-qwpt.onrender.com';
 
 const Logo = () => (
   <Svg width="80" height="80" viewBox="0 0 90 90">
@@ -50,13 +49,8 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || 'Login failed');
+      const res = await api.post('/auth/login', { email, password });
+      const data = res.data;
       await setAuth(data);
       const tierRoute: Record<string, string> = {
         MANUFACTURER: '/(manufacturer)/dashboard',
@@ -69,7 +63,7 @@ export default function Login() {
         router.replace(tierRoute[data.tierType] as any);
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Check your credentials.');
+      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Check your credentials.');
     } finally {
       setLoading(false);
     }

@@ -8,26 +8,14 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { sendEmail, welcomeEmailHtml } from "@/lib/email"
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+import { API_BASE_URL } from "@/lib/api"
+import { MONTHLY_PRICE_USD as planPrices, SUB_ACCOUNT_LIMITS as ACCOUNT_LIMITS } from "@/lib/subscription-plans"
 
 const tiers = [
   { id: "MANUFACTURER", name: "Manufacturer", icon: Factory, description: "Materials, recipes, production planning, finished goods, dispatch", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", gradient: "from-blue-500 to-indigo-600" },
   { id: "WHOLESALER", name: "Wholesaler", icon: Truck, description: "Warehouse management, receiving, selling to retailers, credit", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", gradient: "from-amber-500 to-orange-500" },
   { id: "RETAILER", name: "Retailer", icon: Store, description: "Products, POS, stock tracking, credit owed to wholesalers", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", gradient: "from-emerald-500 to-green-600" },
 ]
-
-const planPrices: Record<string, Record<string, number>> = {
-  RETAILER: { STANDARD: 17, PREMIUM: 30 },
-  WHOLESALER: { STANDARD: 45, PREMIUM: 75 },
-  MANUFACTURER: { STANDARD: 80, PREMIUM: 110 },
-}
-
-const ACCOUNT_LIMITS: Record<string, Record<string, number>> = {
-  MANUFACTURER: { STANDARD: 4, PREMIUM: 9 },
-  WHOLESALER: { STANDARD: 5, PREMIUM: 7 },
-  RETAILER: { STANDARD: 1, PREMIUM: 4 },
-}
 
 const SUB_ACCOUNT_ROLES: Record<string, { name: string; roles: string[] }> = {
   MANUFACTURER: { name: "Company Admin", roles: ["Production Supervisor", "Store Keeper", "POS Operator"] },

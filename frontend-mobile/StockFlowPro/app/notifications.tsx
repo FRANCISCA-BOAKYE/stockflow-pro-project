@@ -2,8 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../services/api';
+
+const READ_STORAGE_KEY = 'sf_read_notifications';
+
+async function getReadIds(): Promise<Set<string>> {
+  try {
+    const raw = await SecureStore.getItemAsync(READ_STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+async function saveReadIds(ids: Set<string>) {
+  await SecureStore.setItemAsync(READ_STORAGE_KEY, JSON.stringify([...ids]));
+}
 
 const TYPE_MAP: Record<string, { bg: string; color: string; icon: string }> = {
   warning: { bg: '#FFFBEB', color: '#C27803', icon: 'warning-outline' },
@@ -60,7 +76,7 @@ export default function NotificationsScreen() {
         items.push({
           id: `credit-${c.id}`,
           title: 'Credit overdue',
-          body: `${c.debtorBusinessName} owes $${Number(c.amountUsd).toFixed(2)} — overdue since ${new Date(c.dueDate).toLocaleDateString()}`,
+          body: `${c.partnerBusinessName} — $${Number(c.amountUsd).toFixed(2)} overdue since ${new Date(c.dueDate).toLocaleDateString()}`,
           time: 'Now',
           type: 'error',
           read: false,
@@ -89,7 +105,8 @@ export default function NotificationsScreen() {
       setRefreshing(false);
     }
 
-    setNotifications(items);
+    const readIds = await getReadIds();
+    setNotifications(items.map(n => ({ ...n, read: readIds.has(n.id) })));
   }, [user?.tierType]);
 
   useEffect(() => { buildNotifications(); }, [buildNotifications]);
@@ -109,7 +126,10 @@ export default function NotificationsScreen() {
           <Text style={s.sub}>{unreadCount} unread</Text>
         </View>
         {unreadCount > 0 && (
-          <TouchableOpacity style={s.markBtn} onPress={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}>
+          <TouchableOpacity style={s.markBtn} onPress={async () => {
+            await saveReadIds(new Set(notifications.map(n => n.id)));
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+          }}>
             <Text style={s.markBtnText}>Mark all read</Text>
           </TouchableOpacity>
         )}
@@ -133,7 +153,12 @@ export default function NotificationsScreen() {
           return (
             <TouchableOpacity
               style={[s.card, !item.read && s.cardUnread]}
-              onPress={() => setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n))}
+              onPress={async () => {
+                const readIds = await getReadIds();
+                readIds.add(item.id);
+                await saveReadIds(readIds);
+                setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
+              }}
             >
               <View style={[s.icon, { backgroundColor: t.bg }]}>
                 <Ionicons name={t.icon as any} size={20} color={t.color} />

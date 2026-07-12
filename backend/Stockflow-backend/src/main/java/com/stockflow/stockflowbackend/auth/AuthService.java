@@ -4,6 +4,7 @@ import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.security.JwtUtil;
+import com.stockflow.stockflowbackend.subscription.PlanCatalog;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +70,7 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> inviteSubAccount(
-            String email, String role, String password, Long businessId) {
+            String email, String role, String password, Long businessId, String inviterEmail) {
 
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already exists");
@@ -80,11 +81,14 @@ public class AuthService {
 
         List<AppUser> existing = userRepository
                 .findByBusiness_IdAndIsSubAccountTrue(businessId);
-        int maxAccounts = getMaxAccounts(
+        int maxAccounts = PlanCatalog.maxSubAccounts(
                 business.getTierType(), business.getSubscriptionPlan());
         if (existing.size() >= maxAccounts - 1) {
             throw new RuntimeException("Sub-account limit reached for your plan");
         }
+
+        AppUser inviter = userRepository.findByEmail(inviterEmail)
+                .orElseThrow(() -> new RuntimeException("Inviting user not found"));
 
         AppUser subUser = new AppUser();
         subUser.setBusiness(business);
@@ -93,6 +97,7 @@ public class AuthService {
         subUser.setPasswordHash(passwordEncoder.encode(password));
         subUser.setRole("SUB_ACCOUNT");
         subUser.setIsSubAccount(true);
+        subUser.setParentUserId(inviter.getId());
         subUser.setSubAccountRole(role);
         subUser.setMustChangePassword(false);
         userRepository.save(subUser);
@@ -102,18 +107,6 @@ public class AuthService {
                 "email", email,
                 "role", role
         );
-    }
-
-    private int getMaxAccounts(String tierType, String plan) {
-        return switch (tierType + "_" + plan) {
-            case "MANUFACTURER_STANDARD" -> 5;
-            case "MANUFACTURER_PREMIUM" -> 10;
-            case "WHOLESALER_STANDARD" -> 6;
-            case "WHOLESALER_PREMIUM" -> 8;
-            case "RETAILER_STANDARD" -> 2;
-            case "RETAILER_PREMIUM" -> 5;
-            default -> 2;
-        };
     }
 
     @Transactional

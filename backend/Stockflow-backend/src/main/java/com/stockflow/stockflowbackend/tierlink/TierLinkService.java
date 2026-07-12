@@ -44,9 +44,12 @@ public class TierLinkService {
     }
 
     @Transactional
-    public TierLink acceptRequest(AcceptLinkRequest req) {
+    public TierLink acceptRequest(AcceptLinkRequest req, Long callerBusinessId) {
         TierLink link = tierLinkRepository.findById(req.getLinkId())
                 .orElseThrow(() -> new RuntimeException("Link not found"));
+        if (!callerBusinessId.equals(link.getPartnerBusiness().getId())) {
+            throw new RuntimeException("Unauthorized: this link request does not belong to your business");
+        }
         link.setStatus("ACTIVE");
         link.setAcceptedAt(LocalDateTime.now());
         return tierLinkRepository.save(link);

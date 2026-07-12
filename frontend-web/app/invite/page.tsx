@@ -3,14 +3,13 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Mail, User, Shield, Send, Lock, Eye, EyeOff } from "lucide-react"
 import { sendEmail, inviteEmailHtml } from "@/lib/email"
+import { API_BASE_URL } from "@/lib/api"
 
 const ROLES: Record<string, string[]> = {
   MANUFACTURER: ["Production Supervisor", "Store Keeper", "POS Operator"],
   WHOLESALER: ["Receiving Staff", "Sales Staff"],
   RETAILER: ["Shop Staff"],
 }
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
 
 export default function InvitePage() {
   const router = useRouter()

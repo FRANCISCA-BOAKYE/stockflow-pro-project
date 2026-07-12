@@ -4,27 +4,24 @@ import nodemailer from "nodemailer"
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "stockflowp@gmail.com",
-    pass: "fcezpuyxrnaeflbr",
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
   },
 })
 
 export async function POST(req: NextRequest) {
   try {
     const { to, subject, html } = await req.json()
-    console.log("📧 Sending email to:", to)
 
     await transporter.sendMail({
-      from: '"StockFlow Pro" <stockflowp@gmail.com>',
+      from: `"StockFlow Pro" <${process.env.GMAIL_USER}>`,
       to,
       subject,
       html,
     })
 
-    console.log("📧 Email sent successfully")
     return NextResponse.json({ success: true })
   } catch (err: any) {
-    console.log("📧 Email error:", err.message)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

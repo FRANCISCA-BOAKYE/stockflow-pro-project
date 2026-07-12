@@ -25,13 +25,17 @@ public class CreditService {
     }
 
     @Transactional
-    public CreditRecord createCreditRecord(CreateCreditRequest request) {
+    public CreditRecord createCreditRecord(CreateCreditRequest request, Long callerBusinessId) {
         CreditRecord record = new CreditRecord();
 
         Business creditor = businessRepository.findById(request.getCreditorBusinessId())
                 .orElseThrow(() -> new RuntimeException("Creditor business not found"));
         Business debtor = businessRepository.findById(request.getDebtorBusinessId())
                 .orElseThrow(() -> new RuntimeException("Debtor business not found"));
+
+        if (!callerBusinessId.equals(creditor.getId()) && !callerBusinessId.equals(debtor.getId())) {
+            throw new RuntimeException("Unauthorized: this credit record does not belong to your business");
+        }
 
         record.setCreditorBusiness(creditor);
         record.setDebtorBusiness(debtor);
@@ -44,9 +48,14 @@ public class CreditService {
     }
 
     @Transactional
-    public CreditRecord recordPayment(CreditPaymentRequest request) {
+    public CreditRecord recordPayment(CreditPaymentRequest request, Long callerBusinessId) {
         CreditRecord record = creditRepository.findById(request.getCreditRecordId())
                 .orElseThrow(() -> new RuntimeException("Credit record not found"));
+
+        if (!callerBusinessId.equals(record.getCreditorBusiness().getId())
+                && !callerBusinessId.equals(record.getDebtorBusiness().getId())) {
+            throw new RuntimeException("Unauthorized: this credit record does not belong to your business");
+        }
 
         BigDecimal remaining = record.getAmountUsd().subtract(request.getAmountPaid());
 

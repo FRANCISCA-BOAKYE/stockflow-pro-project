@@ -2,11 +2,11 @@ import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Lin
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
+import { MONTHLY_PRICE_USD } from '../../constants/subscriptionPlans';
 
 const getPlansForTier = (tier?: string) => {
-  if (tier === 'MANUFACTURER') return [{ name: 'Standard', price: 80 }, { name: 'Premium', price: 110 }];
-  if (tier === 'WHOLESALER') return [{ name: 'Standard', price: 45 }, { name: 'Premium', price: 75 }];
-  return [{ name: 'Standard', price: 17 }, { name: 'Premium', price: 30 }];
+  const prices = MONTHLY_PRICE_USD[tier || 'RETAILER'] || MONTHLY_PRICE_USD.RETAILER;
+  return [{ name: 'Standard', price: prices.STANDARD }, { name: 'Premium', price: prices.PREMIUM }];
 };
 
 export default function TrialExpired() {

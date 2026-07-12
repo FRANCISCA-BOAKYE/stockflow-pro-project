@@ -4,6 +4,7 @@ import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +21,8 @@ public class PaystackWebhookController {
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
 
-    private static final String PAYSTACK_SECRET = "sk_test_3bbd1c1dabf095c6200abb15eb7631ddb8610104";
+    @Value("${paystack.secret.key}")
+    private String paystackSecret;
 
     public PaystackWebhookController(
             BusinessRepository businessRepository,
@@ -34,7 +36,7 @@ public class PaystackWebhookController {
             @RequestHeader(value = "x-paystack-signature", required = false) String signature,
             @RequestBody String rawBody) {
 
-        if (signature != null && !verifySignature(rawBody, signature)) {
+        if (signature == null || !verifySignature(rawBody, signature)) {
             return ResponseEntity.status(401).body("Invalid signature");
         }
 
@@ -76,7 +78,7 @@ public class PaystackWebhookController {
         try {
             Mac mac = Mac.getInstance("HmacSHA512");
             SecretKeySpec secretKey = new SecretKeySpec(
-                    PAYSTACK_SECRET.getBytes(), "HmacSHA512");
+                    paystackSecret.getBytes(), "HmacSHA512");
             mac.init(secretKey);
             byte[] hash = mac.doFinal(payload.getBytes());
             String computed = HexFormat.of().formatHex(hash);

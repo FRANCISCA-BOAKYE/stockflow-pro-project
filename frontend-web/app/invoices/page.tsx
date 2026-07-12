@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, FileText, Calendar, TrendingUp, Download } from "lucide-react"
-
-const API_BASE_URL = "https://stockflow-backend-qwpt.onrender.com"
+import { API_BASE_URL } from "@/lib/api"
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
   PAID: { bg: '#ecfdf5', text: '#059669', border: '#a7f3d0', dot: '#059669' },
