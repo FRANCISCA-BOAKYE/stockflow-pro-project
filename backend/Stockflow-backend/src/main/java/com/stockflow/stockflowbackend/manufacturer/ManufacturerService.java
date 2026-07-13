@@ -220,6 +220,16 @@ public class ManufacturerService {
         return recipeRepository.findByBusinessIdAndIsActiveTrue(businessId);
     }
 
+    // DELETE RECIPE (soft delete — production history may still reference it)
+    @Transactional
+    public void deleteRecipe(Long recipeId, Long businessId) {
+        Recipe recipe = recipeRepository
+                .findByBusinessIdAndId(businessId, recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found"));
+        recipe.setIsActive(false);
+        recipeRepository.save(recipe);
+    }
+
     @Transactional(readOnly = true)
     public List<ProductionRun> getProductionHistory(Long businessId) {
         return productionRunRepository.findByBusinessIdOrderByConfirmedAtDesc(businessId);

@@ -141,23 +141,38 @@ export default function RecipesScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <View style={s.cardIcon}>
-                  <Ionicons name="git-branch-outline" size={18} color="#8B5CF6" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.name}>{item.name}</Text>
-                  <Text style={s.output}>Output: {item.outputQuantity} {item.outputUnit} per group</Text>
-                </View>
-              </View>
+  <View style={s.card}>
+    <View style={s.cardHeader}>
+      <View style={s.cardIcon}>
+        <Ionicons name="git-branch-outline" size={18} color="#8B5CF6" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.name}>{item.productName || item.name}</Text>
+        <Text style={s.output}>Output: {item.unitsPerGroup || item.outputQuantity} {item.unitLabel || item.outputUnit} per {item.groupLabel || 'group'}</Text>
+      </View>
+      <TouchableOpacity onPress={() => {
+        Alert.alert('Delete recipe', `Delete "${item.productName || item.name}"?`, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: async () => {
+            try {
+              await api.delete(`/manufacturer/recipes/${item.id}`);
+              fetchData();
+            } catch (e: any) {
+              Alert.alert('Error', e?.response?.data?.message || 'Delete failed');
+            }
+          }}
+        ]);
+      }} style={{ padding: 4 }}>
+        <Ionicons name="trash-outline" size={18} color="#DC2626" />
+      </TouchableOpacity>
+    </View>
               {item.materials && item.materials.length > 0 && (
                 <View style={s.materialsList}>
                   <Text style={s.materialsTitle}>Materials required:</Text>
                   {item.materials.map((m: any, i: number) => (
                     <View key={i} style={s.materialRow}>
                       <Ionicons name="flask-outline" size={12} color="#9CA3AF" />
-                      <Text style={s.materialText}>{m.materialName}: {m.quantityRequired} {m.unit}</Text>
+                      <Text style={s.materialText}>{m.material?.name}: {m.quantityPerUnit} {m.material?.unit}</Text>
                     </View>
                   ))}
                 </View>

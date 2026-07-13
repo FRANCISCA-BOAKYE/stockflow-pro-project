@@ -55,6 +55,12 @@ public class ManufacturerController {
         return ResponseEntity.ok(manufacturerService.createRecipe(req, getBusinessId(auth)));
     }
 
+    @DeleteMapping("/recipes/{id}")
+    public ResponseEntity<?> deleteRecipe(@PathVariable Long id, Authentication auth) {
+        manufacturerService.deleteRecipe(id, getBusinessId(auth));
+        return ResponseEntity.ok(java.util.Map.of("message", "Recipe deleted"));
+    }
+
     @PostMapping("/production/calculate")
     public ResponseEntity<ProductionPreview> calculate(
             @RequestBody ProductionCalculateRequest req, Authentication auth) {
