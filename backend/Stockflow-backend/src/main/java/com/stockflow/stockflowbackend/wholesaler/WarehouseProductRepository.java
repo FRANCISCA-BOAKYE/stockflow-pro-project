@@ -19,4 +19,6 @@ public interface WarehouseProductRepository
 
     List<WarehouseProduct> findByBusinessIdAndQuantityLessThanEqual(
             Long businessId, BigDecimal threshold);
+
+    long countByBusinessId(Long businessId);
 }

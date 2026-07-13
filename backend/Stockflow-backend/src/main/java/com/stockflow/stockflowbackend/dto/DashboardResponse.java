@@ -18,19 +18,19 @@ public class DashboardResponse {
     private Integer lowStockCount;
     private BigDecimal todaySalesUsd;
     private Integer totalTransactionsToday;
-    private BigDecimal totalCreditOwed;
+    private BigDecimal totalCreditOwedByCustomers;
     private Integer overdueAccountsCount;
 
     // Wholesaler fields
-    private Integer totalWarehouseProducts;
-    private Integer lowStockWarehouseCount;
+    private Integer totalStockItems;
+    private Integer activeRetailers;
     private BigDecimal totalCreditOwedToManufacturers;
     private BigDecimal totalCreditOwedByRetailers;
 
     // Manufacturer fields
     private Integer totalMaterials;
-    private Integer lowStockMaterialsCount;
     private Integer totalFinishedGoods;
+    private Integer productionRunsThisMonth;
     private BigDecimal totalCreditOwedByWholesalers;
 
     public DashboardResponse(String businessName,
