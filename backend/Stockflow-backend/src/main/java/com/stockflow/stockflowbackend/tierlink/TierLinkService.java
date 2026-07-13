@@ -3,6 +3,7 @@ package com.stockflow.stockflowbackend.tierlink;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.model.*;
+import com.stockflow.stockflowbackend.notification.NotificationService;
 import com.stockflow.stockflowbackend.subscription.PlanCatalog;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,11 +17,14 @@ public class TierLinkService {
 
     private final TierLinkRepository tierLinkRepository;
     private final BusinessRepository businessRepository;
+    private final NotificationService notificationService;
 
     public TierLinkService(TierLinkRepository tierLinkRepository,
-            BusinessRepository businessRepository) {
+            BusinessRepository businessRepository,
+            NotificationService notificationService) {
         this.tierLinkRepository = tierLinkRepository;
         this.businessRepository = businessRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -47,7 +51,13 @@ public class TierLinkService {
         link.setRequesterBusiness(requester);
         link.setPartnerBusiness(partner);
         link.setStatus("PENDING");
-        return tierLinkRepository.save(link);
+        TierLink saved = tierLinkRepository.save(link);
+
+        notificationService.notify(partner, "TIER_LINK_REQUEST", "info",
+                "New link request",
+                requester.getName() + " wants to link with your business");
+
+        return saved;
     }
 
     @Transactional
@@ -59,7 +69,13 @@ public class TierLinkService {
         }
         link.setStatus("ACTIVE");
         link.setAcceptedAt(LocalDateTime.now());
-        return tierLinkRepository.save(link);
+        TierLink saved = tierLinkRepository.save(link);
+
+        notificationService.notify(link.getRequesterBusiness(), "TIER_LINK_ACCEPTED", "success",
+                "Link request accepted",
+                link.getPartnerBusiness().getName() + " accepted your link request");
+
+        return saved;
     }
 
     @Transactional(readOnly = true)

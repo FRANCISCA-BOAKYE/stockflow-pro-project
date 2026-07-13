@@ -4,25 +4,22 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Bell } from "lucide-react"
 import { API_BASE_URL } from "@/lib/api"
 
-const READ_STORAGE_KEY = "sf_read_notifications"
-
-function getReadIds(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || "[]"))
-  } catch {
-    return new Set()
-  }
-}
-
-function saveReadIds(ids: Set<string>) {
-  localStorage.setItem(READ_STORAGE_KEY, JSON.stringify([...ids]))
-}
-
 const TYPE_CONFIG: Record<string, { bg: string; border: string; icon: string; color: string }> = {
   warning: { bg: '#fffbeb', border: '#fde68a', icon: '⚠️', color: '#d97706' },
   success: { bg: '#ecfdf5', border: '#a7f3d0', icon: '✓', color: '#059669' },
   info: { bg: '#eff6ff', border: '#bfdbfe', icon: 'i', color: '#1a56db' },
   error: { bg: '#fef2f2', border: '#fecaca', icon: '!', color: '#dc2626' },
+}
+
+function timeAgo(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 1) return "Just now"
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 export default function NotificationsPage() {
@@ -34,53 +31,43 @@ export default function NotificationsPage() {
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
     if (!stored) { router.replace("/login"); return }
-    const u = JSON.parse(stored)
-    setUser(u)
-    buildNotifications(u)
+    setUser(JSON.parse(stored))
+    fetchNotifications()
   }, [])
 
-  const buildNotifications = async (u: any) => {
-    const items: any[] = []
+  const authHeaders = () => {
+    const token = localStorage.getItem("sf_token")
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
+  const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem("sf_token")
-      const headers: any = {}
-      if (token) headers.Authorization = `Bearer ${token}`
-
-      if (u.tierType === "RETAILER") {
-        const res = await fetch(`${API_BASE_URL}/retailer/products/low-stock`, { headers })
-        const lowStock = await res.json()
-        ;(Array.isArray(lowStock) ? lowStock : []).forEach((p: any) => {
-          items.push({ id: `low-${p.id}`, title: "Low stock alert", body: `${p.name} is below reorder level (${p.quantity} ${p.unit} remaining)`, time: "Now", type: "warning", read: false })
-        })
-      }
-
-      if (u.tierType === "MANUFACTURER") {
-        const res = await fetch(`${API_BASE_URL}/manufacturer/materials`, { headers })
-        const mats = await res.json()
-        ;(Array.isArray(mats) ? mats : []).filter((m: any) => m.quantity < m.minThreshold).forEach((m: any) => {
-          items.push({ id: `mat-${m.id}`, title: "Low material alert", body: `${m.name} is below threshold (${m.quantity} ${m.unit} remaining)`, time: "Now", type: "warning", read: false })
-        })
-      }
-
-      const creditRes = await fetch(`${API_BASE_URL}/credit/overdue`, { headers })
-      const overdue = await creditRes.json()
-      ;(Array.isArray(overdue) ? overdue : []).forEach((c: any) => {
-        items.push({ id: `credit-${c.id}`, title: "Credit overdue", body: `${c.partnerBusinessName} — $${Number(c.amountUsd).toFixed(2)} overdue since ${new Date(c.dueDate).toLocaleDateString()}`, time: "Now", type: "error", read: false })
-      })
-
-      const linksRes = await fetch(`${API_BASE_URL}/links/partners`, { headers })
-      const links = await linksRes.json()
-      ;(Array.isArray(links) ? links : []).filter((l: any) => l.status === "PENDING").forEach((l: any) => {
-        items.push({ id: `link-${l.id}`, title: "New link request", body: `${l.requesterBusiness?.name || "A business"} wants to link with your business`, time: "Now", type: "info", read: false })
-      })
-
+      const res = await fetch(`${API_BASE_URL}/notifications`, { headers: authHeaders() })
+      const data = await res.json()
+      setNotifications(Array.isArray(data) ? data : [])
     } catch (e) {
-      console.log("Error building notifications:", e)
+      console.log("Error fetching notifications:", e)
     } finally {
       setLoading(false)
     }
-    const readIds = getReadIds()
-    setNotifications(items.map(n => ({ ...n, read: readIds.has(n.id) })))
+  }
+
+  const markRead = async (id: number) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    try {
+      await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: "POST", headers: authHeaders() })
+    } catch (e) {
+      console.log("Error marking notification read:", e)
+    }
+  }
+
+  const markAllRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    try {
+      await fetch(`${API_BASE_URL}/notifications/read-all`, { method: "POST", headers: authHeaders() })
+    } catch (e) {
+      console.log("Error marking all notifications read:", e)
+    }
   }
 
   if (!user) return null
@@ -100,11 +87,7 @@ export default function NotificationsPage() {
             {unread > 0 && <span style={{ backgroundColor: '#1a56db', color: '#ffffff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px' }}>{unread}</span>}
           </div>
           {unread > 0 && (
-            <button onClick={() => {
-              const readIds = new Set(notifications.map(n => n.id))
-              saveReadIds(readIds)
-              setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-            }}
+            <button onClick={markAllRead}
               style={{ fontSize: '13px', color: '#1a56db', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
               Mark all read
             </button>
@@ -126,12 +109,7 @@ export default function NotificationsPage() {
             {notifications.map(n => {
               const tc = TYPE_CONFIG[n.type] || TYPE_CONFIG.info
               return (
-                <div key={n.id} onClick={() => {
-                  const readIds = getReadIds()
-                  readIds.add(n.id)
-                  saveReadIds(readIds)
-                  setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
-                }}
+                <div key={n.id} onClick={() => !n.read && markRead(n.id)}
                   style={{
                     backgroundColor: n.read ? '#ffffff' : tc.bg,
                     border: `1px solid ${n.read ? '#f1f5f9' : tc.border}`,
@@ -148,7 +126,7 @@ export default function NotificationsPage() {
                       {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#1a56db', flexShrink: 0 }} />}
                     </div>
                     <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '6px' }}>{n.body}</p>
-                    <p style={{ fontSize: '11px', color: '#94a3b8' }}>{n.time}</p>
+                    <p style={{ fontSize: '11px', color: '#94a3b8' }}>{timeAgo(n.createdAt)}</p>
                   </div>
                 </div>
               )

@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -39,6 +40,10 @@ export default function DashboardPage() {
       .then(r => r.json()).then(d => setData(d))
       .catch(() => toast.error("Couldn't load dashboard stats. Check your connection and try again."))
       .finally(() => setLoading(false))
+    fetch(`${API_BASE_URL}/notifications`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setUnreadNotifications(Array.isArray(d) ? d.filter((n: any) => !n.read).length : 0))
+      .catch(() => {})
   }, [])
 
   const handleLogout = () => {
@@ -111,8 +116,13 @@ export default function DashboardPage() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link href="/notifications" style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
+            <Link href="/notifications" style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none' }}>
               <Bell style={{ width: '16px', height: '16px', color: '#64748b' }} />
+              {unreadNotifications > 0 && (
+                <span style={{ position: 'absolute', top: '-4px', right: '-4px', minWidth: '16px', height: '16px', padding: '0 4px', borderRadius: '8px', backgroundColor: '#dc2626', color: '#ffffff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #ffffff' }}>
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
             </Link>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: tc.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#ffffff' }}>{initials}</div>
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#64748b', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}>

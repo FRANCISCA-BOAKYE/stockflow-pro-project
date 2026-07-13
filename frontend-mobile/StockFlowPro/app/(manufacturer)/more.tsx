@@ -1,10 +1,12 @@
+import { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, SafeAreaView, ScrollView, Alert, Linking
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import { api } from '../../services/api';
 
 const HELP_URL = 'https://stockflowpro-web.netlify.app/help';
 
@@ -24,6 +26,15 @@ const MENU_ITEMS = [
 export default function ManufacturerMoreScreen() {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      api.get('/notifications')
+        .then(res => setUnreadCount(Array.isArray(res.data) ? res.data.filter((n: any) => !n.read).length : 0))
+        .catch(() => {});
+    }, [])
+  );
 
   const initials = user?.name
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
@@ -80,6 +91,11 @@ export default function ManufacturerMoreScreen() {
                 <Ionicons name={item.icon as any} size={18} color={item.color} />
               </View>
               <Text style={s.menuLabel}>{item.label}</Text>
+              {item.label === 'Notifications' && unreadCount > 0 && (
+                <View style={s.badge}>
+                  <Text style={s.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
               <Ionicons name="chevron-forward-outline" size={16} color="#D1D5DB" />
             </TouchableOpacity>
           ))}
@@ -112,6 +128,8 @@ const s = StyleSheet.create({
   menuBorder: { borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
   menuIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   menuLabel: { flex: 1, fontSize: 13, fontWeight: '500', color: '#374151' },
+  badge: { backgroundColor: '#DC2626', borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   logoutCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
   logoutText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
 });

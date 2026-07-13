@@ -4,6 +4,7 @@ import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.model.CreditRecord;
+import com.stockflow.stockflowbackend.notification.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +18,14 @@ public class CreditService {
 
     private final CreditRepository creditRepository;
     private final BusinessRepository businessRepository;
+    private final NotificationService notificationService;
 
     public CreditService(CreditRepository creditRepository,
-                         BusinessRepository businessRepository) {
+                         BusinessRepository businessRepository,
+                         NotificationService notificationService) {
         this.creditRepository = creditRepository;
         this.businessRepository = businessRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -67,7 +71,17 @@ public class CreditService {
             record.setAmountUsd(remaining);
         }
 
-        return creditRepository.save(record);
+        CreditRecord saved = creditRepository.save(record);
+
+        boolean callerIsCreditor = callerBusinessId.equals(record.getCreditorBusiness().getId());
+        Business recipient = callerIsCreditor ? record.getDebtorBusiness() : record.getCreditorBusiness();
+        Business actor = callerIsCreditor ? record.getCreditorBusiness() : record.getDebtorBusiness();
+        String settledNote = "SETTLED".equals(saved.getStatus()) ? " — fully settled" : "";
+        notificationService.notify(recipient, "CREDIT_PAYMENT", "success",
+                "Payment recorded",
+                actor.getName() + " recorded a payment of $" + request.getAmountPaid() + settledNote);
+
+        return saved;
     }
 
     @Transactional
@@ -81,7 +95,21 @@ public class CreditService {
                 .orElseThrow(() -> new RuntimeException("No outstanding credit with this business"));
 
         targetRecord.setHoldPlaced(request.getHoldActive());
-        return creditRepository.save(targetRecord);
+        CreditRecord saved = creditRepository.save(targetRecord);
+
+        Business creditor = businessRepository.findById(creditorBusinessId)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        if (Boolean.TRUE.equals(request.getHoldActive())) {
+            notificationService.notify(targetRecord.getDebtorBusiness(), "CREDIT_HOLD", "warning",
+                    "Credit hold placed",
+                    creditor.getName() + " placed a hold on your account until outstanding credit is paid");
+        } else {
+            notificationService.notify(targetRecord.getDebtorBusiness(), "CREDIT_HOLD", "success",
+                    "Credit hold lifted",
+                    creditor.getName() + " lifted the hold on your account");
+        }
+
+        return saved;
     }
 
     @Transactional

@@ -7,6 +7,7 @@ import com.stockflow.stockflowbackend.dto.ReservationResponse;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.model.Reservation;
+import com.stockflow.stockflowbackend.notification.NotificationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,12 +21,15 @@ import java.util.List;
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private final NotificationService notificationService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public ReservationService(ReservationRepository reservationRepository) {
+    public ReservationService(ReservationRepository reservationRepository,
+                              NotificationService notificationService) {
         this.reservationRepository = reservationRepository;
+        this.notificationService = notificationService;
     }
 
     private static final int RESERVATION_TTL_MINUTES = 10;
@@ -134,6 +138,9 @@ public class ReservationService {
         var expired = reservationRepository.findExpiredReservations(LocalDateTime.now());
         for (Reservation r : expired) {
             r.setStatus("EXPIRED");
+            notificationService.notify(r.getBusiness(), "RESERVATION_EXPIRED", "warning",
+                    "Reservation expired",
+                    "Your reservation of " + r.getQuantity() + " units expired unfulfilled");
         }
         reservationRepository.saveAll(expired);
     }

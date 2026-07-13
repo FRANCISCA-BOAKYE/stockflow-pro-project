@@ -2,24 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { useAuthStore } from '../store/authStore';
 import { api } from '../services/api';
-
-const READ_STORAGE_KEY = 'sf_read_notifications';
-
-async function getReadIds(): Promise<Set<string>> {
-  try {
-    const raw = await SecureStore.getItemAsync(READ_STORAGE_KEY);
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-async function saveReadIds(ids: Set<string>) {
-  await SecureStore.setItemAsync(READ_STORAGE_KEY, JSON.stringify([...ids]));
-}
 
 const TYPE_MAP: Record<string, { bg: string; color: string; icon: string }> = {
   warning: { bg: '#FFFBEB', color: '#C27803', icon: 'warning-outline' },
@@ -28,88 +11,54 @@ const TYPE_MAP: Record<string, { bg: string; color: string; icon: string }> = {
   error: { bg: '#FEF2F2', color: '#DC2626', icon: 'alert-circle-outline' },
 };
 
+function timeAgo(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const buildNotifications = useCallback(async () => {
-    const items: any[] = [];
+  const fetchNotifications = useCallback(async () => {
     try {
-      // Low stock alerts
-      if (user?.tierType === 'RETAILER') {
-        const lowStockRes = await api.get('/retailer/products/low-stock');
-        const lowStock = lowStockRes.data || [];
-        lowStock.forEach((p: any) => {
-          items.push({
-            id: `low-${p.id}`,
-            title: 'Low stock alert',
-            body: `${p.name} is below reorder level (${p.quantity} ${p.unit} remaining)`,
-            time: 'Now',
-            type: 'warning',
-            read: false,
-          });
-        });
-      }
-
-      if (user?.tierType === 'MANUFACTURER') {
-        const matsRes = await api.get('/manufacturer/materials');
-        const mats = matsRes.data || [];
-        mats.filter((m: any) => m.quantity < m.minThreshold).forEach((m: any) => {
-          items.push({
-            id: `mat-${m.id}`,
-            title: 'Low material alert',
-            body: `${m.name} is below threshold (${m.quantity} ${m.unit} remaining)`,
-            time: 'Now',
-            type: 'warning',
-            read: false,
-          });
-        });
-      }
-
-      // Overdue credit alerts
-      const creditRes = await api.get('/credit/overdue');
-      const overdue = creditRes.data || [];
-      overdue.forEach((c: any) => {
-        items.push({
-          id: `credit-${c.id}`,
-          title: 'Credit overdue',
-          body: `${c.partnerBusinessName} — $${Number(c.amountUsd).toFixed(2)} overdue since ${new Date(c.dueDate).toLocaleDateString()}`,
-          time: 'Now',
-          type: 'error',
-          read: false,
-        });
-      });
-
-      // Pending link requests
-      const linksRes = await api.get('/links/partners');
-      const pending = (linksRes.data || []).filter((l: any) => l.status === 'PENDING');
-      pending.forEach((l: any) => {
-        const requester = l.requesterBusiness?.name || 'A business';
-        items.push({
-          id: `link-${l.id}`,
-          title: 'New link request',
-          body: `${requester} wants to link with your business`,
-          time: 'Now',
-          type: 'info',
-          read: false,
-        });
-      });
-
+      const res = await api.get('/notifications');
+      setNotifications(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      console.log('Error building notifications:', e);
+      console.log('Error fetching notifications:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  }, []);
 
-    const readIds = await getReadIds();
-    setNotifications(items.map(n => ({ ...n, read: readIds.has(n.id) })));
-  }, [user?.tierType]);
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
-  useEffect(() => { buildNotifications(); }, [buildNotifications]);
+  const markRead = async (id: number) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      await api.post(`/notifications/${id}/read`, {});
+    } catch (e) {
+      console.log('Error marking notification read:', e);
+    }
+  };
+
+  const markAllRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await api.post('/notifications/read-all', {});
+    } catch (e) {
+      console.log('Error marking all notifications read:', e);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -126,10 +75,7 @@ export default function NotificationsScreen() {
           <Text style={s.sub}>{unreadCount} unread</Text>
         </View>
         {unreadCount > 0 && (
-          <TouchableOpacity style={s.markBtn} onPress={async () => {
-            await saveReadIds(new Set(notifications.map(n => n.id)));
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-          }}>
+          <TouchableOpacity style={s.markBtn} onPress={markAllRead}>
             <Text style={s.markBtnText}>Mark all read</Text>
           </TouchableOpacity>
         )}
@@ -137,10 +83,10 @@ export default function NotificationsScreen() {
 
       <FlatList
         data={notifications}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.id)}
         contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); buildNotifications(); }} tintColor="#1A56DB" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNotifications(); }} tintColor="#1A56DB" />}
         ListEmptyComponent={
           <View style={s.empty}>
             <Ionicons name="notifications-outline" size={40} color="#D1D5DB" />
@@ -153,12 +99,7 @@ export default function NotificationsScreen() {
           return (
             <TouchableOpacity
               style={[s.card, !item.read && s.cardUnread]}
-              onPress={async () => {
-                const readIds = await getReadIds();
-                readIds.add(item.id);
-                await saveReadIds(readIds);
-                setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
-              }}
+              onPress={() => !item.read && markRead(item.id)}
             >
               <View style={[s.icon, { backgroundColor: t.bg }]}>
                 <Ionicons name={t.icon as any} size={20} color={t.color} />
@@ -169,7 +110,7 @@ export default function NotificationsScreen() {
                   {!item.read && <View style={s.dot} />}
                 </View>
                 <Text style={s.body}>{item.body}</Text>
-                <Text style={s.time}>{item.time}</Text>
+                <Text style={s.time}>{timeAgo(item.createdAt)}</Text>
               </View>
             </TouchableOpacity>
           );

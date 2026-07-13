@@ -2,22 +2,30 @@ package com.stockflow.stockflowbackend.subscription;
 
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.model.Business;
+import com.stockflow.stockflowbackend.notification.NotificationService;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 @Service
 public class SubscriptionService {
 
-    private final BusinessRepository businessRepository;
+    private static final int TRIAL_ENDING_WARNING_DAYS = 3;
 
-    public SubscriptionService(BusinessRepository businessRepository) {
+    private final BusinessRepository businessRepository;
+    private final NotificationService notificationService;
+
+    public SubscriptionService(BusinessRepository businessRepository,
+                               NotificationService notificationService) {
         this.businessRepository = businessRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -108,5 +116,31 @@ public class SubscriptionService {
         catalog.put("monthlyPriceUsd", PlanCatalog.MONTHLY_PRICE_USD);
         catalog.put("premiumFeatures", PlanCatalog.PREMIUM_FEATURES);
         return catalog;
+    }
+
+    @Scheduled(fixedRate = 12 * 60 * 60 * 1000)
+    @Transactional
+    public void checkTrialExpirations() {
+        List<Business> trialBusinesses = businessRepository.findBySubscriptionStatus("TRIAL");
+        for (Business business : trialBusinesses) {
+            if (business.getTrialStartedAt() == null) {
+                continue;
+            }
+            long days = ChronoUnit.DAYS.between(business.getTrialStartedAt(), LocalDateTime.now());
+            long daysLeft = PlanCatalog.TRIAL_DAYS - days;
+
+            if (daysLeft <= 0) {
+                business.setSubscriptionStatus("EXPIRED");
+                businessRepository.save(business);
+                notificationService.notify(business, "TRIAL_EXPIRED", "error",
+                        "Trial expired",
+                        "Your " + PlanCatalog.TRIAL_DAYS + "-day trial has ended. Subscribe to keep using StockFlow Pro.");
+            } else if (daysLeft <= TRIAL_ENDING_WARNING_DAYS) {
+                notificationService.notifyOnce(business, "TRIAL_ENDING", "warning",
+                        "Trial ending soon",
+                        "Your trial ends in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s") + ". Subscribe to avoid losing access.",
+                        LocalDateTime.now().minusHours(24));
+            }
+        }
     }
 }

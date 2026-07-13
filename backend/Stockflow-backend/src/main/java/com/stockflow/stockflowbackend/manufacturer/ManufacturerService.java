@@ -4,6 +4,7 @@ import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.model.*;
+import com.stockflow.stockflowbackend.notification.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ public class ManufacturerService {
     private final RecipeMaterialRepository recipeMaterialRepository;
     private final BusinessRepository businessRepository;
     private final CreditRepository creditRepository;
+    private final NotificationService notificationService;
 
     public ManufacturerService(MaterialRepository materialRepository,
                                RecipeRepository recipeRepository,
@@ -30,7 +32,8 @@ public class ManufacturerService {
                                DispatchRepository dispatchRepository,
                                RecipeMaterialRepository recipeMaterialRepository,
                                BusinessRepository businessRepository,
-                               CreditRepository creditRepository) {
+                               CreditRepository creditRepository,
+                               NotificationService notificationService) {
         this.materialRepository = materialRepository;
         this.recipeRepository = recipeRepository;
         this.productionRunRepository = productionRunRepository;
@@ -39,6 +42,7 @@ public class ManufacturerService {
         this.recipeMaterialRepository = recipeMaterialRepository;
         this.businessRepository = businessRepository;
         this.creditRepository = creditRepository;
+        this.notificationService = notificationService;
     }
 
     // ADD MATERIAL
@@ -212,7 +216,14 @@ public class ManufacturerService {
             CreditRecord saved = creditRepository.save(credit);
             dispatch.setCreditRecordId(saved.getId());
         }
-        return dispatchRepository.save(dispatch);
+        Dispatch savedDispatch = dispatchRepository.save(dispatch);
+
+        notificationService.notify(wholesaler, "DISPATCH_RECEIVED", "info",
+                "Incoming dispatch",
+                fg.getBusiness().getName() + " dispatched " + req.getQuantity() + " units of "
+                        + fg.getRecipe().getProductName() + " to you");
+
+        return savedDispatch;
     }
 
     @Transactional(readOnly = true)
