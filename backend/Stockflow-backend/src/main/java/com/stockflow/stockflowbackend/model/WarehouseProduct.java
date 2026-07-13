@@ -34,6 +34,9 @@ public class WarehouseProduct {
     @Column(name = "min_threshold", nullable = false, precision = 14, scale = 3)
     private BigDecimal minThreshold = BigDecimal.ZERO;
 
+    @Column(name = "price_usd", precision = 10, scale = 2)
+    private BigDecimal priceUsd;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 }

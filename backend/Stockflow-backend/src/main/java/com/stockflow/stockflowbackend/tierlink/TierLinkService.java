@@ -69,6 +69,10 @@ public class TierLinkService {
                 .findByRequesterBusinessIdAndStatus(businessId, "ACTIVE"));
         all.addAll(tierLinkRepository
                 .findByPartnerBusinessIdAndStatus(businessId, "ACTIVE"));
+        all.addAll(tierLinkRepository
+                .findByRequesterBusinessIdAndStatus(businessId, "PENDING"));
+        all.addAll(tierLinkRepository
+                .findByPartnerBusinessIdAndStatus(businessId, "PENDING"));
         return all;
     }
 }

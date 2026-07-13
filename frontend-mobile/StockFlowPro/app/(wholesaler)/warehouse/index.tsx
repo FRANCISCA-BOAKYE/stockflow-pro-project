@@ -16,7 +16,7 @@ export default function WarehouseScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '' });
+  const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '', priceUsd: '' });
 
   const fetchStock = useCallback(async () => {
     try {
@@ -33,7 +33,7 @@ export default function WarehouseScreen() {
   useEffect(() => { fetchStock(); }, [fetchStock]);
 
   const handleAddProduct = async () => {
-    if (!form.name || !form.unit || !form.quantity) {
+    if (!form.name || !form.unit || !form.quantity || !form.priceUsd) {
       Alert.alert('Missing info', 'Please fill in all required fields.');
       return;
     }
@@ -44,9 +44,10 @@ export default function WarehouseScreen() {
         unit: form.unit,
         quantity: parseInt(form.quantity),
         minThreshold: form.minThreshold ? parseInt(form.minThreshold) : 20,
+        priceUsd: parseFloat(form.priceUsd),
       });
       setShowAddModal(false);
-      setForm({ name: '', unit: '', quantity: '', minThreshold: '' });
+      setForm({ name: '', unit: '', quantity: '', minThreshold: '', priceUsd: '' });
       fetchStock();
       Alert.alert('Success', 'Product added to warehouse!');
     } catch (e: any) {
@@ -117,10 +118,15 @@ export default function WarehouseScreen() {
                     {item.quantity} {item.unit} in stock
                   </Text>
                 </View>
-                <View style={[s.badge, isLow ? s.badgeRed : s.badgeGreen]}>
-                  <Text style={[s.badgeText, isLow ? s.badgeTextRed : s.badgeTextGreen]}>
-                    {isLow ? 'Low stock' : 'In stock'}
-                  </Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  {item.priceUsd != null && (
+                    <Text style={s.price}>${Number(item.priceUsd).toFixed(2)}</Text>
+                  )}
+                  <View style={[s.badge, isLow ? s.badgeRed : s.badgeGreen]}>
+                    <Text style={[s.badgeText, isLow ? s.badgeTextRed : s.badgeTextGreen]}>
+                      {isLow ? 'Low stock' : 'In stock'}
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
@@ -146,6 +152,7 @@ export default function WarehouseScreen() {
               { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola Crate' },
               { label: 'Unit *', key: 'unit', placeholder: 'e.g. crate, kg, carton' },
               { label: 'Quantity *', key: 'quantity', placeholder: '100', keyboard: 'numeric' },
+              { label: 'Price per unit (USD) *', key: 'priceUsd', placeholder: '25.00', keyboard: 'decimal-pad' },
               { label: 'Min threshold', key: 'minThreshold', placeholder: '20', keyboard: 'numeric' },
             ].map(field => (
               <View key={field.key} style={{ marginBottom: 16 }}>
@@ -186,6 +193,7 @@ const s = StyleSheet.create({
   name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
   unit: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
   qty: { fontSize: 11, color: '#059669', fontWeight: '500', marginTop: 2 },
+  price: { fontSize: 13, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
   badge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   badgeGreen: { backgroundColor: '#D1FAE5' },
   badgeRed: { backgroundColor: '#FEE2E2' },

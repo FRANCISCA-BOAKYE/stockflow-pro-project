@@ -66,10 +66,10 @@ export default function PrintInvoicesPage() {
             {invoices.map((inv: any, i: number) => {
               const status = inv.status || (inv.paymentMode === "CREDIT" ? "UNPAID" : "PAID")
               return (
-                <tr key={inv.transactionId || inv.id || i} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                <tr key={inv.id || i} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
                   <td style={{ padding: '14px 12px', fontSize: '13px', fontFamily: 'monospace' }}>{inv.invoiceNumber}</td>
-                  <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 600 }}>{inv.productName || inv.buyerName || "Sale"}</td>
-                  <td style={{ padding: '14px 12px', fontSize: '13px', color: '#64748b' }}>{inv.recordedAt ? new Date(inv.recordedAt).toLocaleDateString() : ""}</td>
+                  <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 600 }}>{inv.buyerName || inv.buyerBusinessName || "Sale"}</td>
+                  <td style={{ padding: '14px 12px', fontSize: '13px', color: '#64748b' }}>{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : ""}</td>
                   <td style={{ padding: '14px 12px', fontSize: '13px', fontWeight: 700 }}>${Number(inv.totalUsd || 0).toLocaleString()}</td>
                   <td style={{ padding: '14px 12px' }}>
                     <span style={{

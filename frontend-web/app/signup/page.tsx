@@ -18,28 +18,6 @@ const tiers = [
   { id: "RETAILER", name: "Retailer", icon: Store, description: "Products, POS, stock tracking, credit owed to wholesalers", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", gradient: "from-emerald-500 to-green-600" },
 ]
 
-const SUB_ACCOUNT_ROLES: Record<string, { name: string; roles: string[] }> = {
-  MANUFACTURER: { name: "Company Admin", roles: ["Production Supervisor", "Store Keeper", "POS Operator"] },
-  WHOLESALER: { name: "Warehouse Admin", roles: ["Receiving Staff", "Sales Staff"] },
-  RETAILER: { name: "Shop Owner", roles: ["Shop Staff"] },
-}
-
-function generateSubAccounts(tier: string, plan: string, adminEmail: string) {
-  const limit = ACCOUNT_LIMITS[tier]?.[plan] ?? 1
-  const roleConfig = SUB_ACCOUNT_ROLES[tier] ?? { name: "Admin", roles: ["Staff"] }
-  const domain = adminEmail.includes("@") ? adminEmail.split("@")[1] : "business.com"
-  const accounts: { role: string; email: string; isAdmin: boolean }[] = [
-    { role: roleConfig.name, email: adminEmail, isAdmin: true },
-  ]
-  let roleIndex = 0
-  while (accounts.length < limit) {
-    const role = roleConfig.roles[roleIndex % roleConfig.roles.length]
-    accounts.push({ role, email: `${role.toLowerCase().replace(/ /g, ".")}${accounts.length}@${domain}`, isAdmin: false })
-    roleIndex++
-  }
-  return accounts
-}
-
 function SignupContent() {
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
@@ -69,23 +47,12 @@ function SignupContent() {
       const json = await res.json()
 if (!res.ok) throw new Error(json.error || json.message || "Registration failed")
 
-const subAccounts = [
-  { role: json.role || "Admin", email: json.email, isAdmin: true, password: formData.password },
-  ...(json.subAccounts || []).map((acc: any) => ({
-    role: acc.role,
-    email: acc.email,
-    isAdmin: false,
-    password: acc.temporaryPassword,
-  }))
-]
-
 setRegistered({
   email: formData.email,
   password: formData.password,
   businessName: json.businessName || formData.businessName,
   tier: json.tierType || selectedTier,
   plan: json.subscriptionPlan || selectedPlan,
-  subAccounts,
 })
 setStep(4)
 
@@ -130,7 +97,7 @@ sendEmail(
             <p className="text-blue-200 text-sm leading-relaxed">
               {step === 1 && "Select the tier that best matches your business type."}
               {step === 2 && "Both plans start with a 14-day free trial. No card required."}
-              {step === 3 && "Your admin account will be created with sub-accounts for your team."}
+              {step === 3 && "Create your admin account now — invite your team afterwards."}
               {step === 4 && "Check your email for your credentials. Download the mobile app to get started."}
             </p>
           </div>
@@ -212,7 +179,7 @@ sendEmail(
           {step === 3 && (
             <div>
               <h1 className="text-2xl font-bold text-slate-900 mb-2">Create your account</h1>
-              <p className="text-slate-500 mb-8 text-sm">Your admin account plus {ACCOUNT_LIMITS[selectedTier]?.[selectedPlan] - 1} sub-accounts will be created</p>
+              <p className="text-slate-500 mb-8 text-sm">Your plan includes up to {ACCOUNT_LIMITS[selectedTier]?.[selectedPlan]} accounts. You'll invite your team from Settings after signing up.</p>
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-slate-700 text-sm font-medium">Business name</Label>
@@ -267,19 +234,20 @@ sendEmail(
               </div>
 
               <div className="space-y-2 mb-6">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Sub-account credentials</p>
-                {registered.subAccounts.map((acc: any, i: number) => (
-                  <div key={i} className={`flex items-center justify-between rounded-xl border p-4 ${acc.isAdmin ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-900">{acc.isAdmin ? "Admin (You)" : acc.role}</span>
-                        {acc.isAdmin && <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">Admin</Badge>}
-                      </div>
-                      <p className="text-xs font-mono text-slate-500 mt-0.5">{acc.email}</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Your login</p>
+                <div className="flex items-center justify-between rounded-xl border p-4 bg-blue-50 border-blue-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-slate-900">Admin (You)</span>
+                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">Admin</Badge>
                     </div>
-                    <p className="text-xs font-mono text-slate-400">{acc.isAdmin ? registered.password : acc.password || "TempPass123!"}</p>
+                    <p className="text-xs font-mono text-slate-500 mt-0.5">{registered.email}</p>
                   </div>
-                ))}
+                  <p className="text-xs font-mono text-slate-400">{registered.password}</p>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">
+                  Your plan includes up to {ACCOUNT_LIMITS[registered.tier]?.[registered.plan] ?? 1} accounts. Invite your team from Settings → Accounts once you're signed in.
+                </p>
               </div>
 
               <Separator className="mb-6" />

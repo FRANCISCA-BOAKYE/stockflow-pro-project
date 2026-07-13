@@ -18,7 +18,7 @@ export default function ReceiveStockScreen() {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ quantity: '', amountUsd: '', paymentMode: 'CASH', manufacturerBusinessId: '' });
+  const [form, setForm] = useState({ quantity: '', amountUsd: '', paymentMode: 'CASH', manufacturerBusinessId: '', dueDate: '' });
 
   const fetchStock = useCallback(async () => {
     try {
@@ -39,18 +39,24 @@ export default function ReceiveStockScreen() {
       Alert.alert('Missing info', 'Please fill in all required fields.');
       return;
     }
+    if (form.paymentMode === 'CREDIT' && !form.dueDate.trim()) {
+      Alert.alert('Missing info', 'Please enter a due date for credit payment.');
+      return;
+    }
     setSubmitting(true);
     try {
-      await api.post('/wholesaler/receive', {
+      const body: any = {
         productId: selectedProduct.id,
         quantity: parseInt(form.quantity),
         amountUsd: parseFloat(form.amountUsd),
         paymentMode: form.paymentMode,
         manufacturerBusinessId: form.manufacturerBusinessId ? parseInt(form.manufacturerBusinessId) : null,
-      });
+      };
+      if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
+      await api.post('/wholesaler/receive', body);
       Alert.alert('Success', `${form.quantity} units of ${selectedProduct.name} received!`);
       setShowModal(false);
-      setForm({ quantity: '', amountUsd: '', paymentMode: 'CASH', manufacturerBusinessId: '' });
+      setForm({ quantity: '', amountUsd: '', paymentMode: 'CASH', manufacturerBusinessId: '', dueDate: '' });
       setSelectedProduct(null);
       fetchStock();
     } catch (e: any) {
@@ -147,6 +153,14 @@ export default function ReceiveStockScreen() {
                 ))}
               </View>
             </View>
+            {form.paymentMode === 'CREDIT' && (
+              <View>
+                <Text style={s.fieldLabel}>Due date *</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
+                  value={form.dueDate} onChangeText={v => setForm(f => ({ ...f, dueDate: v }))} />
+                <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>A credit record will be created for this manufacturer</Text>
+              </View>
+            )}
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleReceive} disabled={submitting}>
               {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Receive</Text>}
             </TouchableOpacity>

@@ -117,7 +117,7 @@ export default function InvoicesPage() {
                 const status = inv.status || (inv.paymentMode === "CREDIT" ? "UNPAID" : "PAID")
                 const sc = STATUS_CONFIG[status] || STATUS_CONFIG.UNPAID
                 return (
-                  <div key={inv.transactionId || inv.id} style={{
+                  <div key={inv.id} style={{
                     backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px 24px',
                     border: '1px solid #f1f5f9', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
                     display: 'flex', alignItems: 'center', gap: '16px',
@@ -130,9 +130,9 @@ export default function InvoicesPage() {
                       <FileText style={{ width: '18px', height: '18px', color: '#64748b' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a', marginBottom: '3px' }}>{inv.productName || inv.buyerName || "Sale"}</p>
+                      <p style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a', marginBottom: '3px' }}>{inv.buyerName || inv.buyerBusinessName || "Sale"}</p>
                       <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Calendar style={{ width: '11px', height: '11px' }} />{inv.recordedAt ? new Date(inv.recordedAt).toLocaleDateString() : ""} · <span style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</span>
+                        <Calendar style={{ width: '11px', height: '11px' }} />{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : ""} · <span style={{ fontFamily: 'monospace' }}>{inv.invoiceNumber}</span>
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>

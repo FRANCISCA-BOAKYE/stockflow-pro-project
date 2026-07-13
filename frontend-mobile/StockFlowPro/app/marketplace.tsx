@@ -44,8 +44,10 @@ export default function MarketplaceScreen() {
             name: b.name || b.businessName || 'Business',
             type: b.tierType || 'MANUFACTURER',
             location: item.location || 'Ghana',
-            products: item.productsOffered ? item.productsOffered.split(',') : [],
-            priceRange: item.priceRange || 'Contact for pricing',
+            headline: item.headline || '',
+            description: item.description || 'No description provided yet.',
+            deliveryTerms: item.deliveryTerms || 'TBD',
+            creditTerms: item.creditTerms || 'TBD',
             verified: b.subscriptionStatus === 'ACTIVE' || b.subscriptionStatus === 'TRIAL',
           };
         }));
@@ -154,17 +156,13 @@ export default function MarketplaceScreen() {
                     <Text style={[s.typeBadgeText, { color: tc.color }]}>{tc.label}</Text>
                   </View>
                 </View>
-                {item.products.length > 0 && (
-                  <View style={s.products}>
-                    {item.products.slice(0, 3).map((p: string, i: number) => (
-                      <View key={i} style={s.productTag}>
-                        <Text style={s.productTagText}>{p.trim()}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {item.headline ? <Text style={s.headline}>{item.headline}</Text> : null}
+                <Text style={s.description}>{item.description}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={s.price}>{item.priceRange}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.terms}>Delivery: {item.deliveryTerms}</Text>
+                    <Text style={s.terms}>Credit: {item.creditTerms}</Text>
+                  </View>
                   {canLink && (
                     status === 'ACTIVE' ? (
                       <View style={s.linkedBadge}>
@@ -219,10 +217,9 @@ const s = StyleSheet.create({
   location: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
   typeBadge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   typeBadgeText: { fontSize: 10, fontWeight: '600' },
-  products: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  productTag: { backgroundColor: '#F8FAFC', borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 0.5, borderColor: '#E5E7EB' },
-  productTagText: { fontSize: 10, color: '#374151' },
-  price: { fontSize: 11, color: '#6B7280' },
+  headline: { fontSize: 12, color: '#1A56DB', fontWeight: '600' },
+  description: { fontSize: 12, color: '#475569', lineHeight: 17 },
+  terms: { fontSize: 11, color: '#6B7280' },
   linkBtn: { backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 12 },
   linkBtnText: { fontSize: 11, color: '#1A56DB', fontWeight: '600' },
   linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ECFDF5', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },

@@ -63,6 +63,7 @@ public class ReportService {
                 business.getTierType(),
                 business.getSubscriptionStatus()
         );
+        response.setTrialStartedAt(business.getTrialStartedAt());
 
         switch (business.getTierType()) {
             case "RETAILER" -> buildRetailerDashboard(response, businessId);

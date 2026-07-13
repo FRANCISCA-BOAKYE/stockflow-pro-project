@@ -61,7 +61,7 @@ export default function InvoicesScreen() {
 
         <FlatList
           data={invoices}
-          keyExtractor={item => String(item.transactionId || item.id)}
+          keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchInvoices(); }} tintColor="#1A56DB" />}
@@ -81,10 +81,10 @@ export default function InvoicesScreen() {
                   <Ionicons name="receipt-outline" size={18} color={st.text} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.party}>{item.productName || item.buyerName || 'Sale'}</Text>
+                  <Text style={s.party}>{item.buyerName || item.buyerBusinessName || 'Sale'}</Text>
                   <View style={s.row}>
                     <Ionicons name="calendar-outline" size={11} color="#9CA3AF" />
-                    <Text style={s.date}> {new Date(item.recordedAt).toLocaleDateString()}</Text>
+                    <Text style={s.date}> {new Date(item.createdAt).toLocaleDateString()}</Text>
                   </View>
                   <Text style={s.invoiceId}>{item.invoiceNumber}</Text>
                 </View>

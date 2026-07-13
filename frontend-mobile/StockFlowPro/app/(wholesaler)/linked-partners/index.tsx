@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
+import { useAuthStore } from '../../../store/authStore';
 
 export default function LinkedPartnersScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,6 +90,7 @@ export default function LinkedPartnersScreen() {
           const isRequester = item.requesterBusiness?.tierType !== 'WHOLESALER';
           const business = isRequester ? item.requesterBusiness : item.partnerBusiness;
           const isPending = item.status === 'PENDING';
+          const isIncoming = item.partnerBusiness?.id === user?.businessId;
           const tierColor = business?.tierType === 'MANUFACTURER' ? '#1A56DB' : '#059669';
           const tierBg = business?.tierType === 'MANUFACTURER' ? '#EFF6FF' : '#ECFDF5';
           return (
@@ -99,7 +102,7 @@ export default function LinkedPartnersScreen() {
                 <Text style={s.name}>{business?.name}</Text>
                 <Text style={s.type}>{business?.tierType} · ID: {business?.id}</Text>
               </View>
-              {isPending ? (
+              {isPending && isIncoming ? (
                 <View style={{ gap: 6 }}>
                   <TouchableOpacity style={s.acceptBtn} onPress={() => handleAccept(item.id)}>
                     <Text style={s.acceptBtnText}>Accept</Text>
@@ -107,6 +110,10 @@ export default function LinkedPartnersScreen() {
                   <View style={s.pendingBadge}>
                     <Text style={s.pendingText}>Pending</Text>
                   </View>
+                </View>
+              ) : isPending ? (
+                <View style={s.pendingBadge}>
+                  <Text style={s.pendingText}>Request sent</Text>
                 </View>
               ) : (
                 <View style={s.activeBadge}>

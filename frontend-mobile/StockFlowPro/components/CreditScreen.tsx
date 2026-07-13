@@ -44,7 +44,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
     try {
       await api.post('/credit/payment', {
         creditRecordId: selectedAccount.id,
-        amountPaidUsd: parseFloat(paymentAmount),
+        amountPaid: parseFloat(paymentAmount),
       });
       Alert.alert('Success', 'Payment recorded successfully!');
       setShowPaymentModal(false);
@@ -71,7 +71,10 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
           style: account.holdPlaced ? 'default' : 'destructive',
           onPress: async () => {
             try {
-              await api.post('/credit/hold', { creditRecordId: account.id });
+              await api.post('/credit/hold', {
+                debtorBusinessId: account.partnerBusinessId,
+                holdActive: !account.holdPlaced,
+              });
               fetchAccounts();
             } catch (e: any) {
               Alert.alert('Error', e?.response?.data?.message || 'Action failed');

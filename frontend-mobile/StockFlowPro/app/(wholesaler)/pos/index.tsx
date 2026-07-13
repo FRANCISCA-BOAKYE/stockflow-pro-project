@@ -62,7 +62,7 @@ export default function WholesalerPOSScreen() {
     ? stock.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
     : []
 
-  const total = selected ? (Number(selected.price || 0) * qty).toFixed(2) : '0.00'
+  const total = selected ? (Number(selected.priceUsd || 0) * qty).toFixed(2) : '0.00'
 
   const confirmOrder = async () => {
     if (!selected) { Alert.alert('Missing info', 'Please select a product.'); return }
@@ -148,7 +148,7 @@ export default function WholesalerPOSScreen() {
                   <Ionicons name="archive-outline" size={16} color="#1A56DB" />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
-                <Text style={s.resultStock}>{p.quantity} {p.unit}</Text>
+                <Text style={s.resultStock}>${Number(p.priceUsd || 0).toFixed(2)} · {p.quantity} {p.unit}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -157,6 +157,7 @@ export default function WholesalerPOSScreen() {
         {selected && (
           <View style={s.card}>
             <Text style={s.prodName}>{selected.name}</Text>
+            <Text style={s.prodPrice}>${Number(selected.priceUsd || 0).toFixed(2)} per {selected.unit}</Text>
             <View style={s.reserveRow}>
               <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
               <Text style={s.reserveText}> {qty} units reserved · {selected.quantity - qty} available</Text>
@@ -302,6 +303,7 @@ const s = StyleSheet.create({
   reserveRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 8, padding: 8 },
   reserveText: { fontSize: 10.5, color: '#1A56DB' },
   prodName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  prodPrice: { fontSize: 12, color: '#6B7280' },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   stepLabel: { fontSize: 13, color: '#374151', fontWeight: '500' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },

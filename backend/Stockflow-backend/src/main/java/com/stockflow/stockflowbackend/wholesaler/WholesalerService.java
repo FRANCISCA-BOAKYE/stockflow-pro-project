@@ -55,6 +55,7 @@ public class WholesalerService {
         product.setUnit(request.getUnit());
         product.setQuantity(request.getQuantity());
         product.setMinThreshold(request.getMinThreshold());
+        product.setPriceUsd(request.getPriceUsd());
         product.setUpdatedAt(LocalDateTime.now());
 
         return warehouseProductRepository.save(product);
@@ -66,7 +67,7 @@ public class WholesalerService {
                 .stream()
                 .map(p -> new WarehouseStockResponse(
                         p.getId(), p.getName(), p.getUnit(),
-                        p.getQuantity(), p.getMinThreshold()))
+                        p.getQuantity(), p.getMinThreshold(), p.getPriceUsd()))
                 .collect(Collectors.toList());
     }
 

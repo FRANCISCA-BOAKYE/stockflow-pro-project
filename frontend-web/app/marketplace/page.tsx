@@ -11,11 +11,12 @@ interface Listing {
   name: string
   type: string
   location: string
-  products: string[]
-  priceRange: string
-  moq: string
+  headline: string
+  description: string
   deliveryTerms: string
   creditTerms: string
+  contactEmail: string
+  contactPhone: string
   verified: boolean
 }
 
@@ -43,11 +44,12 @@ export default function MarketplacePage() {
               name: b.name || b.businessName || "Business",
               type: b.tierType || "MANUFACTURER",
               location: item.location || b.location || "Ghana",
-              products: item.productsOffered ? item.productsOffered.split(",") : item.products || [],
-              priceRange: item.priceRange || "Contact for pricing",
-              moq: item.minOrderQuantity || "Contact seller",
+              headline: item.headline || "",
+              description: item.description || "No description provided yet.",
               deliveryTerms: item.deliveryTerms || "TBD",
               creditTerms: item.creditTerms || "TBD",
+              contactEmail: item.contactEmail || "",
+              contactPhone: item.contactPhone || "",
               verified: b.subscriptionStatus === "ACTIVE" || b.subscriptionStatus === "TRIAL",
             }
           }))
@@ -57,7 +59,7 @@ export default function MarketplacePage() {
   }, [])
 
   const filtered = useMemo(() => listings.filter(l => {
-    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) || l.products.some(p => p.toLowerCase().includes(search.toLowerCase()))
+    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) || l.headline.toLowerCase().includes(search.toLowerCase())
     const matchType = typeFilter === "ALL" || l.type === typeFilter
     return matchSearch && matchType
   }), [listings, search, typeFilter])
@@ -154,21 +156,16 @@ export default function MarketplacePage() {
                           )}
                         </div>
                       </div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{listing.name}</h3>
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '2px' }}>{listing.name}</h3>
+                      {listing.headline && (
+                        <p style={{ fontSize: '13px', color: '#1a56db', fontWeight: 600, marginBottom: '6px' }}>{listing.headline}</p>
+                      )}
                       <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
                         <MapPin style={{ width: '12px', height: '12px' }} />{listing.location}
                       </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
-                        {listing.products.length > 0 ? listing.products.map(p => (
-                          <span key={p} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 500 }}>{p}</span>
-                        )) : (
-                          <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }}>Contact for product list</span>
-                        )}
-                      </div>
+                      <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, marginBottom: '16px' }}>{listing.description}</p>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
                         {[
-                          { label: "Price range", value: listing.priceRange },
-                          { label: "Min. order", value: listing.moq },
                           { label: "Delivery", value: listing.deliveryTerms },
                           { label: "Credit terms", value: listing.creditTerms },
                         ].map(d => (
@@ -178,14 +175,20 @@ export default function MarketplacePage() {
                           </div>
                         ))}
                       </div>
-                      <button style={{
-                        width: '100%', padding: '12px', borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
-                        color: '#ffffff', fontWeight: 600, fontSize: '13px',
-                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                      }}>
-                        Contact <ArrowRight style={{ width: '14px', height: '14px' }} />
-                      </button>
+                      {listing.contactEmail ? (
+                        <a href={`mailto:${listing.contactEmail}`} style={{
+                          width: '100%', padding: '12px', borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #1a56db, #4f46e5)',
+                          color: '#ffffff', fontWeight: 600, fontSize: '13px', textDecoration: 'none',
+                          border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        }}>
+                          Contact <ArrowRight style={{ width: '14px', height: '14px' }} />
+                        </a>
+                      ) : (
+                        <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
+                          {listing.contactPhone || 'No contact info provided'}
+                        </p>
+                      )}
                     </div>
                   )
                 })}

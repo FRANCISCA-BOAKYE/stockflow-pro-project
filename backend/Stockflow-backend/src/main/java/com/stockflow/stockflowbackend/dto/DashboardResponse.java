@@ -3,6 +3,7 @@ package com.stockflow.stockflowbackend.dto;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -12,6 +13,7 @@ public class DashboardResponse {
     private String businessName;
     private String tierType;
     private String subscriptionStatus;
+    private LocalDateTime trialStartedAt;
 
     // Retailer fields
     private Integer totalProducts;

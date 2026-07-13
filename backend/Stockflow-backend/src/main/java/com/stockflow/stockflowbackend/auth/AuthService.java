@@ -153,6 +153,7 @@ public class AuthService {
         response.setSubscriptionPlan(business.getSubscriptionPlan());
         response.setIsSubAccount(Boolean.TRUE.equals(user.getIsSubAccount()));
         response.setSubAccountRole(user.getSubAccountRole());
+        response.setTrialStartedAt(business.getTrialStartedAt());
 
         if (Boolean.TRUE.equals(user.getIsSubAccount()) && user.getParentUserId() != null) {
             userRepository.findById(user.getParentUserId())

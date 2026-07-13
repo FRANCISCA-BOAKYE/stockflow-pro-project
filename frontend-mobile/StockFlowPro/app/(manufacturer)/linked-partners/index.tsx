@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 
-export default function LinkedWholesalersScreen() {
+export default function ManufacturerLinkedPartnersScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [partners, setPartners] = useState<any[]>([]);
@@ -67,7 +67,7 @@ export default function LinkedWholesalersScreen() {
           <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.title}>Linked Wholesalers</Text>
+          <Text style={s.title}>Linked Partners</Text>
           <Text style={s.sub}>{partners.length} partners</Text>
         </View>
         <TouchableOpacity style={s.addBtn} onPress={() => setShowRequestModal(true)}>

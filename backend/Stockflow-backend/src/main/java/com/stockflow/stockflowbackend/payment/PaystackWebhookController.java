@@ -82,7 +82,8 @@ public class PaystackWebhookController {
             mac.init(secretKey);
             byte[] hash = mac.doFinal(payload.getBytes());
             String computed = HexFormat.of().formatHex(hash);
-            return computed.equals(signature);
+            return java.security.MessageDigest.isEqual(
+                    computed.getBytes(), signature.getBytes());
         } catch (Exception e) {
             return false;
         }

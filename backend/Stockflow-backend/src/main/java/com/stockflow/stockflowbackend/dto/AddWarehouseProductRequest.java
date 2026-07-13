@@ -11,4 +11,5 @@ public class AddWarehouseProductRequest {
     private String unit;
     private BigDecimal quantity;
     private BigDecimal minThreshold;
+    private BigDecimal priceUsd;
 }

@@ -1,5 +1,6 @@
 package com.stockflow.stockflowbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,10 +20,12 @@ public class ProductionUsage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "run_id", nullable = false)
+    @JsonIgnoreProperties({"usages", "hibernateLazyInitializer", "handler"})
     private ProductionRun productionRun;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "material_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Material Material;
 
     @Column(name = "quantity_used", nullable = false, precision = 14, scale = 3)

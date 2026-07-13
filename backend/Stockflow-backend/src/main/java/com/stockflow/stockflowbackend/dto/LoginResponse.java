@@ -3,6 +3,7 @@ package com.stockflow.stockflowbackend.dto;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor
 public class LoginResponse {
@@ -18,4 +19,5 @@ public class LoginResponse {
     private Boolean isSubAccount;
     private String adminEmail;
     private String subAccountRole;
+    private LocalDateTime trialStartedAt;
 }
