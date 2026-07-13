@@ -116,7 +116,7 @@ export default function DispatchScreen() {
                 <Ionicons name="cube-outline" size={18} color="#1A56DB" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.name}>{item.name || `Product #${item.id}`}</Text>
+                <Text style={s.name}>{item.recipe?.productName || `Product #${item.id}`}</Text>
                 <Text style={s.stock}>{item.quantityInStock} units available</Text>
               </View>
               <View style={s.dispatchBtn}>
@@ -132,7 +132,7 @@ export default function DispatchScreen() {
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowModal(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Dispatch — {selectedGood?.name || `Product #${selectedGood?.id}`}</Text>
+            <Text style={s.modalTitle}>Dispatch — {selectedGood?.recipe?.productName || `Product #${selectedGood?.id}`}</Text>
             <TouchableOpacity onPress={() => setShowModal(false)}>
               <Ionicons name="close" size={24} color="#374151" />
             </TouchableOpacity>

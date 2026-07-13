@@ -59,7 +59,7 @@ export default function ManufacturerPOSScreen() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const results = search.length > 1
-    ? goods.filter(g => (g.name || `Product ${g.id}`).toLowerCase().includes(search.toLowerCase()))
+    ? goods.filter(g => (g.recipe?.productName || `Product ${g.id}`).toLowerCase().includes(search.toLowerCase()))
     : [];
 
   const total = selected && unitPrice ? (parseFloat(unitPrice) * qty).toFixed(2) : '0.00';
@@ -86,7 +86,7 @@ export default function ManufacturerPOSScreen() {
       if (paymentMode === 'CREDIT') body.dueDate = dueDate;
 
       await api.post('/manufacturer/dispatch', body);
-      Alert.alert('Dispatch confirmed ✓', `${selected.name || `Product #${selected.id}`} x${qty} — $${total}`, [
+      Alert.alert('Dispatch confirmed ✓', `${selected.recipe?.productName || `Product #${selected.id}`} x${qty} — $${total}`, [
         { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(MIN_QTY); setPayment('CASH'); setDueDate(''); setUnitPrice(''); setSelectedPartner(null); fetchData(); } }
       ]);
     } catch (e: any) {
@@ -142,11 +142,11 @@ export default function ManufacturerPOSScreen() {
         {results.length > 0 && (
           <View style={s.resultsBox}>
             {results.map(g => (
-              <TouchableOpacity key={g.id} style={s.result} onPress={() => { setSelected(g); setSearch(g.name || `Product #${g.id}`); }}>
+              <TouchableOpacity key={g.id} style={s.result} onPress={() => { setSelected(g); setSearch(g.recipe?.productName || `Product #${g.id}`); }}>
                 <View style={s.resultIcon}>
                   <Ionicons name="cube-outline" size={16} color="#1A56DB" />
                 </View>
-                <Text style={s.resultName}>{g.name || `Product #${g.id}`}</Text>
+                <Text style={s.resultName}>{g.recipe?.productName || `Product #${g.id}`}</Text>
                 <Text style={s.resultStock}>{g.quantityInStock} units</Text>
               </TouchableOpacity>
             ))}
@@ -163,7 +163,7 @@ export default function ManufacturerPOSScreen() {
 
         {selected && (
           <View style={s.card}>
-            <Text style={s.prodName}>{selected.name || `Product #${selected.id}`}</Text>
+            <Text style={s.prodName}>{selected.recipe?.productName || `Product #${selected.id}`}</Text>
             <View style={s.reserveRow}>
               <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
               <Text style={s.reserveText}> {qty} units reserved · {selected.quantityInStock - qty} available</Text>
@@ -235,7 +235,7 @@ export default function ManufacturerPOSScreen() {
           <View style={s.card}>
             <Text style={s.sectionLabel}>Order summary</Text>
             <View style={s.summaryRow}>
-              <Text style={s.summaryItem}>{selected.name || `Product #${selected.id}`} x{qty}</Text>
+              <Text style={s.summaryItem}>{selected.recipe?.productName || `Product #${selected.id}`} x{qty}</Text>
               <Text style={s.summaryAmt}>${total}</Text>
             </View>
             <View style={s.dividerLine} />

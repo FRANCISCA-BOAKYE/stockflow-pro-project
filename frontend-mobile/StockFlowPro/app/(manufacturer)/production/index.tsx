@@ -59,7 +59,7 @@ export default function ProductionScreen() {
     if (!selectedRecipe || !target) return;
     Alert.alert(
       'Confirm production run',
-      `Start ${target} group(s) of ${selectedRecipe.name}? This will deduct materials from stock.`,
+      `Start ${target} ${selectedRecipe.groupLabel}(s) of ${selectedRecipe.productName}? This will deduct materials from stock.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -125,9 +125,9 @@ export default function ProductionScreen() {
                     <Ionicons name="construct-outline" size={16} color={selectedRecipe?.id === recipe.id ? '#fff' : '#1A56DB'} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.recipeName, selectedRecipe?.id === recipe.id && { color: '#fff' }]}>{recipe.name}</Text>
+                    <Text style={[s.recipeName, selectedRecipe?.id === recipe.id && { color: '#fff' }]}>{recipe.productName}</Text>
                     <Text style={[s.recipeMats, selectedRecipe?.id === recipe.id && { color: 'rgba(255,255,255,0.7)' }]}>
-                      {recipe.materials?.length || 0} materials · {recipe.outputQuantity} units/group
+                      {recipe.materials?.length || 0} materials · {recipe.unitsPerGroup} {recipe.unitLabel} per {recipe.groupLabel}
                     </Text>
                   </View>
                   {selectedRecipe?.id === recipe.id && <Ionicons name="checkmark-circle" size={18} color="#fff" />}
@@ -141,7 +141,7 @@ export default function ProductionScreen() {
         {selectedRecipe && (
           <View style={s.card}>
             <Text style={s.sectionLabel}>Target groups</Text>
-            <Text style={s.hint}>1 group = {selectedRecipe.outputQuantity} units of {selectedRecipe.name}</Text>
+            <Text style={s.hint}>1 {selectedRecipe.groupLabel} = {selectedRecipe.unitsPerGroup} {selectedRecipe.unitLabel} of {selectedRecipe.productName}</Text>
             <View style={s.inputRow}>
               <TextInput
                 style={s.input}
@@ -214,7 +214,7 @@ export default function ProductionScreen() {
                 <Ionicons name="checkmark-circle-outline" size={18} color="#059669" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.runName}>Recipe #{run.id}</Text>
+                <Text style={s.runName}>{run.recipe?.productName || `Recipe #${run.id}`}</Text>
                 <Text style={s.runDate}>{new Date(run.confirmedAt).toLocaleDateString()}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>

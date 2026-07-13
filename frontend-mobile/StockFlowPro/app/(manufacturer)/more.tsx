@@ -1,10 +1,12 @@
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView, Alert
+  StyleSheet, SafeAreaView, ScrollView, Alert, Linking
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+
+const HELP_URL = 'https://stockflowpro-web.netlify.app/help';
 
 const MENU_ITEMS = [
   { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
@@ -15,6 +17,7 @@ const MENU_ITEMS = [
   { label: 'Invoices', icon: 'receipt-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/invoices' },
   { label: 'Marketplace', icon: 'storefront-outline', color: '#6B7280', bg: '#F3F4F6', route: '/marketplace' },
   { label: 'Subscription', icon: 'card-outline', color: '#374151', bg: '#F3F4F6', route: '/subscription' },
+  { label: 'Help', icon: 'help-circle-outline', color: '#0891B2', bg: '#ECFEFF', route: HELP_URL, external: true },
 ];
 
 export default function ManufacturerMoreScreen() {
@@ -70,7 +73,7 @@ export default function ManufacturerMoreScreen() {
             <TouchableOpacity
               key={item.label}
               style={[s.menuItem, index < MENU_ITEMS.length - 1 && s.menuBorder]}
-              onPress={() => router.push(item.route as any)}
+              onPress={() => item.external ? Linking.openURL(item.route) : router.push(item.route as any)}
             >
               <View style={[s.menuIcon, { backgroundColor: item.bg }]}>
                 <Ionicons name={item.icon as any} size={18} color={item.color} />

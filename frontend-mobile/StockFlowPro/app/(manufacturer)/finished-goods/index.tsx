@@ -26,7 +26,7 @@ export default function FinishedGoodsScreen() {
   useEffect(() => { fetchGoods(); }, [fetchGoods]);
 
   const filtered = goods.filter(g =>
-    g.name?.toLowerCase().includes(search.toLowerCase()) || !search
+    g.recipe?.productName?.toLowerCase().includes(search.toLowerCase()) || !search
   );
 
   if (loading) return (
@@ -73,7 +73,7 @@ export default function FinishedGoodsScreen() {
                 <Ionicons name="cube-outline" size={18} color="#1A56DB" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.name}>{item.name || `Product #${item.id}`}</Text>
+                <Text style={s.name}>{item.recipe?.productName || `Product #${item.id}`}</Text>
                 <Text style={s.sku}>ID: {item.id}</Text>
                 <Text style={s.stock}>{item.quantityInStock} units in stock</Text>
                 <Text style={s.updated}>Updated: {new Date(item.updatedAt).toLocaleDateString()}</Text>

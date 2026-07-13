@@ -49,6 +49,7 @@ export function Footer() {
                 { label: 'How it works', href: '/#how-it-works' },
                 { label: 'Marketplace', href: '/marketplace' },
                 { label: 'Pricing', href: '/pricing' },
+                { label: 'Help', href: '/help' },
               ].map(link => (
                 <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
                   onMouseEnter={(e: any) => e.target.style.color = '#ffffff'}
