@@ -1,8 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+
+// Mirrors backend PlanCatalog.ALLOWED_LINK_PAIRS
+const ALLOWED_LINK_PAIRS: Record<string, string[]> = {
+  MANUFACTURER: ['WHOLESALER'],
+  WHOLESALER: ['MANUFACTURER', 'RETAILER'],
+  RETAILER: ['WHOLESALER'],
+};
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
   MANUFACTURER: { label: 'Manufacturer', bg: '#EFF6FF', color: '#1A56DB' },
@@ -12,16 +20,22 @@ const TYPE_CONFIG: Record<string, { label: string; bg: string; color: string }> 
 
 export default function MarketplaceScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [listings, setListings] = useState<any[]>([]);
+  const [linkStatus, setLinkStatus] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [requestingId, setRequestingId] = useState<string | null>(null);
 
   const fetchListings = useCallback(async () => {
     try {
-      const res = await api.get('/marketplace/listings');
-      const data = res.data;
+      const [listingsRes, partnersRes] = await Promise.all([
+        api.get('/marketplace/listings'),
+        api.get('/links/partners').catch(() => ({ data: [] })),
+      ]);
+      const data = listingsRes.data;
       if (Array.isArray(data)) {
         setListings(data.map((item: any) => {
           const b = item.business || item;
@@ -36,15 +50,38 @@ export default function MarketplaceScreen() {
           };
         }));
       }
+      const statusMap: Record<string, string> = {};
+      (partnersRes.data || []).forEach((link: any) => {
+        const otherId = String(
+          link.requesterBusiness?.id === user?.businessId
+            ? link.partnerBusiness?.id
+            : link.requesterBusiness?.id
+        );
+        statusMap[otherId] = link.status;
+      });
+      setLinkStatus(statusMap);
     } catch (e) {
       console.log('Error fetching listings:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.businessId]);
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
+
+  const handleRequestLink = async (item: any) => {
+    setRequestingId(item.id);
+    try {
+      await api.post('/links/request', { partnerBusinessId: parseInt(item.id, 10) });
+      Alert.alert('Request sent', `Link request sent to ${item.name}.`);
+      fetchListings();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to send link request');
+    } finally {
+      setRequestingId(null);
+    }
+  };
 
   const filtered = listings.filter(l => {
     const matchSearch = l.name.toLowerCase().includes(search.toLowerCase());
@@ -97,6 +134,9 @@ export default function MarketplaceScreen() {
           }
           renderItem={({ item }) => {
             const tc = TYPE_CONFIG[item.type] || TYPE_CONFIG.MANUFACTURER;
+            const isOwnBusiness = String(user?.businessId) === item.id;
+            const canLink = !isOwnBusiness && (ALLOWED_LINK_PAIRS[user?.tierType] || []).includes(item.type);
+            const status = linkStatus[item.id];
             return (
               <View style={s.card}>
                 <View style={s.cardTop}>
@@ -123,7 +163,31 @@ export default function MarketplaceScreen() {
                     ))}
                   </View>
                 )}
-                <Text style={s.price}>{item.priceRange}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={s.price}>{item.priceRange}</Text>
+                  {canLink && (
+                    status === 'ACTIVE' ? (
+                      <View style={s.linkedBadge}>
+                        <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                        <Text style={s.linkedBadgeText}>Linked</Text>
+                      </View>
+                    ) : status === 'PENDING' ? (
+                      <View style={s.pendingBadge}>
+                        <Text style={s.pendingBadgeText}>Request pending</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={s.linkBtn}
+                        disabled={requestingId === item.id}
+                        onPress={() => handleRequestLink(item)}
+                      >
+                        {requestingId === item.id
+                          ? <ActivityIndicator size="small" color="#1A56DB" />
+                          : <Text style={s.linkBtnText}>Request Link</Text>}
+                      </TouchableOpacity>
+                    )
+                  )}
+                </View>
               </View>
             );
           }}
@@ -159,6 +223,12 @@ const s = StyleSheet.create({
   productTag: { backgroundColor: '#F8FAFC', borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, borderWidth: 0.5, borderColor: '#E5E7EB' },
   productTagText: { fontSize: 10, color: '#374151' },
   price: { fontSize: 11, color: '#6B7280' },
+  linkBtn: { backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 12 },
+  linkBtnText: { fontSize: 11, color: '#1A56DB', fontWeight: '600' },
+  linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ECFDF5', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
+  linkedBadgeText: { fontSize: 11, color: '#059669', fontWeight: '500' },
+  pendingBadge: { backgroundColor: '#FFFBEB', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
+  pendingBadgeText: { fontSize: 11, color: '#C27803', fontWeight: '500' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
 });

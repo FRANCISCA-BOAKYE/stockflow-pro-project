@@ -3,6 +3,7 @@ package com.stockflow.stockflowbackend.tierlink;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.model.*;
+import com.stockflow.stockflowbackend.subscription.PlanCatalog;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,12 @@ public class TierLinkService {
         Business partner = businessRepository
                 .findById(req.getPartnerBusinessId())
                 .orElseThrow(() -> new RuntimeException("Partner not found"));
+
+        if (!PlanCatalog.isAllowedLink(requester.getTierType(), partner.getTierType())) {
+            throw new RuntimeException(requester.getTierType()
+                    + " businesses cannot link directly with " + partner.getTierType()
+                    + " businesses");
+        }
 
         tierLinkRepository
                 .findByRequesterBusinessIdAndPartnerBusinessId(
