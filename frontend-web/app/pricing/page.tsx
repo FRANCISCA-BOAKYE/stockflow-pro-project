@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { PaystackButton } from "@/components/paystack-button"
+import { priceGhs } from "@/lib/subscription-plans"
 
 const PAYSTACK_KEY = "pk_test_6620d84161debea0ad30c0617bde2eea7de28051"
 
@@ -144,7 +145,7 @@ export default function PricingPage() {
                       {/* Paystack pay now */}
                       <PaystackButton
                         email={email || "user@business.com"}
-                        amount={plan.price}
+                        amount={priceGhs(tierGroup.tier.toUpperCase(), plan.name.toUpperCase())}
                         publicKey={PAYSTACK_KEY}
                         onSuccess={(ref) => toast.success(`Payment successful! Reference: ${ref}. Sign in to access your account.`)}
                         onClose={() => {}}

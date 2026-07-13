@@ -6,6 +6,8 @@ import { Shield, Clock, Check } from "lucide-react"
 import { toast } from "sonner"
 import { PaystackButton } from "@/components/paystack-button"
 import { clearAuthSession } from "@/lib/auth"
+import { priceGhs } from "@/lib/subscription-plans"
+import { API_BASE_URL } from "@/lib/api"
 
 const PAYSTACK_KEY = "pk_test_6620d84161debea0ad30c0617bde2eea7de28051"
 
@@ -45,6 +47,7 @@ export default function TrialExpiredPage() {
   const [tier, setTier] = useState("RETAILER")
   const [businessName, setBusinessName] = useState("")
   const [userEmail, setUserEmail] = useState("")
+  const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -63,11 +66,38 @@ export default function TrialExpiredPage() {
     router.replace("/login")
   }
 
- const handlePaymentSuccess = (reference: string) => {
-  toast.success(`Payment successful! Reference: ${reference}. Please sign in again to activate your account.`)
-  clearAuthSession()
-  router.push("/login")
-}
+  const handlePaymentSuccess = async (reference: string, planName: string) => {
+    setVerifying(true)
+    try {
+      const token = localStorage.getItem("sf_token")
+      const res = await fetch(`${API_BASE_URL}/payments/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ reference, plan: planName.toUpperCase() }),
+      })
+      const data = await res.json()
+      if (res.ok && data.verified) {
+        const stored = localStorage.getItem("sf_user")
+        if (stored) {
+          const u = JSON.parse(stored)
+          u.subscriptionStatus = data.subscriptionStatus
+          u.subscriptionPlan = data.subscriptionPlan
+          localStorage.setItem("sf_user", JSON.stringify(u))
+        }
+        toast.success("Payment verified — your subscription is active!")
+        router.push("/dashboard")
+      } else {
+        toast.error(data.message || "We couldn't verify this payment. Contact support with your reference: " + reference)
+      }
+    } catch (e) {
+      toast.error("Couldn't reach the server to verify payment. Contact support with your reference: " + reference)
+    } finally {
+      setVerifying(false)
+    }
+  }
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 50%, #1a0533 100%)', display: 'flex', flexDirection: 'column' }}>
       <style>{`@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
@@ -148,11 +178,11 @@ export default function TrialExpiredPage() {
                 </ul>
                 <PaystackButton
                   email={userEmail || "user@business.com"}
-                  amount={plan.price}
+                  amount={priceGhs(tier, plan.name.toUpperCase())}
                   publicKey={PAYSTACK_KEY}
-                  onSuccess={handlePaymentSuccess}
+                  onSuccess={(reference) => handlePaymentSuccess(reference, plan.name)}
                   onClose={() => {}}
-                  label={`Subscribe — $${plan.price}/month`}
+                  label={verifying ? "Verifying..." : `Subscribe — $${plan.price}/month`}
                   style={{
                     backgroundColor: i === 1 ? '#ffffff' : 'rgba(255,255,255,0.08)',
                     color: i === 1 ? '#1a56db' : '#ffffff',

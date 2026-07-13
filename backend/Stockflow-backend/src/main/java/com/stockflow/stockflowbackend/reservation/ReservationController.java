@@ -30,16 +30,19 @@ public class ReservationController {
         return (Long) authentication.getDetails();
     }
 
+    private Long getUserId(Authentication authentication) {
+        return (Long) authentication.getCredentials();
+    }
+
     @PostMapping
     public ResponseEntity<ReservationResponse> create(
             @RequestBody CreateReservationRequest request,
             Authentication authentication) {
-        // Using businessId as a placeholder for userId for now
         Long businessId = getBusinessId(authentication);
         Business business = accessControlService.requireBusiness(businessId);
         accessControlService.requireFeature(business, SubscriptionFeature.STOCK_RESERVATION);
         return ResponseEntity.ok(
-                reservationService.createReservation(request, businessId, businessId));
+                reservationService.createReservation(request, businessId, getUserId(authentication)));
     }
 
     @GetMapping

@@ -2,10 +2,13 @@ package com.stockflow.stockflowbackend.payment;
 
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.auth.UserRepository;
+import com.stockflow.stockflowbackend.dto.VerifyPaymentRequest;
+import com.stockflow.stockflowbackend.dto.VerifyPaymentResponse;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.Mac;
@@ -20,15 +23,26 @@ public class PaystackWebhookController {
 
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
+    private final PaystackVerifyService paystackVerifyService;
 
     @Value("${paystack.secret.key}")
     private String paystackSecret;
 
     public PaystackWebhookController(
             BusinessRepository businessRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            PaystackVerifyService paystackVerifyService) {
         this.businessRepository = businessRepository;
         this.userRepository = userRepository;
+        this.paystackVerifyService = paystackVerifyService;
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<VerifyPaymentResponse> verify(
+            @RequestBody VerifyPaymentRequest req, Authentication auth) {
+        Long businessId = (Long) auth.getDetails();
+        VerifyPaymentResponse response = paystackVerifyService.verifyAndActivate(businessId, req);
+        return response.isVerified() ? ResponseEntity.ok(response) : ResponseEntity.status(402).body(response);
     }
 
     @PostMapping("/webhook")

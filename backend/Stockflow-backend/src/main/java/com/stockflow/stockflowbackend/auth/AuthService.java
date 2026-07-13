@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -44,6 +45,7 @@ public class AuthService {
         business.setTierType(req.getTierType());
         business.setSubscriptionPlan(req.getSubscriptionPlan());
         business.setSubscriptionStatus("TRIAL");
+        business.setTrialStartedAt(LocalDateTime.now());
         Business savedBusiness = businessRepository.save(business);
 
         AppUser admin = new AppUser();
@@ -56,7 +58,7 @@ public class AuthService {
         AppUser savedAdmin = userRepository.save(admin);
 
         String token = jwtUtil.generateToken(
-                savedAdmin.getEmail(), savedBusiness.getId(), "COMPANY_ADMIN");
+                savedAdmin.getEmail(), savedBusiness.getId(), savedAdmin.getId(), "COMPANY_ADMIN");
 
         RegisterResponse response = new RegisterResponse();
         response.setToken(token);
@@ -139,7 +141,7 @@ public class AuthService {
                 ? "SUB_ACCOUNT" : user.getRole();
 
         String token = jwtUtil.generateToken(
-                user.getEmail(), business.getId(), effectiveRole);
+                user.getEmail(), business.getId(), user.getId(), effectiveRole);
 
         LoginResponse response = new LoginResponse();
         response.setToken(token);

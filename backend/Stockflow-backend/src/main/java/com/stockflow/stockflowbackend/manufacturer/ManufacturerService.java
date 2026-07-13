@@ -103,7 +103,7 @@ public class ManufacturerService {
 
         if (req.getMaterials() != null) {
             for (CreateRecipeRequest.RecipeMaterialItem item : req.getMaterials()) {
-                Material material = materialRepository.findById(item.getMaterialId())
+                Material material = materialRepository.findByBusinessIdAndId(businessId, item.getMaterialId())
                         .orElseThrow(() -> new RuntimeException("Material not found"));
                 RecipeMaterial rm = new RecipeMaterial();
                 rm.setRecipe(saved);

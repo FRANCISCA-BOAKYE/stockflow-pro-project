@@ -21,6 +21,10 @@ public class ManufacturerController {
         return (Long) auth.getDetails();
     }
 
+    private Long getUserId(Authentication auth) {
+        return (Long) auth.getCredentials();
+    }
+
     @GetMapping("/materials")
     public ResponseEntity<List<Material>> getMaterials(Authentication auth) {
         return ResponseEntity.ok(manufacturerService.getMaterials(getBusinessId(auth)));
@@ -70,8 +74,8 @@ public class ManufacturerController {
     @PostMapping("/production/confirm")
     public ResponseEntity<ProductionRun> confirm(
             @RequestBody ProductionCalculateRequest req, Authentication auth) {
-        Long id = getBusinessId(auth);
-        return ResponseEntity.ok(manufacturerService.confirmProduction(req, id, id));
+        return ResponseEntity.ok(manufacturerService.confirmProduction(
+                req, getBusinessId(auth), getUserId(auth)));
     }
 
     @GetMapping("/production/history")
@@ -87,7 +91,7 @@ public class ManufacturerController {
     @PostMapping("/dispatch")
     public ResponseEntity<Dispatch> dispatch(
             @RequestBody DispatchRequest req, Authentication auth) {
-        Long id = getBusinessId(auth);
-        return ResponseEntity.ok(manufacturerService.dispatch(req, id, id));
+        return ResponseEntity.ok(manufacturerService.dispatch(
+                req, getBusinessId(auth), getUserId(auth)));
     }
 }
