@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
 import { api } from '../../../services/api';
 import PaystackPayment from '../../../components/PaystackPayment';
+import { USD_TO_GHS } from '../../../constants/subscriptionPlans';
 
 const MIN_QTY = 5;
 
@@ -108,7 +109,7 @@ export default function ManufacturerPOSScreen() {
       <PaystackPayment
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
-        amount={parseFloat(total)}
+        amount={parseFloat(total) * USD_TO_GHS}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
       />
