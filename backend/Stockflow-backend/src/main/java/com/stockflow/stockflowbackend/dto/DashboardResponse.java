@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -34,6 +36,9 @@ public class DashboardResponse {
     private Integer totalFinishedGoods;
     private Integer productionRunsThisMonth;
     private BigDecimal totalCreditOwedByWholesalers;
+
+    // Premium: recent activity feed (null when not entitled)
+    private List<Map<String, Object>> recentActivity;
 
     public DashboardResponse(String businessName,
                              String tierType,

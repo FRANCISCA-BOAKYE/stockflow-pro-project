@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone } from "lucide-react"
+import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone, Clock, ArrowDownCircle, ArrowUpCircle } from "lucide-react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
 import { clearAuthSession } from "@/lib/auth"
@@ -224,6 +224,38 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Recent activity (Premium) */}
+        {Array.isArray(data?.recentActivity) && (
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px', border: '1px solid #f1f5f9', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>Recent activity</p>
+            {data.recentActivity.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <Clock style={{ width: '24px', height: '24px', color: '#cbd5e1', margin: '0 auto 8px' }} />
+                <p style={{ fontSize: '13px', color: '#94a3b8' }}>No recent activity</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {data.recentActivity.map((a: any, i: number) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: i < data.recentActivity.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '9px', backgroundColor: a.positive ? '#ecfdf5' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {a.positive
+                        ? <ArrowDownCircle style={{ width: '15px', height: '15px', color: '#059669' }} />
+                        : <ArrowUpCircle style={{ width: '15px', height: '15px', color: '#64748b' }} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{a.name || a.msg}</p>
+                      <p style={{ fontSize: '11px', color: '#94a3b8' }}>{a.time} · by {a.by}</p>
+                    </div>
+                    {(a.amount || a.detail) && (
+                      <p style={{ fontSize: '13px', fontWeight: 700, color: a.positive ? '#059669' : '#0f172a' }}>{a.amount || a.detail}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Mobile app banner */}
         <div style={{ backgroundColor: '#0f172a', borderRadius: '20px', padding: '24px 28px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
