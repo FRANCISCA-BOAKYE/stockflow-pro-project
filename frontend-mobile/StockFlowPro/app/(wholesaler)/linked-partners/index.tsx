@@ -39,7 +39,7 @@ export default function LinkedPartnersScreen() {
       setBusinessId('');
       fetchPartners();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to send request');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to send request');
     } finally {
       setSubmitting(false);
     }
@@ -51,7 +51,7 @@ export default function LinkedPartnersScreen() {
       Alert.alert('Success', 'Link accepted!');
       fetchPartners();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to accept');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to accept');
     }
   };
 

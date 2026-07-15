@@ -93,7 +93,7 @@ export default function WholesalerPOSScreen() {
         { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(MIN_QTY); setPayment('CASH'); setDueDate(''); setSelectedPartner(null); setWantsInvoice(true); fetchData() } }
       ])
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Sale failed. Please try again.')
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.')
     } finally {
       setSubmitting(false)
     }

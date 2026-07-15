@@ -90,7 +90,7 @@ export default function TrialExpiredPage() {
         toast.success("Payment verified — your subscription is active!")
         router.push("/dashboard")
       } else {
-        toast.error(data.message || "We couldn't verify this payment. Contact support with your reference: " + reference)
+        toast.error(data.error || data.message || "We couldn't verify this payment. Contact support with your reference: " + reference)
       }
     } catch (e) {
       toast.error("Couldn't reach the server to verify payment. Contact support with your reference: " + reference)

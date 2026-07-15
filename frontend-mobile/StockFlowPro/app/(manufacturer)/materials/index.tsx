@@ -52,7 +52,7 @@ export default function MaterialsScreen() {
       setForm({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '' });
       fetchMaterials();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to add material');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add material');
     } finally {
       setAddLoading(false);
     }
@@ -72,7 +72,7 @@ export default function MaterialsScreen() {
       fetchMaterials();
       Alert.alert('Success', 'Stock added successfully!');
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to add stock');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add stock');
     } finally {
       setAddLoading(false);
     }
@@ -84,7 +84,7 @@ export default function MaterialsScreen() {
       await api.delete(`/manufacturer/materials/${id}`);
       fetchMaterials();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to delete material');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to delete material');
     } finally {
       setAddLoading(false);
     }

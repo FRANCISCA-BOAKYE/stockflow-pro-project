@@ -52,7 +52,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
       setSelectedAccount(null);
       fetchAccounts();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to record payment');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to record payment');
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +77,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
               });
               fetchAccounts();
             } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.message || 'Action failed');
+              Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Action failed');
             }
           }
         }

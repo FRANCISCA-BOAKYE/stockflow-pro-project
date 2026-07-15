@@ -9,4 +9,5 @@ import java.util.List; import java.util.Optional;
 public interface FinishedGoodsRepository extends JpaRepository<FinishedGoods, Long> {
     List<FinishedGoods> findByBusinessId(Long businessId);
     Optional<FinishedGoods> findByBusinessIdAndRecipeId(Long businessId, Long recipeId);
+    Optional<FinishedGoods> findByBusinessIdAndId(Long businessId, Long id);
 }

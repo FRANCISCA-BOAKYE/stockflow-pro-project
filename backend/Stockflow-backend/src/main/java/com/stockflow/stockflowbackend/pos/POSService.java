@@ -51,6 +51,13 @@ public class POSService {
     @Transactional
     public POSResponse processRetailSale(POSRequest request,
                                          Long businessId, Long userId) {
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero");
+        }
+        if (request.getUnitPriceUsd() == null || request.getUnitPriceUsd().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Unit price cannot be negative");
+        }
+
         // 1. Load product and validate it belongs to this business
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));

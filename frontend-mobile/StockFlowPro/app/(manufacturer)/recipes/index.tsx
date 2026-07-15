@@ -106,7 +106,7 @@ export default function RecipesScreen() {
       fetchData();
       Alert.alert('Success', 'Recipe added successfully!');
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to add recipe');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add recipe');
     } finally {
       setAddLoading(false);
     }
@@ -158,7 +158,7 @@ export default function RecipesScreen() {
               await api.delete(`/manufacturer/recipes/${item.id}`);
               fetchData();
             } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.message || 'Delete failed');
+              Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Delete failed');
             }
           }}
         ]);

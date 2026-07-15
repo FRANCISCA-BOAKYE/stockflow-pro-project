@@ -86,7 +86,7 @@ export default function ReservationsScreen() {
             await api.delete(`/reserve/${reservation.id}`);
             fetchData();
           } catch (e: any) {
-            Alert.alert('Error', e?.response?.data?.message || 'Failed to release reservation');
+            Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to release reservation');
           }
         }
       }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -158,8 +159,10 @@ public class CreditService {
 
     @Transactional
     public List<CreditAccountResponse> getOverdueAccounts(Long businessId) {
+        LocalDate today = LocalDate.now();
         return getCreditAccounts(businessId).stream()
-                .filter(r -> r.getStatus().equals("OVERDUE"))
+                .filter(r -> "OUTSTANDING".equals(r.getStatus())
+                        && r.getDueDate() != null && r.getDueDate().isBefore(today))
                 .collect(Collectors.toList());
     }
 }

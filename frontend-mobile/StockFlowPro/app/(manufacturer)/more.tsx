@@ -12,7 +12,6 @@ const HELP_URL = 'https://stockflowpro-web.netlify.app/help';
 
 const MENU_ITEMS = [
   { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
-  { label: 'POS Dispatch', icon: 'cart-outline', color: '#059669', bg: '#ECFDF5', route: '/(manufacturer)/pos' },
   { label: 'Finished Goods', icon: 'cube-outline', color: '#059669', bg: '#ECFDF5', route: '/(manufacturer)/finished-goods' },
   { label: 'Dispatch', icon: 'send-outline', color: '#C27803', bg: '#FFFBEB', route: '/(manufacturer)/dispatch' },
   { label: 'Recipes', icon: 'git-branch-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/(manufacturer)/recipes' },

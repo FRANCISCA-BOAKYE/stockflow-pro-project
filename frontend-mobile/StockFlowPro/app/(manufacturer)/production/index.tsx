@@ -49,7 +49,7 @@ export default function ProductionScreen() {
       });
       setPreview(res.data);
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Calculation failed');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Calculation failed');
     } finally {
       setCalculating(false);
     }
@@ -76,7 +76,7 @@ export default function ProductionScreen() {
               setPreview(null);
               fetchData();
             } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.message || 'Production run failed');
+              Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Production run failed');
             } finally {
               setConfirming(false);
             }

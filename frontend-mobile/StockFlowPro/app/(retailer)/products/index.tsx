@@ -70,7 +70,7 @@ export default function ProductsScreen() {
       setForm(f => ({ ...f, name: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' }));
       fetchData();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to add product');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add product');
     } finally {
       setAddLoading(false);
     }
@@ -89,7 +89,7 @@ export default function ProductsScreen() {
       setForm(f => ({ ...f, categoryId: String(res.data.id) }));
       setNewCategoryName('');
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Could not add category');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Could not add category');
     } finally {
       setAddingCategory(false);
     }

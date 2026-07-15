@@ -54,7 +54,7 @@ export default function StockInScreen() {
       setSelectedProduct(null);
       fetchData();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Stock in failed');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Stock in failed');
     } finally {
       setSubmitting(false);
     }

@@ -79,7 +79,7 @@ export default function MarketplaceScreen() {
       Alert.alert('Request sent', `Link request sent to ${item.name}.`);
       fetchListings();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to send link request');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to send link request');
     } finally {
       setRequestingId(null);
     }

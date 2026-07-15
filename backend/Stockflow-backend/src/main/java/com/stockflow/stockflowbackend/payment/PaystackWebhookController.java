@@ -55,7 +55,12 @@ public class PaystackWebhookController {
         }
 
         try {
-            String email = extractEmail(rawBody);
+            String event = extractField(rawBody, "event");
+            if (!"charge.success".equals(event)) {
+                return ResponseEntity.ok("Ignored event: " + event);
+            }
+
+            String email = extractField(rawBody, "email");
             if (email != null) {
                 Optional<AppUser> userOpt = userRepository.findByEmail(email);
                 if (userOpt.isPresent()) {
@@ -76,11 +81,12 @@ public class PaystackWebhookController {
         return ResponseEntity.ok("OK");
     }
 
-    private String extractEmail(String rawBody) {
+    private String extractField(String rawBody, String fieldName) {
         try {
-            int idx = rawBody.indexOf("\"email\"");
+            String needle = "\"" + fieldName + "\"";
+            int idx = rawBody.indexOf(needle);
             if (idx == -1) return null;
-            int start = rawBody.indexOf("\"", idx + 8) + 1;
+            int start = rawBody.indexOf("\"", idx + needle.length()) + 1;
             int end = rawBody.indexOf("\"", start);
             return rawBody.substring(start, end);
         } catch (Exception e) {

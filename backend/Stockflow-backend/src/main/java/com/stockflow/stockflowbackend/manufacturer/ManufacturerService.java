@@ -199,7 +199,14 @@ public class ManufacturerService {
     // DISPATCH TO WHOLESALER
     @Transactional
     public Dispatch dispatch(DispatchRequest req, Long businessId, Long userId) {
-        FinishedGoods fg = finishedGoodsRepository.findById(req.getFinishedGoodId())
+        if (req.getQuantity() == null || req.getQuantity() <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero");
+        }
+        if (req.getAmountUsd() == null || req.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Amount cannot be negative");
+        }
+
+        FinishedGoods fg = finishedGoodsRepository.findByBusinessIdAndId(businessId, req.getFinishedGoodId())
                 .orElseThrow(() -> new RuntimeException("Finished goods not found"));
         if (fg.getQuantityInStock() < req.getQuantity()) {
             throw new RuntimeException("Insufficient finished goods");

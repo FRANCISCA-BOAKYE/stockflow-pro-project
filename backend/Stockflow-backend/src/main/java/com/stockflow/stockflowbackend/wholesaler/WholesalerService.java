@@ -139,6 +139,13 @@ public class WholesalerService {
     @Transactional
     public WholesaleSale sellToRetailer(WholesaleSaleRequest request,
                                         Long businessId, Long userId) {
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero");
+        }
+        if (request.getAmountUsd() == null || request.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Amount cannot be negative");
+        }
+
         WarehouseProduct product = warehouseProductRepository
                 .findByBusinessIdAndId(businessId, request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));

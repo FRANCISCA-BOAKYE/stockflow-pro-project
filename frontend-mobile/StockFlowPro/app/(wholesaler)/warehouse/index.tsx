@@ -51,7 +51,7 @@ export default function WarehouseScreen() {
       setForm({ name: '', unit: '', quantity: '', minThreshold: '', priceUsd: '' });
       fetchStock();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to add product');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add product');
     } finally {
       setAddLoading(false);
     }

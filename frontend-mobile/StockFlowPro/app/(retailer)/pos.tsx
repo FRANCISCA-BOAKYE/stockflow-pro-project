@@ -88,7 +88,7 @@ export default function POSScreen() {
         [{ text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(1); setPayment('CASH'); setCreditBuyer(''); setDueDate(''); setBuyerContact(''); setBuyerAddress(''); setWantsInvoice(true); fetchProducts(); } }]
       );
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Sale failed. Please try again.');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.');
     } finally {
       setSubmitting(false);
     }

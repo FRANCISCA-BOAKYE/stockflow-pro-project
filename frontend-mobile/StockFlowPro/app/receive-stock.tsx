@@ -78,7 +78,7 @@ export default function ReceiveStockScreen() {
       setSelectedPartner(null);
       fetchStock();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Receive stock failed');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Receive stock failed');
     } finally {
       setSubmitting(false);
     }
