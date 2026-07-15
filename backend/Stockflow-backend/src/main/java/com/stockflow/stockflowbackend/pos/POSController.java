@@ -29,13 +29,16 @@ public class POSController {
         return (Long) authentication.getDetails();
     }
 
+    private Long getUserId(Authentication authentication) {
+        return (Long) authentication.getCredentials();
+    }
+
     @PostMapping("/retail")
     public ResponseEntity<POSResponse> retailSale(
             @RequestBody POSRequest request,
             Authentication authentication) {
-        Long businessId = getBusinessId(authentication);
-        return ResponseEntity.ok(
-                posService.processRetailSale(request, businessId, businessId));
+        return ResponseEntity.ok(posService.processRetailSale(
+                request, getBusinessId(authentication), getUserId(authentication)));
     }
 
     @GetMapping("/invoices")

@@ -25,6 +25,10 @@ public class RetailerController {
         return (Long) authentication.getDetails();
     }
 
+    private Long getUserId(Authentication authentication) {
+        return (Long) authentication.getCredentials();
+    }
+
     @GetMapping("/products")
     public ResponseEntity<Page<ProductResponse>> getProducts(
             @RequestParam(required = false) String search,
@@ -56,9 +60,8 @@ public class RetailerController {
     public ResponseEntity<RetailTransaction> stockIn(
             @RequestBody StockInRequest request,
             Authentication authentication) {
-        Long businessId = getBusinessId(authentication);
-        return ResponseEntity.ok(
-                retailerService.stockIn(request, businessId, businessId));
+        return ResponseEntity.ok(retailerService.stockIn(
+                request, getBusinessId(authentication), getUserId(authentication)));
     }
 
     @GetMapping("/categories")

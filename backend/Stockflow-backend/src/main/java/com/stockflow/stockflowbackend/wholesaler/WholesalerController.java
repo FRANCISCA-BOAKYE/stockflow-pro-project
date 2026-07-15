@@ -24,6 +24,10 @@ public class WholesalerController {
         return (Long) authentication.getDetails();
     }
 
+    private Long getUserId(Authentication authentication) {
+        return (Long) authentication.getCredentials();
+    }
+
     @PostMapping("/products")
     public ResponseEntity<WarehouseProduct> addProduct(
             @RequestBody AddWarehouseProductRequest request,
@@ -43,17 +47,15 @@ public class WholesalerController {
     public ResponseEntity<Receipt> receive(
             @RequestBody ReceiveStockRequest request,
             Authentication authentication) {
-        Long businessId = getBusinessId(authentication);
         return ResponseEntity.ok(wholesalerService.receiveFromManufacturer(
-                request, businessId, businessId));
+                request, getBusinessId(authentication), getUserId(authentication)));
     }
 
     @PostMapping("/sell")
     public ResponseEntity<WholesaleSale> sell(
             @RequestBody WholesaleSaleRequest request,
             Authentication authentication) {
-        Long businessId = getBusinessId(authentication);
         return ResponseEntity.ok(wholesalerService.sellToRetailer(
-                request, businessId, businessId));
+                request, getBusinessId(authentication), getUserId(authentication)));
     }
 }
