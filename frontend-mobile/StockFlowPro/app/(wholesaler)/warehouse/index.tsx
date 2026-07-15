@@ -17,6 +17,7 @@ export default function WarehouseScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '', priceUsd: '' });
+  const [lastAdded, setLastAdded] = useState('');
 
   const fetchStock = useCallback(async () => {
     try {
@@ -46,10 +47,9 @@ export default function WarehouseScreen() {
         minThreshold: form.minThreshold ? parseInt(form.minThreshold) : 20,
         priceUsd: parseFloat(form.priceUsd),
       });
-      setShowAddModal(false);
+      setLastAdded(form.name);
       setForm({ name: '', unit: '', quantity: '', minThreshold: '', priceUsd: '' });
       fetchStock();
-      Alert.alert('Success', 'Product added to warehouse!');
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to add product');
     } finally {
@@ -134,7 +134,7 @@ export default function WarehouseScreen() {
         />
       </View>
 
-      <TouchableOpacity style={s.fab} onPress={() => setShowAddModal(true)}>
+      <TouchableOpacity style={s.fab} onPress={() => { setLastAdded(''); setShowAddModal(true); }}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
@@ -148,6 +148,14 @@ export default function WarehouseScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalBody}>
+            {lastAdded ? (
+              <View style={s.addedBanner}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={s.addedBannerText}>"{lastAdded}" added. Keep adding more, or tap ✕ when done.</Text>
+              </View>
+            ) : (
+              <Text style={s.bulkHint}>Tip: this stays open after each save so you can add several items in a row.</Text>
+            )}
             {[
               { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola Crate' },
               { label: 'Unit *', key: 'unit', placeholder: 'e.g. crate, kg, carton' },
@@ -168,7 +176,7 @@ export default function WarehouseScreen() {
               </View>
             ))}
             <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddProduct} disabled={addLoading}>
-              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>Add to Warehouse</Text>}
+              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>{lastAdded ? 'Add Another' : 'Add to Warehouse'}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -211,4 +219,7 @@ const s = StyleSheet.create({
   fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
   confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   confirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  bulkHint: { fontSize: 11, color: '#9CA3AF', marginBottom: 16, fontStyle: 'italic' },
+  addedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', borderRadius: 10, padding: 10, marginBottom: 16 },
+  addedBannerText: { fontSize: 11, color: '#065F46', flex: 1 },
 });

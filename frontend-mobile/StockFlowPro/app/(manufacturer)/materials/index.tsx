@@ -18,6 +18,7 @@ export default function MaterialsScreen() {
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '' });
   const [stockInQty, setStockInQty] = useState('');
+  const [lastAdded, setLastAdded] = useState('');
 
   const fetchMaterials = useCallback(async () => {
     try {
@@ -47,10 +48,9 @@ export default function MaterialsScreen() {
         minThreshold: form.minThreshold ? parseFloat(form.minThreshold) : 100,
         costPerUnit: form.costPerUnit ? parseFloat(form.costPerUnit) : 0,
       });
-      setShowAddModal(false);
+      setLastAdded(form.name);
       setForm({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '' });
       fetchMaterials();
-      Alert.alert('Success', 'Material added successfully!');
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to add material');
     } finally {
@@ -185,7 +185,7 @@ export default function MaterialsScreen() {
         />
       </View>
 
-      <TouchableOpacity style={s.fab} onPress={() => setShowAddModal(true)}>
+      <TouchableOpacity style={s.fab} onPress={() => { setLastAdded(''); setShowAddModal(true); }}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
@@ -199,6 +199,14 @@ export default function MaterialsScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalBody}>
+            {lastAdded ? (
+              <View style={s.addedBanner}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={s.addedBannerText}>"{lastAdded}" added. Keep adding more, or tap ✕ when done.</Text>
+              </View>
+            ) : (
+              <Text style={s.bulkHint}>Tip: this stays open after each save so you can add several materials in a row.</Text>
+            )}
             {[
               { label: 'Material name *', key: 'name', placeholder: 'e.g. Cotton Fabric' },
               { label: 'Unit *', key: 'unit', placeholder: 'e.g. metres, kg, litres' },
@@ -219,7 +227,7 @@ export default function MaterialsScreen() {
               </View>
             ))}
             <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddMaterial} disabled={addLoading}>
-              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>Add Material</Text>}
+              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>{lastAdded ? 'Add Another' : 'Add Material'}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -290,4 +298,7 @@ const s = StyleSheet.create({
   fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
   confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   confirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  bulkHint: { fontSize: 11, color: '#9CA3AF', marginBottom: 16, fontStyle: 'italic' },
+  addedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', borderRadius: 10, padding: 10, marginBottom: 16 },
+  addedBannerText: { fontSize: 11, color: '#065F46', flex: 1 },
 });

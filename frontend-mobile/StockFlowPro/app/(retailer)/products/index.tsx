@@ -10,6 +10,12 @@ import { api } from '../../../services/api';
 
 const LOW_STOCK = 10;
 
+const CATEGORY_PRESETS = [
+  'Toiletries', 'Beverages', 'Snacks & Confectionery', 'Household',
+  'Dairy & Eggs', 'Personal Care', 'Cleaning Supplies', 'Stationery',
+  'Frozen Foods', 'Bakery', 'Canned & Packaged Foods', 'Baby Products',
+];
+
 export default function ProductsScreen() {
   const { token } = useAuthStore();
   const [products, setProducts] = useState<any[]>([]);
@@ -21,6 +27,9 @@ export default function ProductsScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ name: '', categoryId: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' });
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [lastAdded, setLastAdded] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -55,14 +64,34 @@ export default function ProductsScreen() {
         minThreshold: form.minThreshold ? parseInt(form.minThreshold) : 10,
         unit: form.unit,
       });
-      setShowAddModal(false);
-      setForm({ name: '', categoryId: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' });
+      setLastAdded(form.name);
+      // Keep the modal open (and the category selected) so multiple items can be
+      // added back-to-back instead of reopening the modal for each one.
+      setForm(f => ({ ...f, name: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' }));
       fetchData();
-      Alert.alert('Success', 'Product added successfully!');
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to add product');
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const handleAddCategory = async (name: string) => {
+    if (!name.trim()) return;
+    if (categories.some((c: any) => c.name.toLowerCase() === name.trim().toLowerCase())) {
+      Alert.alert('Already exists', `"${name.trim()}" is already one of your categories.`);
+      return;
+    }
+    setAddingCategory(true);
+    try {
+      const res = await api.post('/retailer/categories', { name: name.trim() });
+      setCategories(prev => [...prev, res.data]);
+      setForm(f => ({ ...f, categoryId: String(res.data.id) }));
+      setNewCategoryName('');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Could not add category');
+    } finally {
+      setAddingCategory(false);
     }
   };
 
@@ -151,7 +180,7 @@ export default function ProductsScreen() {
         />
       </View>
 
-      <TouchableOpacity style={s.fab} onPress={() => setShowAddModal(true)}>
+      <TouchableOpacity style={s.fab} onPress={() => { setLastAdded(''); setShowAddModal(true); }}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
@@ -165,6 +194,14 @@ export default function ProductsScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={s.modalBody}>
+            {lastAdded ? (
+              <View style={s.addedBanner}>
+                <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                <Text style={s.addedBannerText}>"{lastAdded}" added. Keep adding more, or tap ✕ when done.</Text>
+              </View>
+            ) : (
+              <Text style={s.bulkHint}>Tip: this stays open after each save so you can add several items in a row.</Text>
+            )}
             {[
               { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola 500ml' },
               { label: 'Price (USD) *', key: 'priceUsd', placeholder: '1.50', keyboard: 'decimal-pad' },
@@ -185,10 +222,10 @@ export default function ProductsScreen() {
               </View>
             ))}
 
-            {categories.length > 0 && (
-              <View style={{ marginBottom: 16 }}>
-                <Text style={s.fieldLabel}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ marginBottom: 16 }}>
+              <Text style={s.fieldLabel}>Category</Text>
+              {categories.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {categories.map((cat: any) => (
                       <TouchableOpacity key={cat.id} style={[s.chip, form.categoryId === String(cat.id) && s.chipActive]}
@@ -198,11 +235,37 @@ export default function ProductsScreen() {
                     ))}
                   </View>
                 </ScrollView>
+              )}
+
+              <Text style={s.presetLabel}>Add a category — pick a suggestion or type your own</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {CATEGORY_PRESETS
+                    .filter(p => !categories.some((c: any) => c.name.toLowerCase() === p.toLowerCase()))
+                    .map(preset => (
+                      <TouchableOpacity key={preset} style={s.presetChip} onPress={() => handleAddCategory(preset)} disabled={addingCategory}>
+                        <Ionicons name="add" size={12} color="#1A56DB" />
+                        <Text style={s.presetChipText}>{preset}</Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </ScrollView>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[s.fieldInput, { flex: 1 }]}
+                  placeholder="Custom category name"
+                  placeholderTextColor="#9CA3AF"
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                />
+                <TouchableOpacity style={s.addCategoryBtn} onPress={() => handleAddCategory(newCategoryName)} disabled={addingCategory}>
+                  {addingCategory ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="add" size={18} color="#fff" />}
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
 
             <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddProduct} disabled={addLoading}>
-              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>Add Product</Text>}
+              {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>{lastAdded ? 'Add Another' : 'Add Product'}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -249,4 +312,11 @@ const s = StyleSheet.create({
   fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
   confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   confirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  bulkHint: { fontSize: 11, color: '#9CA3AF', marginBottom: 16, fontStyle: 'italic' },
+  addedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', borderRadius: 10, padding: 10, marginBottom: 16 },
+  addedBannerText: { fontSize: 11, color: '#065F46', flex: 1 },
+  presetLabel: { fontSize: 11, color: '#9CA3AF', marginBottom: 8 },
+  presetChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#EFF6FF', borderWidth: 0.5, borderColor: '#BFDBFE' },
+  presetChipText: { fontSize: 11, color: '#1A56DB', fontWeight: '500' },
+  addCategoryBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#1A56DB', alignItems: 'center', justifyContent: 'center' },
 });
