@@ -11,14 +11,21 @@ export default function RootLayout() {
 
   useEffect(() => {
     (async () => {
-      const storedToken = await SecureStore.getItemAsync('jwt_token');
-      const storedUser = await SecureStore.getItemAsync('user_data');
+      try {
+        const storedToken = await SecureStore.getItemAsync('jwt_token');
+        const storedUser = await SecureStore.getItemAsync('user_data');
 
-      if (storedToken && storedUser) {
-        const parsed = JSON.parse(storedUser);
-        setAuth({ token: storedToken, ...parsed });
-      } else {
-        clearAuth();
+        if (storedToken && storedUser) {
+          const parsed = JSON.parse(storedUser);
+          await setAuth({ token: storedToken, ...parsed });
+        } else {
+          await clearAuth();
+        }
+      } catch (e) {
+        // Corrupted or unreadable session data — fall back to a clean
+        // logged-out state instead of hanging on isLoading forever.
+        console.log('Error restoring session:', e);
+        await clearAuth();
       }
     })();
   }, []);
