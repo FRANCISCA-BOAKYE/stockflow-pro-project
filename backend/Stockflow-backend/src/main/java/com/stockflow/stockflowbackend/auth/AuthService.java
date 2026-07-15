@@ -165,6 +165,18 @@ public class AuthService {
         return response;
     }
 
+    @Transactional
+    public Map<String, Object> updateProfileName(Long userId, String name) {
+        if (name == null || name.isBlank()) {
+            throw new RuntimeException("Name cannot be empty");
+        }
+        AppUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setName(name.trim());
+        userRepository.save(user);
+        return Map.of("name", user.getName());
+    }
+
     @Transactional(readOnly = true)
     public List<SubAccountResponse> getSubAccounts(Long businessId) {
         List<AppUser> subUsers = userRepository

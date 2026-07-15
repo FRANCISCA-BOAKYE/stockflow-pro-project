@@ -29,6 +29,9 @@ export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState("")
+  const [savingName, setSavingName] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -49,6 +52,29 @@ export default function DashboardPage() {
   const handleLogout = () => {
     clearAuthSession()
     router.replace("/login")
+  }
+
+  const saveName = async () => {
+    if (!nameInput.trim()) { toast.error("Name cannot be empty"); return }
+    setSavingName(true)
+    try {
+      const token = localStorage.getItem("sf_token")
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: nameInput.trim() }),
+      })
+      if (!res.ok) throw new Error("Failed")
+      const updated = { ...user, name: nameInput.trim() }
+      localStorage.setItem("sf_user", JSON.stringify(updated))
+      setUser(updated)
+      setEditingName(false)
+      toast.success("Name updated")
+    } catch {
+      toast.error("Couldn't update your name. Try again.")
+    } finally {
+      setSavingName(false)
+    }
   }
 
   if (loading) return (
@@ -124,7 +150,32 @@ export default function DashboardPage() {
                 </span>
               )}
             </Link>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: tc.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#ffffff' }}>{initials}</div>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => { setNameInput(user?.name || ""); setEditingName(v => !v) }}
+                title={user?.name ? `${user.name} — click to edit` : "Edit your name"}
+                style={{ width: '38px', height: '38px', borderRadius: '10px', background: tc.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#ffffff', border: 'none', cursor: 'pointer' }}
+              >{initials}</button>
+              {editingName && (
+                <div style={{ position: 'absolute', top: '46px', right: 0, backgroundColor: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: '14px', width: '240px', zIndex: 200 }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Your name</p>
+                  <input
+                    value={nameInput}
+                    onChange={e => setNameInput(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '10px', boxSizing: 'border-box' }}
+                    autoFocus
+                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={saveName} disabled={savingName} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', backgroundColor: '#059669', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                      {savingName ? "Saving..." : "Save"}
+                    </button>
+                    <button onClick={() => setEditingName(false)} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#fff', color: '#64748b', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#64748b', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}>
               <LogOut style={{ width: '14px', height: '14px' }} />Log out
             </button>

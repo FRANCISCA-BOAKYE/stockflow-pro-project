@@ -34,7 +34,7 @@ export default function SubscriptionScreen() {
         {/* Current plan */}
         <View style={s.planCard}>
           <View style={s.planTop}>
-            <View>
+            <View style={{ flex: 1, marginRight: 10 }}>
               <Text style={s.planLabel}>Current plan</Text>
               <Text style={s.planName}>{tier} · {plan}</Text>
             </View>
@@ -107,7 +107,7 @@ const s = StyleSheet.create({
   planTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   planLabel: { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '500', marginBottom: 3 },
   planName: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  statusBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20 },
+  statusBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20, flexShrink: 0, alignSelf: 'flex-start' },
   statusText: { fontSize: 11, fontWeight: '600' },
   planPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   price: { fontSize: 36, fontWeight: '800', color: '#fff' },

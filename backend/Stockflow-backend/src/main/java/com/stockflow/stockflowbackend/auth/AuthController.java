@@ -45,4 +45,12 @@ public class AuthController {
                 auth.getName()
         ));
     }
+
+    @PutMapping("/profile")
+    public ResponseEntity<Map<String, Object>> updateProfile(
+            @RequestBody Map<String, String> req,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(authService.updateProfileName(userId, req.get("name")));
+    }
 }

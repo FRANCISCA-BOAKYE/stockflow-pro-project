@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
@@ -13,9 +13,12 @@ const TIER_CONFIG: Record<string, { color: string; bg: string; icon: string }> =
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth, updateUser } = useAuthStore();
   const [subAccounts, setSubAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [nameInput, setNameInput] = useState(user?.name || '');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.get('/auth/sub-accounts')
@@ -23,6 +26,25 @@ export default function ProfileScreen() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const startEditing = () => {
+    setNameInput(user?.name || '');
+    setEditing(true);
+  };
+
+  const saveName = async () => {
+    if (!nameInput.trim()) { Alert.alert('Name required', 'Your name cannot be empty.'); return; }
+    setSaving(true);
+    try {
+      await api.put('/auth/profile', { name: nameInput.trim() });
+      await updateUser({ name: nameInput.trim() });
+      setEditing(false);
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || 'Could not update your name. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure you want to log out?', [
@@ -50,7 +72,30 @@ export default function ProfileScreen() {
           <View style={[s.avatar, { backgroundColor: tc.bg }]}>
             <Text style={[s.avatarText, { color: tc.color }]}>{initials}</Text>
           </View>
-          <Text style={s.userName}>{user?.name || 'User'}</Text>
+          {editing ? (
+            <View style={s.editRow}>
+              <TextInput
+                style={s.editInput}
+                value={nameInput}
+                onChangeText={setNameInput}
+                placeholder="Your name"
+                autoFocus
+              />
+              <TouchableOpacity style={s.editSaveBtn} onPress={saveName} disabled={saving}>
+                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="checkmark" size={16} color="#fff" />}
+              </TouchableOpacity>
+              <TouchableOpacity style={s.editCancelBtn} onPress={() => setEditing(false)} disabled={saving}>
+                <Ionicons name="close" size={16} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={s.nameRow}>
+              <Text style={s.userName}>{user?.name || 'User'}</Text>
+              <TouchableOpacity onPress={startEditing} style={s.nameEditBtn}>
+                <Ionicons name="pencil-outline" size={14} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+          )}
           <Text style={s.userEmail}>{user?.email}</Text>
           <View style={[s.tierBadge, { backgroundColor: tc.bg }]}>
             <Ionicons name={tc.icon as any} size={12} color={tc.color} />
@@ -122,8 +167,14 @@ const s = StyleSheet.create({
   avatarSection: { alignItems: 'center', padding: 24, backgroundColor: '#fff', marginBottom: 12 },
   avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   avatarText: { fontSize: 26, fontWeight: '800' },
-  userName: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
-  userEmail: { fontSize: 13, color: '#6B7280', marginBottom: 10 },
+  userName: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  userEmail: { fontSize: 13, color: '#6B7280', marginBottom: 10, marginTop: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameEditBtn: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 6, width: '100%', paddingHorizontal: 24 },
+  editInput: { flex: 1, borderWidth: 1, borderColor: '#1A56DB', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, fontSize: 14, color: '#0F172A' },
+  editSaveBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#059669', alignItems: 'center', justifyContent: 'center' },
+  editCancelBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   tierBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 12, borderRadius: 20 },
   tierBadgeText: { fontSize: 12, fontWeight: '600' },
   section: { backgroundColor: '#fff', marginHorizontal: 12, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
