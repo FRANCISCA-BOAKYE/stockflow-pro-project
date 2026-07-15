@@ -24,8 +24,12 @@ public class CreditRecord {
     private Business creditorBusiness;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "debtor_business_id", nullable = false)
+    @JoinColumn(name = "debtor_business_id")
     private Business debtorBusiness;
+
+    /** Set when the debtor is a walk-in customer with no business account (retail credit sales). */
+    @Column(name = "debtor_name", length = 200)
+    private String debtorName;
 
     @Column(name = "amount_usd", nullable = false, precision = 12, scale = 2)
     private BigDecimal amountUsd;

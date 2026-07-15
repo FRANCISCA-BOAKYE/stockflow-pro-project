@@ -73,13 +73,17 @@ public class CreditService {
 
         CreditRecord saved = creditRepository.save(record);
 
-        boolean callerIsCreditor = callerBusinessId.equals(record.getCreditorBusiness().getId());
-        Business recipient = callerIsCreditor ? record.getDebtorBusiness() : record.getCreditorBusiness();
-        Business actor = callerIsCreditor ? record.getCreditorBusiness() : record.getDebtorBusiness();
-        String settledNote = "SETTLED".equals(saved.getStatus()) ? " — fully settled" : "";
-        notificationService.notify(recipient, "CREDIT_PAYMENT", "success",
-                "Payment recorded",
-                actor.getName() + " recorded a payment of $" + request.getAmountPaid() + settledNote);
+        // Individual (non-business) debtors have no account to notify, so only
+        // notify when both sides of this record are real registered businesses.
+        if (record.getDebtorBusiness() != null) {
+            boolean callerIsCreditor = callerBusinessId.equals(record.getCreditorBusiness().getId());
+            Business recipient = callerIsCreditor ? record.getDebtorBusiness() : record.getCreditorBusiness();
+            Business actor = callerIsCreditor ? record.getCreditorBusiness() : record.getDebtorBusiness();
+            String settledNote = "SETTLED".equals(saved.getStatus()) ? " — fully settled" : "";
+            notificationService.notify(recipient, "CREDIT_PAYMENT", "success",
+                    "Payment recorded",
+                    actor.getName() + " recorded a payment of $" + request.getAmountPaid() + settledNote);
+        }
 
         return saved;
     }
@@ -90,7 +94,8 @@ public class CreditService {
                 .findByCreditorBusinessIdAndStatus(creditorBusinessId, "OUTSTANDING");
 
         CreditRecord targetRecord = records.stream()
-                .filter(r -> r.getDebtorBusiness().getId().equals(request.getDebtorBusinessId()))
+                .filter(r -> r.getDebtorBusiness() != null
+                        && r.getDebtorBusiness().getId().equals(request.getDebtorBusinessId()))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("No outstanding credit with this business"));
 
@@ -116,12 +121,13 @@ public class CreditService {
     public List<CreditAccountResponse> getCreditAccounts(Long businessId) {
         List<CreditAccountResponse> result = new java.util.ArrayList<>();
 
-        // Money owed TO this business (this business is creditor)
+        // Money owed TO this business (this business is creditor) — debtor may be a
+        // registered business, or an individual walk-in customer with no account.
         List<CreditRecord> owedToMe = creditRepository.findByCreditorBusinessIdFetchDebtor(businessId);
         result.addAll(owedToMe.stream().map(r -> new CreditAccountResponse(
                 r.getId(),
-                r.getDebtorBusiness().getId(),
-                r.getDebtorBusiness().getName(),
+                r.getDebtorBusiness() != null ? r.getDebtorBusiness().getId() : null,
+                r.getDebtorBusiness() != null ? r.getDebtorBusiness().getName() : r.getDebtorName(),
                 r.getAmountUsd(),
                 r.getDueDate(),
                 r.getStatus(),

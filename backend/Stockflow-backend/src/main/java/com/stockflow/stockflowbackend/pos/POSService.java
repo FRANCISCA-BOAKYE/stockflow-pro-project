@@ -110,21 +110,26 @@ public class POSService {
         user.setId(userId);
         tx.setRecordedBy(user);
 
-        // 8. Handle credit
+        // 8. Handle credit — the buyer may be a registered business (B2B credit)
+        // or a walk-in customer with no account (tracked by name only).
         Long creditRecordId = null;
-        if ("CREDIT".equals(request.getPaymentMode())
-                && request.getBuyerBusinessId() != null
-                && request.getDueDate() != null) {
-
-            Business buyer = businessRepository
-                    .findById(request.getBuyerBusinessId())
-                    .orElseThrow(() ->
-                            new RuntimeException("Buyer business not found"));
-            tx.setWholesalerBusiness(buyer);
+        if ("CREDIT".equals(request.getPaymentMode()) && request.getDueDate() != null) {
 
             CreditRecord credit = new CreditRecord();
             credit.setCreditorBusiness(business);
-            credit.setDebtorBusiness(buyer);
+
+            if (request.getBuyerBusinessId() != null) {
+                Business buyer = businessRepository
+                        .findById(request.getBuyerBusinessId())
+                        .orElseThrow(() ->
+                                new RuntimeException("Buyer business not found"));
+                tx.setWholesalerBusiness(buyer);
+                credit.setDebtorBusiness(buyer);
+            } else {
+                credit.setDebtorName(request.getBuyerName() != null
+                        ? request.getBuyerName() : "Walk-in customer");
+            }
+
             credit.setAmountUsd(total);
             credit.setDueDate(request.getDueDate());
             credit.setStatus("OUTSTANDING");

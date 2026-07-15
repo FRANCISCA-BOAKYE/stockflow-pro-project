@@ -138,6 +138,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
           renderItem={({ item }) => {
             const st = STATUS_MAP[item.status] || STATUS_MAP.OUTSTANDING;
             const showActions = tab === 'owe_me' && item.status !== 'SETTLED';
+            const isIndividualCustomer = tab === 'owe_me' && !item.partnerBusinessId;
             return (
               <View style={s.card}>
                 <View style={s.cardTop}>
@@ -172,10 +173,12 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
                       <Ionicons name="checkmark-circle-outline" size={13} color="#059669" style={{ marginRight: 4 }} />
                       <Text style={s.paymentBtnText}>Record payment</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[s.holdBtn, item.holdPlaced && s.holdBtnActive]} onPress={() => handleToggleHold(item)}>
-                      <Ionicons name="lock-closed-outline" size={13} color={item.holdPlaced ? '#fff' : '#DC2626'} style={{ marginRight: 4 }} />
-                      <Text style={[s.holdBtnText, item.holdPlaced && s.holdBtnTextActive]}>{item.holdPlaced ? 'Remove hold' : 'Place hold'}</Text>
-                    </TouchableOpacity>
+                    {!isIndividualCustomer && (
+                      <TouchableOpacity style={[s.holdBtn, item.holdPlaced && s.holdBtnActive]} onPress={() => handleToggleHold(item)}>
+                        <Ionicons name="lock-closed-outline" size={13} color={item.holdPlaced ? '#fff' : '#DC2626'} style={{ marginRight: 4 }} />
+                        <Text style={[s.holdBtnText, item.holdPlaced && s.holdBtnTextActive]}>{item.holdPlaced ? 'Remove hold' : 'Place hold'}</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )}
               </View>

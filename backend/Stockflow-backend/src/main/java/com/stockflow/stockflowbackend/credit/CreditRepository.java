@@ -23,7 +23,7 @@ public interface CreditRepository extends JpaRepository<CreditRecord, Long> {
 
     List<CreditRecord> findByDebtorBusinessIdAndStatus(Long businessId, String status);
 
-    @Query("SELECT c FROM CreditRecord c JOIN FETCH c.debtorBusiness WHERE c.creditorBusiness.id = :businessId")
+    @Query("SELECT c FROM CreditRecord c LEFT JOIN FETCH c.debtorBusiness WHERE c.creditorBusiness.id = :businessId")
     List<CreditRecord> findByCreditorBusinessIdFetchDebtor(@Param("businessId") Long businessId);
 
     @Query("SELECT c FROM CreditRecord c JOIN FETCH c.creditorBusiness WHERE c.debtorBusiness.id = :businessId")
