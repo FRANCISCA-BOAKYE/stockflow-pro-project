@@ -13,17 +13,30 @@ const PAYMENT_MODES = ['CASH', 'CARD', 'MOBILE_MONEY', 'CREDIT'];
 export default function ReceiveStockScreen() {
   const router = useRouter();
   const [stock, setStock] = useState<any[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ quantity: '', amountUsd: '', paymentMode: 'CASH', manufacturerBusinessId: '', dueDate: '' });
+  const [form, setForm] = useState({ quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '' });
 
   const fetchStock = useCallback(async () => {
     try {
-      const res = await api.get('/wholesaler/stock');
-      setStock(res.data || []);
+      const [stockRes, partnersRes] = await Promise.all([
+        api.get('/wholesaler/stock'),
+        api.get('/links/partners'),
+      ]);
+      setStock(stockRes.data || []);
+      const manufacturers = (partnersRes.data || []).filter((p: any) =>
+        p.partnerBusiness?.tierType === 'MANUFACTURER' || p.requesterBusiness?.tierType === 'MANUFACTURER'
+      ).map((p: any) => {
+        const m = p.partnerBusiness?.tierType === 'MANUFACTURER' ? p.partnerBusiness : p.requesterBusiness;
+        return { id: m.id, name: m.name };
+      });
+      setPartners(manufacturers);
     } catch (e) {
       console.log('Error fetching stock:', e);
     } finally {
@@ -39,6 +52,10 @@ export default function ReceiveStockScreen() {
       Alert.alert('Missing info', 'Please fill in all required fields.');
       return;
     }
+    if (!selectedPartner) {
+      Alert.alert('Missing info', 'Please select which manufacturer this stock is from.');
+      return;
+    }
     if (form.paymentMode === 'CREDIT' && !form.dueDate.trim()) {
       Alert.alert('Missing info', 'Please enter a due date for credit payment.');
       return;
@@ -50,14 +67,15 @@ export default function ReceiveStockScreen() {
         quantity: parseInt(form.quantity),
         amountUsd: parseFloat(form.amountUsd),
         paymentMode: form.paymentMode,
-        manufacturerBusinessId: form.manufacturerBusinessId ? parseInt(form.manufacturerBusinessId) : null,
+        manufacturerBusinessId: selectedPartner.id,
       };
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
       await api.post('/wholesaler/receive', body);
       Alert.alert('Success', `${form.quantity} units of ${selectedProduct.name} received!`);
       setShowModal(false);
-      setForm({ quantity: '', amountUsd: '', paymentMode: 'CASH', manufacturerBusinessId: '', dueDate: '' });
+      setForm({ quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '' });
       setSelectedProduct(null);
+      setSelectedPartner(null);
       fetchStock();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Receive stock failed');
@@ -98,7 +116,7 @@ export default function ReceiveStockScreen() {
           renderItem={({ item }) => {
             const isLow = item.quantity < (item.minThreshold || 20);
             return (
-              <TouchableOpacity style={s.card} onPress={() => { setSelectedProduct(item); setShowModal(true); }}>
+              <TouchableOpacity style={s.card} onPress={() => { setSelectedProduct(item); setSelectedPartner(null); setShowModal(true); }}>
                 <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#EFF6FF' }]}>
                   <Ionicons name="archive-outline" size={18} color={isLow ? '#DC2626' : '#1A56DB'} />
                 </View>
@@ -137,10 +155,19 @@ export default function ReceiveStockScreen() {
                 value={form.amountUsd} onChangeText={v => setForm(f => ({ ...f, amountUsd: v }))} keyboardType="decimal-pad" />
             </View>
             <View>
-              <Text style={s.fieldLabel}>Manufacturer business ID (optional)</Text>
-              <TextInput style={s.fieldInput} placeholder="e.g. 1" placeholderTextColor="#9CA3AF"
-                value={form.manufacturerBusinessId} onChangeText={v => setForm(f => ({ ...f, manufacturerBusinessId: v }))} keyboardType="numeric" />
-              <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>Leave blank for walk-in purchases</Text>
+              <Text style={s.fieldLabel}>Manufacturer *</Text>
+              <TouchableOpacity style={s.partnerPicker} onPress={() => setShowPartnerModal(true)}>
+                <Ionicons name="business-outline" size={16} color="#6B7280" />
+                <Text style={[s.partnerPickerText, !selectedPartner && { color: '#9CA3AF' }]}>
+                  {selectedPartner?.name || 'Select manufacturer'}
+                </Text>
+                <Ionicons name="chevron-forward-outline" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+              {partners.length === 0 && (
+                <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>
+                  No linked manufacturers yet — link one from Marketplace first.
+                </Text>
+              )}
             </View>
             <View>
               <Text style={s.fieldLabel}>Payment mode</Text>
@@ -165,6 +192,35 @@ export default function ReceiveStockScreen() {
               {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Receive</Text>}
             </TouchableOpacity>
           </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={showPartnerModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPartnerModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Select Manufacturer</Text>
+            <TouchableOpacity onPress={() => setShowPartnerModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={partners}
+            keyExtractor={item => String(item.id)}
+            contentContainerStyle={{ padding: 16, gap: 8 }}
+            ListEmptyComponent={
+              <View style={s.empty}>
+                <Ionicons name="business-outline" size={40} color="#D1D5DB" />
+                <Text style={s.emptyText}>No linked manufacturers</Text>
+                <Text style={s.emptySub}>Link with a manufacturer from Marketplace first</Text>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity style={s.partnerRow} onPress={() => { setSelectedPartner(item); setShowPartnerModal(false); }}>
+                <Ionicons name="business-outline" size={16} color="#1A56DB" />
+                <Text style={s.partnerRowText}>{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -201,4 +257,8 @@ const s = StyleSheet.create({
   payBtnTextActive: { color: '#fff', fontWeight: '500' },
   confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  partnerPicker: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, backgroundColor: '#F8FAFC' },
+  partnerPickerText: { flex: 1, fontSize: 14, color: '#0F172A' },
+  partnerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  partnerRowText: { fontSize: 14, color: '#0F172A', fontWeight: '500' },
 });
