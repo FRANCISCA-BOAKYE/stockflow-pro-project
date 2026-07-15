@@ -2,10 +2,10 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone, Clock, ArrowDownCircle, ArrowUpCircle } from "lucide-react"
+import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone, Clock, ArrowDownCircle, ArrowUpCircle, Shield, Mail, KeyRound } from "lucide-react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
-import { clearAuthSession } from "@/lib/auth"
+import { clearAuthSession, setAuthSession } from "@/lib/auth"
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
@@ -32,6 +32,15 @@ export default function DashboardPage() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState("")
   const [savingName, setSavingName] = useState(false)
+
+  const [securityPanel, setSecurityPanel] = useState<"none" | "email" | "password">("none")
+  const [emailPassword, setEmailPassword] = useState("")
+  const [newEmail, setNewEmail] = useState("")
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [savingPassword, setSavingPassword] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -74,6 +83,58 @@ export default function DashboardPage() {
       toast.error("Couldn't update your name. Try again.")
     } finally {
       setSavingName(false)
+    }
+  }
+
+  const saveEmail = async () => {
+    if (!emailPassword.trim()) { toast.error("Enter your current password"); return }
+    if (!newEmail.trim() || !newEmail.includes("@")) { toast.error("Enter a valid new email"); return }
+    setSavingEmail(true)
+    try {
+      const token = localStorage.getItem("sf_token")
+      const res = await fetch(`${API_BASE_URL}/auth/change-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: emailPassword, newEmail: newEmail.trim() }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || body?.message || "Failed")
+      const updated = { ...user, email: body.email }
+      setAuthSession(body.token, updated)
+      setUser(updated)
+      setSecurityPanel("none")
+      setEmailPassword("")
+      toast.success("Email updated. We've sent a confirmation to both addresses.")
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't update your email. Try again.")
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
+  const savePassword = async () => {
+    if (!currentPassword.trim()) { toast.error("Enter your current password"); return }
+    if (newPassword.length < 8) { toast.error("New password must be at least 8 characters"); return }
+    if (newPassword !== confirmPassword) { toast.error("New password and confirmation do not match"); return }
+    setSavingPassword(true)
+    try {
+      const token = localStorage.getItem("sf_token")
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body?.error || body?.message || "Failed")
+      setSecurityPanel("none")
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      toast.success("Password updated. We've sent you a confirmation email.")
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't update your password. Try again.")
+    } finally {
+      setSavingPassword(false)
     }
   }
 
@@ -256,6 +317,50 @@ export default function DashboardPage() {
             )}
           </div>
         )}
+
+        {/* Security */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '24px', border: '1px solid #f1f5f9', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+            <Shield style={{ width: '16px', height: '16px', color: '#1a56db' }} />
+            <p style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Security</p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button onClick={() => setSecurityPanel(v => v === "email" ? "none" : "email")} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: securityPanel === "email" ? '#eff6ff' : '#fff', color: '#0f172a', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              <Mail style={{ width: '14px', height: '14px', color: '#1a56db' }} />Change email
+            </button>
+            <button onClick={() => setSecurityPanel(v => v === "password" ? "none" : "password")} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: securityPanel === "password" ? '#eff6ff' : '#fff', color: '#0f172a', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              <KeyRound style={{ width: '14px', height: '14px', color: '#1a56db' }} />Change password
+            </button>
+          </div>
+
+          {securityPanel === "email" && (
+            <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid #f1f5f9', maxWidth: '360px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>Current password</label>
+              <input type="password" value={emailPassword} onChange={e => setEmailPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>New email</label>
+              <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '14px' }}>We'll email both your old and new address to confirm this change.</p>
+              <button onClick={saveEmail} disabled={savingEmail} style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', backgroundColor: '#1a56db', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                {savingEmail ? "Updating..." : "Update Email"}
+              </button>
+            </div>
+          )}
+
+          {securityPanel === "password" && (
+            <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid #f1f5f9', maxWidth: '360px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>Current password</label>
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>New password</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>Confirm new password</label>
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '14px' }}>We'll email you to confirm this change.</p>
+              <button onClick={savePassword} disabled={savingPassword} style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', backgroundColor: '#1a56db', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                {savingPassword ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Mobile app banner */}
         <div style={{ backgroundColor: '#0f172a', borderRadius: '20px', padding: '24px 28px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>

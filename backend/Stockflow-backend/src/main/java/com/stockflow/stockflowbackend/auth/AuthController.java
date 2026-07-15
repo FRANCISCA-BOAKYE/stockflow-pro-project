@@ -53,4 +53,20 @@ public class AuthController {
         Long userId = (Long) auth.getCredentials();
         return ResponseEntity.ok(authService.updateProfileName(userId, req.get("name")));
     }
+
+    @PostMapping("/change-email")
+    public ResponseEntity<Map<String, Object>> changeEmail(
+            @RequestBody ChangeEmailRequest req,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(authService.changeEmail(userId, req));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, Object>> changePassword(
+            @RequestBody ChangePasswordRequest req,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(authService.changePassword(userId, req));
+    }
 }

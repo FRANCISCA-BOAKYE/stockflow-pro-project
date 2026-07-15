@@ -1,6 +1,7 @@
 package com.stockflow.stockflowbackend.auth;
 
 import com.stockflow.stockflowbackend.dto.*;
+import com.stockflow.stockflowbackend.email.EmailSenderService;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.security.JwtUtil;
@@ -23,15 +24,18 @@ public class AuthService {
     private final BusinessRepository businessRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailSenderService emailSenderService;
 
     public AuthService(UserRepository userRepository,
                        BusinessRepository businessRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       EmailSenderService emailSenderService) {
         this.userRepository = userRepository;
         this.businessRepository = businessRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.emailSenderService = emailSenderService;
     }
 
     @Transactional
@@ -175,6 +179,66 @@ public class AuthService {
         user.setName(name.trim());
         userRepository.save(user);
         return Map.of("name", user.getName());
+    }
+
+    @Transactional
+    public Map<String, Object> changeEmail(Long userId, ChangeEmailRequest req) {
+        AppUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (req.getCurrentPassword() == null
+                || !passwordEncoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        if (req.getNewEmail() == null || req.getNewEmail().isBlank()) {
+            throw new RuntimeException("New email cannot be empty");
+        }
+        String newEmail = req.getNewEmail().trim().toLowerCase();
+        if (!newEmail.equals(user.getEmail().toLowerCase())
+                && userRepository.findByEmail(newEmail).isPresent()) {
+            throw new RuntimeException("That email is already in use");
+        }
+
+        String oldEmail = user.getEmail();
+        user.setEmail(newEmail);
+        userRepository.save(user);
+
+        Business business = user.getBusiness();
+        String effectiveRole = Boolean.TRUE.equals(user.getIsSubAccount())
+                ? "SUB_ACCOUNT" : user.getRole();
+        String newToken = jwtUtil.generateToken(newEmail, business.getId(), user.getId(), effectiveRole);
+
+        String html = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
+                + "The email on your StockFlow Pro account was changed from " + oldEmail
+                + " to " + newEmail + ". If you didn't make this change, contact support immediately.</p>";
+        emailSenderService.sendAsync(oldEmail, "Your StockFlow Pro account email was changed", html);
+        emailSenderService.sendAsync(newEmail, "Your StockFlow Pro account email was changed", html);
+
+        return Map.of("email", newEmail, "token", newToken);
+    }
+
+    @Transactional
+    public Map<String, Object> changePassword(Long userId, ChangePasswordRequest req) {
+        AppUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (req.getCurrentPassword() == null
+                || !passwordEncoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        if (req.getNewPassword() == null || req.getNewPassword().length() < 8) {
+            throw new RuntimeException("New password must be at least 8 characters");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        userRepository.save(user);
+
+        String html = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
+                + "The password on your StockFlow Pro account was just changed. "
+                + "If you didn't make this change, contact support immediately.</p>";
+        emailSenderService.sendAsync(user.getEmail(), "Your StockFlow Pro password was changed", html);
+
+        return Map.of("success", true);
     }
 
     @Transactional(readOnly = true)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
@@ -13,12 +13,23 @@ const TIER_CONFIG: Record<string, { color: string; bg: string; icon: string }> =
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, clearAuth, updateUser } = useAuthStore();
+  const { user, clearAuth, updateUser, updateToken } = useAuthStore();
   const [subAccounts, setSubAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
+
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailPassword, setEmailPassword] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     api.get('/auth/sub-accounts')
@@ -43,6 +54,54 @@ export default function ProfileScreen() {
       Alert.alert('Error', e?.response?.data?.error || 'Could not update your name. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openEmailModal = () => {
+    setEmailPassword('');
+    setNewEmail(user?.email || '');
+    setShowEmailModal(true);
+  };
+
+  const saveEmail = async () => {
+    if (!emailPassword.trim()) { Alert.alert('Missing info', 'Enter your current password.'); return; }
+    if (!newEmail.trim() || !newEmail.includes('@')) { Alert.alert('Missing info', 'Enter a valid new email.'); return; }
+    setSavingEmail(true);
+    try {
+      const res = await api.post('/auth/change-email', {
+        currentPassword: emailPassword, newEmail: newEmail.trim(),
+      });
+      await updateToken(res.data.token);
+      await updateUser({ email: res.data.email });
+      setShowEmailModal(false);
+      Alert.alert('Email updated', 'Your account email has been changed.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Could not update your email.');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
+  const openPasswordModal = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPasswordModal(true);
+  };
+
+  const savePassword = async () => {
+    if (!currentPassword.trim()) { Alert.alert('Missing info', 'Enter your current password.'); return; }
+    if (newPassword.length < 8) { Alert.alert('Weak password', 'New password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { Alert.alert('Mismatch', 'New password and confirmation do not match.'); return; }
+    setSavingPassword(true);
+    try {
+      await api.post('/auth/change-password', { currentPassword, newPassword });
+      setShowPasswordModal(false);
+      Alert.alert('Password updated', 'Your account password has been changed.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Could not update your password.');
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -141,6 +200,21 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Security */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>Security</Text>
+          <TouchableOpacity style={s.actionRow} onPress={openEmailModal}>
+            <Ionicons name="mail-outline" size={18} color="#1A56DB" style={{ marginRight: 12 }} />
+            <Text style={s.actionText}>Change email</Text>
+            <Ionicons name="chevron-forward-outline" size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.actionRow, { borderTopWidth: 0.5, borderTopColor: '#F3F4F6' }]} onPress={openPasswordModal}>
+            <Ionicons name="lock-closed-outline" size={18} color="#1A56DB" style={{ marginRight: 12 }} />
+            <Text style={s.actionText}>Change password</Text>
+            <Ionicons name="chevron-forward-outline" size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+
         {/* Actions */}
         <View style={s.section}>
           <TouchableOpacity style={s.actionRow} onPress={() => router.push('/subscription' as any)}>
@@ -155,6 +229,65 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal visible={showEmailModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowEmailModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Change Email</Text>
+            <TouchableOpacity onPress={() => setShowEmailModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ padding: 16, gap: 14 }}>
+            <View>
+              <Text style={s.fieldLabel}>Current password</Text>
+              <TextInput style={s.fieldInput} placeholder="Enter current password" placeholderTextColor="#9CA3AF"
+                value={emailPassword} onChangeText={setEmailPassword} secureTextEntry />
+            </View>
+            <View>
+              <Text style={s.fieldLabel}>New email</Text>
+              <TextInput style={s.fieldInput} placeholder="new@email.com" placeholderTextColor="#9CA3AF"
+                value={newEmail} onChangeText={setNewEmail} autoCapitalize="none" keyboardType="email-address" />
+            </View>
+            <Text style={s.modalNote}>We'll email both your old and new address to confirm this change.</Text>
+            <TouchableOpacity style={[s.modalConfirmBtn, savingEmail && { opacity: 0.7 }]} onPress={saveEmail} disabled={savingEmail}>
+              {savingEmail ? <ActivityIndicator color="#fff" /> : <Text style={s.modalConfirmText}>Update Email</Text>}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={showPasswordModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPasswordModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Change Password</Text>
+            <TouchableOpacity onPress={() => setShowPasswordModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ padding: 16, gap: 14 }}>
+            <View>
+              <Text style={s.fieldLabel}>Current password</Text>
+              <TextInput style={s.fieldInput} placeholder="Enter current password" placeholderTextColor="#9CA3AF"
+                value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+            </View>
+            <View>
+              <Text style={s.fieldLabel}>New password</Text>
+              <TextInput style={s.fieldInput} placeholder="At least 8 characters" placeholderTextColor="#9CA3AF"
+                value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+            </View>
+            <View>
+              <Text style={s.fieldLabel}>Confirm new password</Text>
+              <TextInput style={s.fieldInput} placeholder="Re-enter new password" placeholderTextColor="#9CA3AF"
+                value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+            </View>
+            <Text style={s.modalNote}>We'll email you to confirm this change.</Text>
+            <TouchableOpacity style={[s.modalConfirmBtn, savingPassword && { opacity: 0.7 }]} onPress={savePassword} disabled={savingPassword}>
+              {savingPassword ? <ActivityIndicator color="#fff" /> : <Text style={s.modalConfirmText}>Update Password</Text>}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -190,4 +323,11 @@ const s = StyleSheet.create({
   emptyText: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', paddingVertical: 12 },
   actionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   actionText: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '500' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  modalNote: { fontSize: 11.5, color: '#9CA3AF' },
+  modalConfirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center' },
+  modalConfirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

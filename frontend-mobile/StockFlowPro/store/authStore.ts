@@ -7,6 +7,7 @@ interface AuthState {
   isLoading: boolean;
   setAuth: (data: any) => void;
   updateUser: (partial: any) => void;
+  updateToken: (token: string) => void;
   clearAuth: () => void;
 }
 
@@ -26,6 +27,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const merged = { ...get().user, ...partial };
     await SecureStore.setItemAsync('user_data', JSON.stringify(merged));
     set({ user: merged });
+  },
+
+  updateToken: async (token: string) => {
+    await SecureStore.setItemAsync('jwt_token', token);
+    set({ token });
   },
 
   clearAuth: async () => {

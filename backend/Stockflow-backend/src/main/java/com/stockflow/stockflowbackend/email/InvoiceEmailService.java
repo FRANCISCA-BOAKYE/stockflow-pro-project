@@ -8,21 +8,13 @@ import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
 import com.stockflow.stockflowbackend.subscription.SubscriptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.Optional;
 
 /**
  * Emails a copy of an invoice to the buyer business, gated behind the
- * INVOICE_DELIVERY premium feature. Reuses the existing nodemailer relay
- * already deployed on frontend-web rather than adding a mail dependency here.
- * Best-effort: never throws, never blocks the sale it's attached to.
+ * INVOICE_DELIVERY premium feature.
  */
 @Service
 public class InvoiceEmailService {
@@ -31,17 +23,14 @@ public class InvoiceEmailService {
 
     private final UserRepository userRepository;
     private final SubscriptionService subscriptionService;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
-
-    @Value("${frontend.web.base-url}")
-    private String frontendWebBaseUrl;
+    private final EmailSenderService emailSenderService;
 
     public InvoiceEmailService(UserRepository userRepository,
-                               SubscriptionService subscriptionService) {
+                               SubscriptionService subscriptionService,
+                               EmailSenderService emailSenderService) {
         this.userRepository = userRepository;
         this.subscriptionService = subscriptionService;
+        this.emailSenderService = emailSenderService;
     }
 
     public void sendIfEligible(Invoice invoice, Business seller) {
@@ -59,37 +48,14 @@ public class InvoiceEmailService {
                 return;
             }
 
-            String body = "{"
-                    + "\"to\":\"" + jsonEscape(recipient.get().getEmail()) + "\","
-                    + "\"subject\":\"" + jsonEscape("Invoice " + invoice.getInvoiceNumber() + " from " + seller.getName()) + "\","
-                    + "\"html\":\"" + jsonEscape(buildInvoiceHtml(invoice, seller)) + "\""
-                    + "}";
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(frontendWebBaseUrl + "/api/send-email"))
-                    .timeout(Duration.ofSeconds(10))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding())
-                    .exceptionally(e -> {
-                        log.warn("Failed to send invoice email for {}: {}",
-                                invoice.getInvoiceNumber(), e.getMessage());
-                        return null;
-                    });
+            emailSenderService.sendAsync(
+                    recipient.get().getEmail(),
+                    "Invoice " + invoice.getInvoiceNumber() + " from " + seller.getName(),
+                    buildInvoiceHtml(invoice, seller));
         } catch (Exception e) {
             log.warn("Failed to build/send invoice email for {}: {}",
                     invoice.getInvoiceNumber(), e.getMessage());
         }
-    }
-
-    private String jsonEscape(String value) {
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "");
     }
 
     private String buildInvoiceHtml(Invoice invoice, Business seller) {
