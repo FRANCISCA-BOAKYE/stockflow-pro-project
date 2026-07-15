@@ -146,57 +146,33 @@ public class ManufacturerService {
                 .findByBusinessIdAndId(businessId, req.getRecipeId()).orElseThrow();
         int totalUnits = req.getTargetGroups() * recipe.getUnitsPerGroup();
         BigDecimal totalCost = BigDecimal.ZERO;
-        try {
-            for (RecipeMaterial rm : recipe.getMaterials()) {
-                BigDecimal required = rm.getQuantityPerUnit()
-                        .multiply(BigDecimal.valueOf(totalUnits));
-                Material mat = rm.getMaterial();
-                mat.setQuantity(mat.getQuantity().subtract(required));
-                mat.setUpdatedAt(LocalDateTime.now());
-                materialRepository.saveAndFlush(mat);
-                if (mat.getCostPerUnit() != null) {
-                    totalCost = totalCost.add(mat.getCostPerUnit().multiply(required));
-                }
+        for (RecipeMaterial rm : recipe.getMaterials()) {
+            BigDecimal required = rm.getQuantityPerUnit()
+                    .multiply(BigDecimal.valueOf(totalUnits));
+            Material mat = rm.getMaterial();
+            mat.setQuantity(mat.getQuantity().subtract(required));
+            mat.setUpdatedAt(LocalDateTime.now());
+            materialRepository.save(mat);
+            if (mat.getCostPerUnit() != null) {
+                totalCost = totalCost.add(mat.getCostPerUnit().multiply(required));
             }
-        } catch (Exception e) {
-            throw new RuntimeException("DIAG_MATERIALS_LOOP: " + e.getClass().getName() + ": " + e.getMessage(), e);
         }
-
-        Business business;
-        AppUser user;
-        try {
-            business = businessRepository.findById(businessId).orElseThrow();
-            user = new AppUser();
-            user.setId(userId);
-        } catch (Exception e) {
-            throw new RuntimeException("DIAG_BUSINESS_USER: " + e.getClass().getName() + ": " + e.getMessage(), e);
-        }
-
-        ProductionRun savedRun;
-        try {
-            ProductionRun run = new ProductionRun();
-            run.setBusiness(business); run.setRecipe(recipe);
-            run.setTargetGroups(req.getTargetGroups());
-            run.setTotalUnits(totalUnits); run.setTotalCostUsd(totalCost);
-            run.setConfirmedBy(user);
-            savedRun = productionRunRepository.saveAndFlush(run);
-        } catch (Exception e) {
-            throw new RuntimeException("DIAG_PRODUCTION_RUN_SAVE: " + e.getClass().getName() + ": " + e.getMessage(), e);
-        }
-
-        try {
-            FinishedGoods fg = finishedGoodsRepository
-                    .findByBusinessIdAndRecipeId(businessId, recipe.getId())
-                    .orElseGet(() -> { FinishedGoods newFg = new FinishedGoods();
-                        newFg.setBusiness(business); newFg.setRecipe(recipe);
-                        newFg.setQuantityInStock(0); return newFg; });
-            fg.setQuantityInStock(fg.getQuantityInStock() + totalUnits);
-            fg.setUpdatedAt(LocalDateTime.now());
-            finishedGoodsRepository.saveAndFlush(fg);
-        } catch (Exception e) {
-            throw new RuntimeException("DIAG_FINISHED_GOODS: " + e.getClass().getName() + ": " + e.getMessage(), e);
-        }
-
+        Business business = businessRepository.findById(businessId).orElseThrow();
+        AppUser user = new AppUser(); user.setId(userId);
+        ProductionRun run = new ProductionRun();
+        run.setBusiness(business); run.setRecipe(recipe);
+        run.setTargetGroups(req.getTargetGroups());
+        run.setTotalUnits(totalUnits); run.setTotalCostUsd(totalCost);
+        run.setConfirmedBy(user);
+        ProductionRun savedRun = productionRunRepository.save(run);
+        FinishedGoods fg = finishedGoodsRepository
+                .findByBusinessIdAndRecipeId(businessId, recipe.getId())
+                .orElseGet(() -> { FinishedGoods newFg = new FinishedGoods();
+                    newFg.setBusiness(business); newFg.setRecipe(recipe);
+                    newFg.setQuantityInStock(0); return newFg; });
+        fg.setQuantityInStock(fg.getQuantityInStock() + totalUnits);
+        fg.setUpdatedAt(LocalDateTime.now());
+        finishedGoodsRepository.save(fg);
         return savedRun;
     }
 

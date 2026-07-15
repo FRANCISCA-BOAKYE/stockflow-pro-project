@@ -23,7 +23,7 @@ public class FinishedGoods {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipe_id", nullable = false, unique = true)
-    private Recipe Recipe;
+    private Recipe recipe;
 
     @Column(name = "quantity_in_stock", nullable = false)
     private Integer quantityInStock = 0;

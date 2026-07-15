@@ -26,7 +26,7 @@ public class RecipeMaterial {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "material_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private Material Material;
+    private Material material;
 
     @Column(name = "quantity_per_unit", nullable = false, precision = 12, scale = 4)
     private BigDecimal quantityPerUnit;

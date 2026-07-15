@@ -26,7 +26,7 @@ public class ProductionUsage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "material_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private Material Material;
+    private Material material;
 
     @Column(name = "quantity_used", nullable = false, precision = 14, scale = 3)
     private BigDecimal quantityUsed;

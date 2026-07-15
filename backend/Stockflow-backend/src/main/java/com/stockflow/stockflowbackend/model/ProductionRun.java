@@ -26,7 +26,7 @@ public class ProductionRun {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipe_id", nullable = false)
-    private Recipe Recipe;
+    private Recipe recipe;
 
     @Column(name = "target_groups", nullable = false)
     private Integer targetGroups;
