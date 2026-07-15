@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell } from "lucide-react"
+import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone } from "lucide-react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
 import { clearAuthSession } from "@/lib/auth"
@@ -125,6 +125,7 @@ export default function DashboardPage() {
     { label: "Invoices", icon: FileText, desc: "View & generate", href: "/invoices", color: '#d97706', bg: '#fffbeb' },
     { label: "Credit accounts", icon: CreditCard, desc: "Track balances", href: "/credit", color: '#dc2626', bg: '#fef2f2' },
     { label: "Marketplace", icon: Store, desc: "Find partners", href: "/marketplace", color: '#059669', bg: '#ecfdf5' },
+    { label: "My Listing", icon: Megaphone, desc: "Get discovered", href: "/my-listing", color: '#db2777', bg: '#fdf2f8' },
   ]
 
   return (

@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/marketplace")
@@ -31,5 +32,12 @@ public class MarketplaceController {
             Authentication auth) {
         return ResponseEntity.ok(marketplaceService.createOrUpdateListing(
             req, (Long) auth.getDetails()));
+    }
+
+    @GetMapping("/my-listing")
+    public ResponseEntity<?> getMyListing(Authentication auth) {
+        return marketplaceService.getMyListing((Long) auth.getDetails())
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.ok(Map.of("exists", false)));
     }
 }

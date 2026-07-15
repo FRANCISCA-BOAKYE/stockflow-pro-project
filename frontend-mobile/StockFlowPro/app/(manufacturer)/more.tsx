@@ -18,6 +18,7 @@ const MENU_ITEMS = [
   { label: 'Recipes', icon: 'git-branch-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/(manufacturer)/recipes' },
   { label: 'Invoices', icon: 'receipt-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/invoices' },
   { label: 'Marketplace', icon: 'storefront-outline', color: '#6B7280', bg: '#F3F4F6', route: '/marketplace' },
+  { label: 'My Listing', icon: 'megaphone-outline', color: '#DB2777', bg: '#FDF2F8', route: '/my-listing' },
   { label: 'Linked Partners', icon: 'link-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/(manufacturer)/linked-partners' },
   { label: 'Subscription', icon: 'card-outline', color: '#374151', bg: '#F3F4F6', route: '/subscription' },
   { label: 'Help', icon: 'help-circle-outline', color: '#0891B2', bg: '#ECFEFF', route: HELP_URL, external: true },

@@ -40,13 +40,23 @@ public final class PlanCatalog {
      */
     public static final Map<String, Set<SubscriptionFeature>> PREMIUM_FEATURES = Map.of(
             "RETAILER", Set.of(
-                    SubscriptionFeature.STOCK_RESERVATION
+                    SubscriptionFeature.STOCK_RESERVATION,
+                    SubscriptionFeature.MARKETPLACE_LISTING,
+                    SubscriptionFeature.CREDIT_CONTACT_INFO,
+                    SubscriptionFeature.INVOICE_ON_DEMAND,
+                    SubscriptionFeature.RECENT_ACTIVITY_FEED
             ),
             "WHOLESALER", Set.of(
-                    SubscriptionFeature.INVOICE_DELIVERY
+                    SubscriptionFeature.INVOICE_DELIVERY,
+                    SubscriptionFeature.MARKETPLACE_LISTING,
+                    SubscriptionFeature.INVOICE_ON_DEMAND,
+                    SubscriptionFeature.RECENT_ACTIVITY_FEED
             ),
             "MANUFACTURER", Set.of(
-                    SubscriptionFeature.INVOICE_DELIVERY
+                    SubscriptionFeature.INVOICE_DELIVERY,
+                    SubscriptionFeature.MARKETPLACE_LISTING,
+                    SubscriptionFeature.INVOICE_ON_DEMAND,
+                    SubscriptionFeature.RECENT_ACTIVITY_FEED
             )
     );
 

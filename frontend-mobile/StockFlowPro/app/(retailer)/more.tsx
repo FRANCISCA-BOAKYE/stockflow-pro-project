@@ -16,6 +16,7 @@ const MENU_ITEMS = [
   { label: 'Reservations', icon: 'time-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/(retailer)/reservations' },
   { label: 'Invoices', icon: 'receipt-outline', color: '#C27803', bg: '#FFFBEB', route: '/invoices' },
   { label: 'Marketplace', icon: 'storefront-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/marketplace' },
+  { label: 'My Listing', icon: 'megaphone-outline', color: '#DB2777', bg: '#FDF2F8', route: '/my-listing' },
   { label: 'Linked Wholesalers', icon: 'link-outline', color: '#0EA5E9', bg: '#EFF6FF', route: '/(retailer)/linked-wholesalers' },
   { label: 'Subscription', icon: 'card-outline', color: '#6B7280', bg: '#F3F4F6', route: '/subscription' },
   { label: 'Help', icon: 'help-circle-outline', color: '#0891B2', bg: '#ECFEFF', route: HELP_URL, external: true },
