@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -41,7 +42,7 @@ public class ProductionRun {
     private AppUser confirmedBy;
 
     @OneToMany(mappedBy = "productionRun", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ProductionUsage> usages;
+    private List<ProductionUsage> usages = new ArrayList<>();
 
     @Column(name = "confirmed_at", updatable = false)
     private LocalDateTime confirmedAt = LocalDateTime.now();
