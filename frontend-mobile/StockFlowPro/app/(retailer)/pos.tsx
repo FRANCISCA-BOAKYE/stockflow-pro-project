@@ -19,9 +19,13 @@ export default function POSScreen() {
   const [creditBuyer, setCreditBuyer] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [buyerContact, setBuyerContact] = useState('');
+  const [buyerAddress, setBuyerAddress] = useState('');
+  const [wantsInvoice, setWantsInvoice] = useState(true);
   const [showPaystack, setShowPaystack] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const isPremium = user?.subscriptionPlan === 'PREMIUM';
 
   const PAYMENT_MODES = [
     { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
@@ -68,13 +72,20 @@ export default function POSScreen() {
       };
       if (paymentMode === 'CREDIT') {
         body.dueDate = dueDate;
+        if (isPremium) {
+          body.buyerContact = buyerContact || undefined;
+          body.buyerAddress = buyerAddress || undefined;
+        }
+      }
+      if (isPremium) {
+        body.wantsInvoice = wantsInvoice;
       }
       const res = await api.post('/pos/retail', body);
       const inv = res.data;
       Alert.alert(
         'Sale confirmed ✓',
         `${inv.productName} x${qty}\nTotal: $${inv.totalUsd}\nInvoice: ${inv.invoiceNumber}`,
-        [{ text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(1); setPayment('CASH'); setCreditBuyer(''); setDueDate(''); fetchProducts(); } }]
+        [{ text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(1); setPayment('CASH'); setCreditBuyer(''); setDueDate(''); setBuyerContact(''); setBuyerAddress(''); setWantsInvoice(true); fetchProducts(); } }]
       );
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Sale failed. Please try again.');
@@ -176,7 +187,28 @@ export default function POSScreen() {
               <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
                 value={dueDate} onChangeText={setDueDate} />
             </View>
+            {isPremium && (
+              <>
+                <Text style={s.fieldLabel}>Contact (optional)</Text>
+                <View style={s.fieldInputRow}>
+                  <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
+                    value={buyerContact} onChangeText={setBuyerContact} keyboardType="phone-pad" />
+                </View>
+                <Text style={s.fieldLabel}>Address (optional)</Text>
+                <View style={s.fieldInputRow}>
+                  <TextInput style={s.fieldInput} placeholder="Customer address" placeholderTextColor="#9CA3AF"
+                    value={buyerAddress} onChangeText={setBuyerAddress} />
+                </View>
+              </>
+            )}
           </View>
+        )}
+
+        {isPremium && selected && (
+          <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setWantsInvoice(v => !v)}>
+            <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
+            <Text style={s.invoiceToggleText}>Customer wants an invoice</Text>
+          </TouchableOpacity>
         )}
 
         {payment === 'MOBILE_MONEY' && (
@@ -261,6 +293,8 @@ const s = StyleSheet.create({
   fieldLabel: { fontSize: 12, fontWeight: '500', color: '#374151' },
   fieldInputRow: { borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.1)', borderRadius: 10, overflow: 'hidden' },
   fieldInput: { padding: 10, fontSize: 13, color: '#0F172A' },
+  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  invoiceToggleText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryItem: { fontSize: 12, color: '#6B7280' },
   summaryAmt: { fontSize: 12, fontWeight: '500', color: '#0F172A' },

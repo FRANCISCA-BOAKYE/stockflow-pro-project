@@ -124,16 +124,21 @@ public class CreditService {
         // Money owed TO this business (this business is creditor) — debtor may be a
         // registered business, or an individual walk-in customer with no account.
         List<CreditRecord> owedToMe = creditRepository.findByCreditorBusinessIdFetchDebtor(businessId);
-        result.addAll(owedToMe.stream().map(r -> new CreditAccountResponse(
-                r.getId(),
-                r.getDebtorBusiness() != null ? r.getDebtorBusiness().getId() : null,
-                r.getDebtorBusiness() != null ? r.getDebtorBusiness().getName() : r.getDebtorName(),
-                r.getAmountUsd(),
-                r.getDueDate(),
-                r.getStatus(),
-                r.getHoldPlaced(),
-                "OWED_TO_ME"
-        )).collect(Collectors.toList()));
+        result.addAll(owedToMe.stream().map(r -> {
+            CreditAccountResponse resp = new CreditAccountResponse(
+                    r.getId(),
+                    r.getDebtorBusiness() != null ? r.getDebtorBusiness().getId() : null,
+                    r.getDebtorBusiness() != null ? r.getDebtorBusiness().getName() : r.getDebtorName(),
+                    r.getAmountUsd(),
+                    r.getDueDate(),
+                    r.getStatus(),
+                    r.getHoldPlaced(),
+                    "OWED_TO_ME"
+            );
+            resp.setDebtorContact(r.getDebtorContact());
+            resp.setDebtorAddress(r.getDebtorAddress());
+            return resp;
+        }).collect(Collectors.toList()));
 
         // Money this business OWES (this business is debtor)
         List<CreditRecord> iOwe = creditRepository.findByDebtorBusinessIdFetchCreditor(businessId);

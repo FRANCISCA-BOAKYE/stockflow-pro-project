@@ -31,10 +31,12 @@ export default function WholesalerPOSScreen() {
   const [payment, setPayment] = useState('CASH')
   const [dueDate, setDueDate] = useState('')
   const [mobileNumber, setMobileNumber] = useState('')
+  const [wantsInvoice, setWantsInvoice] = useState(true)
   const [showPaystack, setShowPaystack] = useState(false)
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const isPremium = user?.subscriptionPlan === 'PREMIUM'
 
   const fetchData = useCallback(async () => {
     try {
@@ -84,10 +86,11 @@ export default function WholesalerPOSScreen() {
       }
       if (selectedPartner) body.retailerBusinessId = selectedPartner.id
       if (paymentMode === 'CREDIT') body.dueDate = dueDate
+      if (isPremium) body.wantsInvoice = wantsInvoice
 
       await api.post('/wholesaler/sell', body)
       Alert.alert('Order confirmed ✓', `${selected.name} x${qty} — $${total} via ${paymentMode}`, [
-        { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(MIN_QTY); setPayment('CASH'); setDueDate(''); setSelectedPartner(null); fetchData() } }
+        { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(MIN_QTY); setPayment('CASH'); setDueDate(''); setSelectedPartner(null); setWantsInvoice(true); fetchData() } }
       ])
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Sale failed. Please try again.')
@@ -220,6 +223,13 @@ export default function WholesalerPOSScreen() {
           </View>
         )}
 
+        {isPremium && selected && (
+          <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setWantsInvoice(v => !v)}>
+            <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
+            <Text style={s.invoiceToggleText}>Buyer wants an invoice</Text>
+          </TouchableOpacity>
+        )}
+
         {selected && (
           <View style={s.card}>
             <Text style={s.sectionLabel}>Order summary</Text>
@@ -320,6 +330,8 @@ const s = StyleSheet.create({
   fieldLabel: { fontSize: 12, fontWeight: '500', color: '#374151' },
   fieldInputRow: { borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.1)', borderRadius: 10, overflow: 'hidden' },
   fieldInput: { padding: 10, fontSize: 13, color: '#0F172A' },
+  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  invoiceToggleText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryItem: { fontSize: 12, color: '#6B7280' },
   summaryAmt: { fontSize: 12, fontWeight: '500', color: '#0F172A' },

@@ -16,6 +16,8 @@ public class CreditAccountResponse {
     private String status;
     private Boolean holdPlaced;
     private String direction; // "OWED_TO_ME" or "I_OWE"
+    private String debtorContact;
+    private String debtorAddress;
 
     public CreditAccountResponse(Long id, Long partnerBusinessId,
                                  String partnerBusinessName, BigDecimal amountUsd,

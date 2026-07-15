@@ -8,6 +8,8 @@ import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.reservation.ReservationRepository;
 import com.stockflow.stockflowbackend.retailer.ProductRepository;
+import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
+import com.stockflow.stockflowbackend.subscription.SubscriptionService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class POSService {
     private final BusinessRepository businessRepository;
     private final InvoiceRepository invoiceRepository;
     private final InvoiceEmailService invoiceEmailService;
+    private final SubscriptionService subscriptionService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -34,13 +37,15 @@ public class POSService {
                       CreditRepository creditRepository,
                       BusinessRepository businessRepository,
                       InvoiceRepository invoiceRepository,
-                      InvoiceEmailService invoiceEmailService) {
+                      InvoiceEmailService invoiceEmailService,
+                      SubscriptionService subscriptionService) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.creditRepository = creditRepository;
         this.businessRepository = businessRepository;
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
+        this.subscriptionService = subscriptionService;
     }
 
     @Transactional
@@ -128,6 +133,10 @@ public class POSService {
             } else {
                 credit.setDebtorName(request.getBuyerName() != null
                         ? request.getBuyerName() : "Walk-in customer");
+                if (subscriptionService.hasFeature(business, SubscriptionFeature.CREDIT_CONTACT_INFO)) {
+                    credit.setDebtorContact(request.getBuyerContact());
+                    credit.setDebtorAddress(request.getBuyerAddress());
+                }
             }
 
             credit.setAmountUsd(total);
@@ -143,49 +152,56 @@ public class POSService {
         entityManager.persist(tx);
         entityManager.flush();
 
-        // 10. Create invoice
-        AppUser invoiceUser = new AppUser();
-        invoiceUser.setId(userId);
+        // 10. Create invoice — Standard tier always gets one; Premium tier can be
+        // asked per-sale whether the buyer wants one at all.
+        boolean canSkipInvoice = subscriptionService.hasFeature(business, SubscriptionFeature.INVOICE_ON_DEMAND);
+        boolean wantsInvoice = request.getWantsInvoice() == null || request.getWantsInvoice();
+        Invoice savedInvoice = null;
 
-        Invoice invoice = new Invoice();
-        invoice.setSellerBusiness(business);
-        invoice.setTotalUsd(total);
-        invoice.setSubtotalUsd(total);
-        invoice.setPaymentMode(request.getPaymentMode());
-        invoice.setStatus("CREDIT".equals(request.getPaymentMode())
-                ? "UNPAID" : "PAID");
-        invoice.setGeneratedByUser(invoiceUser);
-        invoice.setCreditRecordId(creditRecordId);
+        if (!canSkipInvoice || wantsInvoice) {
+            AppUser invoiceUser = new AppUser();
+            invoiceUser.setId(userId);
 
-        if (request.getDueDate() != null) {
-            invoice.setDueDate(request.getDueDate());
+            Invoice invoice = new Invoice();
+            invoice.setSellerBusiness(business);
+            invoice.setTotalUsd(total);
+            invoice.setSubtotalUsd(total);
+            invoice.setPaymentMode(request.getPaymentMode());
+            invoice.setStatus("CREDIT".equals(request.getPaymentMode())
+                    ? "UNPAID" : "PAID");
+            invoice.setGeneratedByUser(invoiceUser);
+            invoice.setCreditRecordId(creditRecordId);
+
+            if (request.getDueDate() != null) {
+                invoice.setDueDate(request.getDueDate());
+            }
+
+            if (request.getBuyerBusinessId() != null) {
+                Business buyer = businessRepository
+                        .findById(request.getBuyerBusinessId())
+                        .orElse(null);
+                invoice.setBuyerBusiness(buyer);
+            }
+
+            if (request.getBuyerName() != null) {
+                invoice.setBuyerName(request.getBuyerName());
+            }
+
+            savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
+                    invoiceRepository, businessId, invoice);
+            tx.setInvoiceId(savedInvoice.getId());
+            invoiceEmailService.sendIfEligible(savedInvoice, business);
         }
-
-        if (request.getBuyerBusinessId() != null) {
-            Business buyer = businessRepository
-                    .findById(request.getBuyerBusinessId())
-                    .orElse(null);
-            invoice.setBuyerBusiness(buyer);
-        }
-
-        if (request.getBuyerName() != null) {
-            invoice.setBuyerName(request.getBuyerName());
-        }
-
-        Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
-                invoiceRepository, businessId, invoice);
-        tx.setInvoiceId(savedInvoice.getId());
-        invoiceEmailService.sendIfEligible(savedInvoice, business);
 
         return new POSResponse(
                 tx.getId(),
-                savedInvoice.getInvoiceNumber(),
+                savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 product.getName(),
                 request.getQuantity(),
                 request.getUnitPriceUsd(),
                 total,
                 request.getPaymentMode(),
-                invoice.getStatus(),
+                "CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID",
                 tx.getRecordedAt(),
                 creditRecordId
         );

@@ -3,8 +3,13 @@ package com.stockflow.stockflowbackend.manufacturer;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
+import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.notification.NotificationService;
+import com.stockflow.stockflowbackend.pos.InvoiceNumberUtil;
+import com.stockflow.stockflowbackend.pos.InvoiceRepository;
+import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
+import com.stockflow.stockflowbackend.subscription.SubscriptionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -24,6 +29,9 @@ public class ManufacturerService {
     private final BusinessRepository businessRepository;
     private final CreditRepository creditRepository;
     private final NotificationService notificationService;
+    private final InvoiceRepository invoiceRepository;
+    private final InvoiceEmailService invoiceEmailService;
+    private final SubscriptionService subscriptionService;
 
     public ManufacturerService(MaterialRepository materialRepository,
                                RecipeRepository recipeRepository,
@@ -33,7 +41,10 @@ public class ManufacturerService {
                                RecipeMaterialRepository recipeMaterialRepository,
                                BusinessRepository businessRepository,
                                CreditRepository creditRepository,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               InvoiceRepository invoiceRepository,
+                               InvoiceEmailService invoiceEmailService,
+                               SubscriptionService subscriptionService) {
         this.materialRepository = materialRepository;
         this.recipeRepository = recipeRepository;
         this.productionRunRepository = productionRunRepository;
@@ -43,6 +54,9 @@ public class ManufacturerService {
         this.businessRepository = businessRepository;
         this.creditRepository = creditRepository;
         this.notificationService = notificationService;
+        this.invoiceRepository = invoiceRepository;
+        this.invoiceEmailService = invoiceEmailService;
+        this.subscriptionService = subscriptionService;
     }
 
     // ADD MATERIAL
@@ -217,6 +231,7 @@ public class ManufacturerService {
         dispatch.setVehicleNumber(req.getVehicleNumber());
         dispatch.setDriverContact(req.getDriverContact());
         dispatch.setDriverIdNumber(req.getDriverIdNumber());
+        Long creditRecordId = null;
         if ("CREDIT".equals(req.getPaymentMode()) && req.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
             credit.setCreditorBusiness(fg.getBusiness());
@@ -226,8 +241,35 @@ public class ManufacturerService {
             credit.setStatus("OUTSTANDING");
             credit.setHoldPlaced(false);
             CreditRecord saved = creditRepository.save(credit);
-            dispatch.setCreditRecordId(saved.getId());
+            creditRecordId = saved.getId();
+            dispatch.setCreditRecordId(creditRecordId);
         }
+
+        // Standard tier always gets an invoice; Premium can be asked per-dispatch
+        // whether the buyer wants one at all.
+        boolean canSkipInvoice = subscriptionService.hasFeature(
+                fg.getBusiness(), SubscriptionFeature.INVOICE_ON_DEMAND);
+        boolean wantsInvoice = req.getWantsInvoice() == null || req.getWantsInvoice();
+
+        if (!canSkipInvoice || wantsInvoice) {
+            Invoice invoice = new Invoice();
+            invoice.setSellerBusiness(fg.getBusiness());
+            invoice.setBuyerBusiness(wholesaler);
+            invoice.setSubtotalUsd(totalAmount);
+            invoice.setTotalUsd(totalAmount);
+            invoice.setPaymentMode(req.getPaymentMode());
+            invoice.setStatus("CREDIT".equals(req.getPaymentMode()) ? "UNPAID" : "PAID");
+            if (req.getDueDate() != null) {
+                invoice.setDueDate(req.getDueDate());
+            }
+            invoice.setCreditRecordId(creditRecordId);
+            invoice.setGeneratedByUser(user);
+            Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
+                    invoiceRepository, businessId, invoice);
+            dispatch.setInvoiceId(savedInvoice.getId());
+            invoiceEmailService.sendIfEligible(savedInvoice, fg.getBusiness());
+        }
+
         Dispatch savedDispatch = dispatchRepository.save(dispatch);
 
         notificationService.notify(wholesaler, "DISPATCH_RECEIVED", "info",

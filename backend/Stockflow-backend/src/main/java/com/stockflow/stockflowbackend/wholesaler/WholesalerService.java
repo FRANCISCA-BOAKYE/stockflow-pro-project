@@ -7,6 +7,8 @@ import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.pos.InvoiceNumberUtil;
 import com.stockflow.stockflowbackend.pos.InvoiceRepository;
+import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
+import com.stockflow.stockflowbackend.subscription.SubscriptionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class WholesalerService {
     private final CreditRepository creditRepository;
     private final InvoiceRepository invoiceRepository;
     private final InvoiceEmailService invoiceEmailService;
+    private final SubscriptionService subscriptionService;
 
     public WholesalerService(
             WarehouseProductRepository warehouseProductRepository,
@@ -33,7 +36,8 @@ public class WholesalerService {
             BusinessRepository businessRepository,
             CreditRepository creditRepository,
             InvoiceRepository invoiceRepository,
-            InvoiceEmailService invoiceEmailService) {
+            InvoiceEmailService invoiceEmailService,
+            SubscriptionService subscriptionService) {
         this.warehouseProductRepository = warehouseProductRepository;
         this.receiptRepository = receiptRepository;
         this.wholesaleSaleRepository = wholesaleSaleRepository;
@@ -41,6 +45,7 @@ public class WholesalerService {
         this.creditRepository = creditRepository;
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
+        this.subscriptionService = subscriptionService;
     }
 
     @Transactional
@@ -165,6 +170,7 @@ public class WholesalerService {
         user.setId(userId);
         sale.setRecordedBy(user);
 
+        Long creditRecordId = null;
         if ("CREDIT".equals(request.getPaymentMode())
                 && request.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
@@ -175,17 +181,28 @@ public class WholesalerService {
             credit.setStatus("OUTSTANDING");
             credit.setHoldPlaced(false);
             CreditRecord saved = creditRepository.save(credit);
-            sale.setCreditRecordId(saved.getId());
+            creditRecordId = saved.getId();
+            sale.setCreditRecordId(creditRecordId);
+        }
 
+        // Standard tier always gets an invoice; Premium can be asked per-sale
+        // whether the buyer wants one at all.
+        boolean canSkipInvoice = subscriptionService.hasFeature(
+                product.getBusiness(), SubscriptionFeature.INVOICE_ON_DEMAND);
+        boolean wantsInvoice = request.getWantsInvoice() == null || request.getWantsInvoice();
+
+        if (!canSkipInvoice || wantsInvoice) {
             Invoice invoice = new Invoice();
             invoice.setSellerBusiness(product.getBusiness());
             invoice.setBuyerBusiness(retailer);
             invoice.setSubtotalUsd(request.getAmountUsd());
             invoice.setTotalUsd(request.getAmountUsd());
             invoice.setPaymentMode(request.getPaymentMode());
-            invoice.setDueDate(request.getDueDate());
-            invoice.setStatus("UNPAID");
-            invoice.setCreditRecordId(saved.getId());
+            invoice.setStatus("CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID");
+            if (request.getDueDate() != null) {
+                invoice.setDueDate(request.getDueDate());
+            }
+            invoice.setCreditRecordId(creditRecordId);
             invoice.setGeneratedByUser(user);
             Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
                     invoiceRepository, businessId, invoice);

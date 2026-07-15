@@ -18,4 +18,5 @@ public class DispatchRequest {
     private String vehicleNumber;
     private String driverContact;
     private String driverIdNumber;
+    private Boolean wantsInvoice;
 }

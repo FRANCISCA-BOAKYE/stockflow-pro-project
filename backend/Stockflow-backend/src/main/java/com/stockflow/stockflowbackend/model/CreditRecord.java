@@ -31,6 +31,13 @@ public class CreditRecord {
     @Column(name = "debtor_name", length = 200)
     private String debtorName;
 
+    /** Optional contact info for a walk-in debtor, captured on Premium plans only. */
+    @Column(name = "debtor_contact", length = 30)
+    private String debtorContact;
+
+    @Column(name = "debtor_address", length = 300)
+    private String debtorAddress;
+
     @Column(name = "amount_usd", nullable = false, precision = 12, scale = 2)
     private BigDecimal amountUsd;
 

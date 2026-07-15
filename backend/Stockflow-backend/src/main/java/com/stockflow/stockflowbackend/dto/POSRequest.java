@@ -16,5 +16,8 @@ public class POSRequest {
     private LocalDate dueDate; // only if CREDIT
     private Long buyerBusinessId; // wholesaler or retailer buying
     private String buyerName; // walk-in customer name for retailers
+    private String buyerContact; // walk-in customer phone (Premium)
+    private String buyerAddress; // walk-in customer address (Premium)
     private Long reservationId; // from /reserve endpoint
+    private Boolean wantsInvoice;
 }

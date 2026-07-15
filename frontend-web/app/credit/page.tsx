@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Wallet, Calendar, Lock, CheckCircle, TrendingDown } from "lucide-react"
+import { ArrowLeft, Wallet, Calendar, Lock, CheckCircle, TrendingDown, Phone, MapPin } from "lucide-react"
 import { API_BASE_URL } from "@/lib/api"
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
@@ -123,6 +123,16 @@ export default function CreditPage() {
                         <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Calendar style={{ width: '11px', height: '11px' }} />Due {due}
                         </p>
+                        {acc.debtorContact && (
+                          <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                            <Phone style={{ width: '11px', height: '11px' }} />{acc.debtorContact}
+                          </p>
+                        )}
+                        {acc.debtorAddress && (
+                          <p style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                            <MapPin style={{ width: '11px', height: '11px' }} />{acc.debtorAddress}
+                          </p>
+                        )}
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a', marginBottom: '6px' }}>${amount.toLocaleString()}</p>

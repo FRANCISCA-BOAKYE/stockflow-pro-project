@@ -159,6 +159,18 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
                       <Ionicons name="calendar-outline" size={11} color="#9CA3AF" />
                       <Text style={s.acctDue}> Due {new Date(item.dueDate).toLocaleDateString()}</Text>
                     </View>
+                    {item.debtorContact && (
+                      <View style={s.dueRow}>
+                        <Ionicons name="call-outline" size={11} color="#9CA3AF" />
+                        <Text style={s.acctDue}> {item.debtorContact}</Text>
+                      </View>
+                    )}
+                    {item.debtorAddress && (
+                      <View style={s.dueRow}>
+                        <Ionicons name="location-outline" size={11} color="#9CA3AF" />
+                        <Text style={s.acctDue}> {item.debtorAddress}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={s.acctAmt}>${Number(item.amountUsd).toFixed(2)}</Text>

@@ -7,11 +7,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
+import { useAuthStore } from '../../../store/authStore';
 
 const PAYMENT_MODES = ['CASH', 'CARD', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CREDIT'];
 
 export default function DispatchScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
+  const isPremium = user?.subscriptionPlan === 'PREMIUM';
   const [goods, setGoods] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +28,7 @@ export default function DispatchScreen() {
     quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '',
     deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
     driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
+    wantsInvoice: true,
   });
 
   const fetchData = useCallback(async () => {
@@ -75,6 +79,7 @@ export default function DispatchScreen() {
         deliveryMode: form.deliveryMode,
       };
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
+      if (isPremium) body.wantsInvoice = form.wantsInvoice;
       if (form.deliveryMode === 'DELIVERY') {
         if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
         if (form.driverName) body.driverName = form.driverName;
@@ -90,6 +95,7 @@ export default function DispatchScreen() {
         quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '',
         deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
         driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
+        wantsInvoice: true,
       });
       setSelectedGood(null);
       setSelectedPartner(null);
@@ -236,6 +242,13 @@ export default function DispatchScreen() {
               </>
             )}
 
+            {isPremium && (
+              <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setForm(f => ({ ...f, wantsInvoice: !f.wantsInvoice }))}>
+                <Ionicons name={form.wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={form.wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
+                <Text style={s.invoiceToggleText}>Buyer wants an invoice</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleDispatch} disabled={submitting}>
               {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Dispatch</Text>}
             </TouchableOpacity>
@@ -309,6 +322,8 @@ const s = StyleSheet.create({
   payBtnActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
   payBtnText: { fontSize: 12, color: '#374151' },
   payBtnTextActive: { color: '#fff', fontWeight: '500' },
+  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  invoiceToggleText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   partnerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },

@@ -14,4 +14,5 @@ public class WholesaleSaleRequest {
     private BigDecimal amountUsd;
     private String paymentMode;
     private LocalDate dueDate;
+    private Boolean wantsInvoice;
 }
