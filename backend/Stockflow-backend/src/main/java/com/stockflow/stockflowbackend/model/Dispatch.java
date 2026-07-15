@@ -49,6 +49,24 @@ public class Dispatch {
     @JoinColumn(name = "recorded_by", nullable = false)
     private AppUser recordedBy;
 
+    @Column(name = "delivery_mode", length = 20)
+    private String deliveryMode = "DELIVERY";
+
+    @Column(name = "delivery_fee_usd", precision = 10, scale = 2)
+    private BigDecimal deliveryFeeUsd;
+
+    @Column(name = "driver_name", length = 100)
+    private String driverName;
+
+    @Column(name = "vehicle_number", length = 30)
+    private String vehicleNumber;
+
+    @Column(name = "driver_contact", length = 30)
+    private String driverContact;
+
+    @Column(name = "driver_id_number", length = 50)
+    private String driverIdNumber;
+
     @Column(name = "dispatched_at", updatable = false)
     private LocalDateTime dispatchedAt = LocalDateTime.now();
 }

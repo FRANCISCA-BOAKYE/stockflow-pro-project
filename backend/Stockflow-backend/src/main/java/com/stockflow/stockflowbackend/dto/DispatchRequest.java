@@ -10,4 +10,12 @@ public class DispatchRequest {
     private BigDecimal amountUsd;
     private String paymentMode;
     private LocalDate dueDate;
+
+    /** "PICKUP" (buyer collects) or "DELIVERY" (we bring it) — defaults to DELIVERY. */
+    private String deliveryMode;
+    private BigDecimal deliveryFeeUsd;
+    private String driverName;
+    private String vehicleNumber;
+    private String driverContact;
+    private String driverIdNumber;
 }

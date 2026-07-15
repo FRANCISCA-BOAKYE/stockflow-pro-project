@@ -21,7 +21,11 @@ export default function DispatchScreen() {
   const [selectedGood, setSelectedGood] = useState<any>(null);
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '' });
+  const [form, setForm] = useState({
+    quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '',
+    deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
+    driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
+  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -52,6 +56,10 @@ export default function DispatchScreen() {
       Alert.alert('Missing info', 'Please fill in all required fields.');
       return;
     }
+    if (!selectedPartner) {
+      Alert.alert('Missing info', 'Please select which wholesaler this is going to.');
+      return;
+    }
     if (form.paymentMode === 'CREDIT' && !form.dueDate) {
       Alert.alert('Missing info', 'Please enter a due date for credit.');
       return;
@@ -60,22 +68,34 @@ export default function DispatchScreen() {
     try {
       const body: any = {
         finishedGoodId: selectedGood.id,
+        wholesalerBusinessId: selectedPartner.id,
         quantity: parseInt(form.quantity),
         amountUsd: parseFloat(form.amountUsd),
         paymentMode: form.paymentMode,
+        deliveryMode: form.deliveryMode,
       };
-      if (selectedPartner) body.wholesalerBusinessId = selectedPartner.id;
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
+      if (form.deliveryMode === 'DELIVERY') {
+        if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
+        if (form.driverName) body.driverName = form.driverName;
+        if (form.vehicleNumber) body.vehicleNumber = form.vehicleNumber;
+        if (form.driverContact) body.driverContact = form.driverContact;
+        if (form.driverIdNumber) body.driverIdNumber = form.driverIdNumber;
+      }
 
       await api.post('/manufacturer/dispatch', body);
       Alert.alert('Success', `${form.quantity} units dispatched successfully!`);
       setShowModal(false);
-      setForm({ quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '' });
+      setForm({
+        quantity: '', amountUsd: '', paymentMode: 'CASH', dueDate: '',
+        deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
+        driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
+      });
       setSelectedGood(null);
       setSelectedPartner(null);
       fetchData();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Dispatch failed');
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Dispatch failed');
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +161,7 @@ export default function DispatchScreen() {
             <TouchableOpacity style={s.partnerBtn} onPress={() => setShowPartnerModal(true)}>
               <Ionicons name="business-outline" size={16} color="#1A56DB" />
               <Text style={[s.partnerBtnText, selectedPartner && { color: '#0F172A' }]}>
-                {selectedPartner ? selectedPartner.name : 'Select linked wholesaler (optional)'}
+                {selectedPartner ? selectedPartner.name : 'Select linked wholesaler *'}
               </Text>
               <Ionicons name="chevron-down-outline" size={14} color="#9CA3AF" />
             </TouchableOpacity>
@@ -173,6 +193,49 @@ export default function DispatchScreen() {
                   value={form.dueDate} onChangeText={v => setForm(f => ({ ...f, dueDate: v }))} />
               </View>
             )}
+
+            <View>
+              <Text style={s.fieldLabel}>How is this getting there?</Text>
+              <View style={s.payRow}>
+                {[{ key: 'DELIVERY', label: 'We deliver it' }, { key: 'PICKUP', label: 'They pick it up' }].map(mode => (
+                  <TouchableOpacity key={mode.key} style={[s.payBtn, form.deliveryMode === mode.key && s.payBtnActive]}
+                    onPress={() => setForm(f => ({ ...f, deliveryMode: mode.key }))}>
+                    <Text style={[s.payBtnText, form.deliveryMode === mode.key && s.payBtnTextActive]}>{mode.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {form.deliveryMode === 'DELIVERY' && (
+              <>
+                <View>
+                  <Text style={s.fieldLabel}>Delivery fee (USD) — optional</Text>
+                  <TextInput style={s.fieldInput} placeholder="e.g. 50.00 (added to total)" placeholderTextColor="#9CA3AF"
+                    value={form.deliveryFeeUsd} onChangeText={v => setForm(f => ({ ...f, deliveryFeeUsd: v }))} keyboardType="decimal-pad" />
+                </View>
+                <View>
+                  <Text style={s.fieldLabel}>Driver name</Text>
+                  <TextInput style={s.fieldInput} placeholder="Who's driving" placeholderTextColor="#9CA3AF"
+                    value={form.driverName} onChangeText={v => setForm(f => ({ ...f, driverName: v }))} />
+                </View>
+                <View>
+                  <Text style={s.fieldLabel}>Vehicle number</Text>
+                  <TextInput style={s.fieldInput} placeholder="e.g. GT 1234-20" placeholderTextColor="#9CA3AF"
+                    value={form.vehicleNumber} onChangeText={v => setForm(f => ({ ...f, vehicleNumber: v }))} />
+                </View>
+                <View>
+                  <Text style={s.fieldLabel}>Driver contact</Text>
+                  <TextInput style={s.fieldInput} placeholder="Phone number" placeholderTextColor="#9CA3AF"
+                    value={form.driverContact} onChangeText={v => setForm(f => ({ ...f, driverContact: v }))} keyboardType="phone-pad" />
+                </View>
+                <View>
+                  <Text style={s.fieldLabel}>Driver ID number</Text>
+                  <TextInput style={s.fieldInput} placeholder="e.g. Ghana Card number, for the receiver's records" placeholderTextColor="#9CA3AF"
+                    value={form.driverIdNumber} onChangeText={v => setForm(f => ({ ...f, driverIdNumber: v }))} />
+                </View>
+              </>
+            )}
+
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleDispatch} disabled={submitting}>
               {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Dispatch</Text>}
             </TouchableOpacity>

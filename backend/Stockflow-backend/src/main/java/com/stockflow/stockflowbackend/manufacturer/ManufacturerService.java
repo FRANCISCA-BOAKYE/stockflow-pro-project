@@ -196,20 +196,32 @@ public class ManufacturerService {
         fg.setQuantityInStock(fg.getQuantityInStock() - req.getQuantity());
         fg.setUpdatedAt(LocalDateTime.now());
         finishedGoodsRepository.save(fg);
+
+        String deliveryMode = "PICKUP".equals(req.getDeliveryMode()) ? "PICKUP" : "DELIVERY";
+        BigDecimal deliveryFee = "DELIVERY".equals(deliveryMode) && req.getDeliveryFeeUsd() != null
+                ? req.getDeliveryFeeUsd() : BigDecimal.ZERO;
+        BigDecimal totalAmount = req.getAmountUsd().add(deliveryFee);
+
         AppUser user = new AppUser(); user.setId(userId);
         Dispatch dispatch = new Dispatch();
         dispatch.setBusiness(fg.getBusiness());
         dispatch.setFinishedGood(fg);
         dispatch.setWholesalerBusiness(wholesaler);
         dispatch.setQuantity(req.getQuantity());
-        dispatch.setAmountUsd(req.getAmountUsd());
+        dispatch.setAmountUsd(totalAmount);
         dispatch.setPaymentMode(req.getPaymentMode());
         dispatch.setRecordedBy(user);
+        dispatch.setDeliveryMode(deliveryMode);
+        dispatch.setDeliveryFeeUsd(deliveryFee.compareTo(BigDecimal.ZERO) > 0 ? deliveryFee : null);
+        dispatch.setDriverName(req.getDriverName());
+        dispatch.setVehicleNumber(req.getVehicleNumber());
+        dispatch.setDriverContact(req.getDriverContact());
+        dispatch.setDriverIdNumber(req.getDriverIdNumber());
         if ("CREDIT".equals(req.getPaymentMode()) && req.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
             credit.setCreditorBusiness(fg.getBusiness());
             credit.setDebtorBusiness(wholesaler);
-            credit.setAmountUsd(req.getAmountUsd());
+            credit.setAmountUsd(totalAmount);
             credit.setDueDate(req.getDueDate());
             credit.setStatus("OUTSTANDING");
             credit.setHoldPlaced(false);
