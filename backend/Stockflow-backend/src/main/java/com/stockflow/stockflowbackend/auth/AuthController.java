@@ -69,4 +69,14 @@ public class AuthController {
         Long userId = (Long) auth.getCredentials();
         return ResponseEntity.ok(authService.changePassword(userId, req));
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+        return ResponseEntity.ok(authService.forgotPassword(req));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody ResetPasswordRequest req) {
+        return ResponseEntity.ok(authService.resetPassword(req));
+    }
 }

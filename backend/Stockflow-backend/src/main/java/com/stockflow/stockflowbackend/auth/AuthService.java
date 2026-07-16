@@ -2,10 +2,12 @@ package com.stockflow.stockflowbackend.auth;
 
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.EmailSenderService;
+import com.stockflow.stockflowbackend.email.EmailTemplateUtil;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.security.JwtUtil;
 import com.stockflow.stockflowbackend.subscription.PlanCatalog;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailSenderService emailSenderService;
+
+    @Value("${frontend.web.base-url}")
+    private String frontendWebBaseUrl;
 
     public AuthService(UserRepository userRepository,
                        BusinessRepository businessRepository,
@@ -64,10 +69,13 @@ public class AuthService {
         String token = jwtUtil.generateToken(
                 savedAdmin.getEmail(), savedBusiness.getId(), savedAdmin.getId(), "COMPANY_ADMIN");
 
-        String welcomeHtml = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
-                + "Welcome to StockFlow Pro, " + savedAdmin.getName() + "! Your account for <strong>"
-                + savedBusiness.getName() + "</strong> is ready, with a 14-day free trial already active. "
-                + "Log in any time with " + savedAdmin.getEmail() + " to get started.</p>";
+        String welcomeHtml = EmailTemplateUtil.wrap(
+                "Welcome, " + savedAdmin.getName() + " 👋",
+                savedBusiness.getName() + " is now on StockFlow Pro",
+                EmailTemplateUtil.paragraph("Your 14-day free trial is active, no card required. "
+                        + "Log in any time with <strong>" + savedAdmin.getEmail() + "</strong> to start managing "
+                        + "your inventory, sales, and credit accounts.")
+                        + EmailTemplateUtil.smallNote("Didn't create this account? You can safely ignore this email."));
         emailSenderService.sendAsync(savedAdmin.getEmail(), "Welcome to StockFlow Pro", welcomeHtml);
 
         RegisterResponse response = new RegisterResponse();
@@ -121,14 +129,13 @@ public class AuthService {
         subUser.setMustChangePassword(true);
         userRepository.save(subUser);
 
-        String inviteHtml = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
-                + inviter.getName() + " added you as a <strong>" + role + "</strong> on " + business.getName()
-                + "'s StockFlow Pro account.</p>"
-                + "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
-                + "Login email: <strong>" + email + "</strong><br/>"
-                + "Temporary password: <strong>" + temporaryPassword + "</strong></p>"
-                + "<p style=\"font-family: system-ui, sans-serif; font-size: 13px; color: #6B7280;\">"
-                + "You'll be asked to set your own password the first time you log in.</p>";
+        String inviteHtml = EmailTemplateUtil.wrap(
+                "You're invited 🎉",
+                inviter.getName() + " added you to " + business.getName(),
+                EmailTemplateUtil.paragraph("You've been added as a <strong>" + role + "</strong> on "
+                        + business.getName() + "'s StockFlow Pro account. Use these details to log in:")
+                        + EmailTemplateUtil.credentialBox("Login email", email, "Temporary password", temporaryPassword)
+                        + EmailTemplateUtil.smallNote("You'll be asked to set your own password the first time you log in."));
         emailSenderService.sendAsync(email, "You've been added to " + business.getName() + " on StockFlow Pro", inviteHtml);
 
         return Map.of(
@@ -224,9 +231,12 @@ public class AuthService {
                 ? "SUB_ACCOUNT" : user.getRole();
         String newToken = jwtUtil.generateToken(newEmail, business.getId(), user.getId(), effectiveRole);
 
-        String html = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
-                + "The email on your StockFlow Pro account was changed from " + oldEmail
-                + " to " + newEmail + ". If you didn't make this change, contact support immediately.</p>";
+        String html = EmailTemplateUtil.wrap(
+                "Email address changed",
+                "A security update on your account",
+                EmailTemplateUtil.paragraph("The email on your StockFlow Pro account was changed from <strong>"
+                        + oldEmail + "</strong> to <strong>" + newEmail + "</strong>.")
+                        + EmailTemplateUtil.smallNote("If you didn't make this change, contact support immediately."));
         emailSenderService.sendAsync(oldEmail, "Your StockFlow Pro account email was changed", html);
         emailSenderService.sendAsync(newEmail, "Your StockFlow Pro account email was changed", html);
 
@@ -249,10 +259,73 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
 
-        String html = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
-                + "The password on your StockFlow Pro account was just changed. "
-                + "If you didn't make this change, contact support immediately.</p>";
+        String html = EmailTemplateUtil.wrap(
+                "Password changed",
+                "A security update on your account",
+                EmailTemplateUtil.paragraph("The password on your StockFlow Pro account was just changed.")
+                        + EmailTemplateUtil.smallNote("If you didn't make this change, contact support immediately."));
         emailSenderService.sendAsync(user.getEmail(), "Your StockFlow Pro password was changed", html);
+
+        return Map.of("success", true);
+    }
+
+    @Transactional
+    public Map<String, Object> forgotPassword(ForgotPasswordRequest req) {
+        if (req.getEmail() == null || req.getEmail().isBlank()) {
+            throw new RuntimeException("Email cannot be empty");
+        }
+
+        Optional<AppUser> userOpt = userRepository.findByEmail(req.getEmail().trim().toLowerCase());
+        if (userOpt.isPresent()) {
+            AppUser user = userOpt.get();
+            String token = UUID.randomUUID().toString();
+            user.setResetToken(token);
+            user.setResetTokenExpiresAt(LocalDateTime.now().plusMinutes(30));
+            userRepository.save(user);
+
+            String resetLink = frontendWebBaseUrl + "/reset-password?token=" + token;
+            String html = EmailTemplateUtil.wrap(
+                    "Reset your password",
+                    "This link expires in 30 minutes",
+                    EmailTemplateUtil.paragraph("We received a request to reset the password for your StockFlow Pro account.")
+                            + EmailTemplateUtil.button(resetLink, "Reset Password")
+                            + EmailTemplateUtil.smallNote("If you didn't request this, you can safely ignore this email — your password won't change."));
+            emailSenderService.sendAsync(user.getEmail(), "Reset your StockFlow Pro password", html);
+        }
+
+        // Always return the same response, whether or not the email exists,
+        // so this endpoint can't be used to find out which emails are registered.
+        return Map.of("success", true, "message", "If that email exists, a reset link has been sent.");
+    }
+
+    @Transactional
+    public Map<String, Object> resetPassword(ResetPasswordRequest req) {
+        if (req.getToken() == null || req.getToken().isBlank()) {
+            throw new RuntimeException("Reset token is required");
+        }
+        if (req.getNewPassword() == null || req.getNewPassword().length() < 8) {
+            throw new RuntimeException("New password must be at least 8 characters");
+        }
+
+        AppUser user = userRepository.findByResetToken(req.getToken())
+                .orElseThrow(() -> new RuntimeException("Invalid or expired reset link"));
+
+        if (user.getResetTokenExpiresAt() == null
+                || user.getResetTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Invalid or expired reset link");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiresAt(null);
+        userRepository.save(user);
+
+        String html = EmailTemplateUtil.wrap(
+                "Password reset",
+                "A security update on your account",
+                EmailTemplateUtil.paragraph("Your StockFlow Pro password was just reset.")
+                        + EmailTemplateUtil.smallNote("If you didn't make this change, contact support immediately."));
+        emailSenderService.sendAsync(user.getEmail(), "Your StockFlow Pro password was reset", html);
 
         return Map.of("success", true);
     }

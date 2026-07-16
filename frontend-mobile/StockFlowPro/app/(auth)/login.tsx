@@ -125,6 +125,13 @@ export default function Login() {
               </View>
             </View>
 
+            <TouchableOpacity
+              style={s.forgotLink}
+              onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/forgot-password')}
+            >
+              <Text style={s.forgotLinkText}>Forgot password?</Text>
+            </TouchableOpacity>
+
             {error ? (
               <View style={s.errorBox}>
                 <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
@@ -230,6 +237,9 @@ const s = StyleSheet.create({
   },
   inputFocused: { borderColor: '#1A56DB', backgroundColor: '#ffffff' },
   input: { fontSize: 14, color: '#0F172A', flex: 1 },
+
+  forgotLink: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 14 },
+  forgotLinkText: { fontSize: 12.5, color: '#1A56DB', fontWeight: '600' },
 
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

@@ -52,6 +52,12 @@ public class AppUser {
     @Column(name = "expo_push_token", length = 200)
     private String expoPushToken;
 
+    @Column(name = "reset_token", length = 100)
+    private String resetToken;
+
+    @Column(name = "reset_token_expires_at")
+    private LocalDateTime resetTokenExpiresAt;
+
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 

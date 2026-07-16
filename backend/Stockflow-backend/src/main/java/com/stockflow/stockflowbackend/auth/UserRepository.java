@@ -11,4 +11,5 @@ public interface UserRepository extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByEmail(String email);
     List<AppUser> findByBusiness_IdAndIsSubAccountTrue(Long businessId);
     Optional<AppUser> findFirstByBusiness_IdAndIsSubAccountFalse(Long businessId);
+    Optional<AppUser> findByResetToken(String resetToken);
 }
