@@ -299,7 +299,7 @@ export default function HelpPage() {
             <h2 className="text-2xl font-bold text-slate-900 mb-6">Troubleshooting</h2>
             <div className="space-y-4">
               <Accordion q="I can't log in on mobile" a={
-                <p>Mobile is login-only — accounts are created on the web at <Link href="/signup" className="text-blue-600 font-semibold">stockflowpro-web.netlify.app/signup</Link>.
+                <p>Mobile is login-only — accounts are created on the web at <Link href="/signup" className="text-blue-600 font-semibold">phenomenal-blini-7b80dd.netlify.app/signup</Link>.
                 Double-check your email/password, and confirm your business admin hasn't deactivated your sub-account.</p>
               } />
               <Accordion q="My sub-account invite isn't showing a password" a={
