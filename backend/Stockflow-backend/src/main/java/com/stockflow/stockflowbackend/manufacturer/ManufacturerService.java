@@ -6,6 +6,7 @@ import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.notification.NotificationService;
+import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
 import com.stockflow.stockflowbackend.pos.InvoiceNumberUtil;
 import com.stockflow.stockflowbackend.pos.InvoiceRepository;
 import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
@@ -32,6 +33,7 @@ public class ManufacturerService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
+    private final PaystackTransactionVerifier paystackTransactionVerifier;
 
     public ManufacturerService(MaterialRepository materialRepository,
                                RecipeRepository recipeRepository,
@@ -44,7 +46,8 @@ public class ManufacturerService {
                                NotificationService notificationService,
                                InvoiceRepository invoiceRepository,
                                InvoiceEmailService invoiceEmailService,
-                               SubscriptionService subscriptionService) {
+                               SubscriptionService subscriptionService,
+                               PaystackTransactionVerifier paystackTransactionVerifier) {
         this.materialRepository = materialRepository;
         this.recipeRepository = recipeRepository;
         this.productionRunRepository = productionRunRepository;
@@ -53,6 +56,7 @@ public class ManufacturerService {
         this.recipeMaterialRepository = recipeMaterialRepository;
         this.businessRepository = businessRepository;
         this.creditRepository = creditRepository;
+        this.paystackTransactionVerifier = paystackTransactionVerifier;
         this.notificationService = notificationService;
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
@@ -214,14 +218,19 @@ public class ManufacturerService {
         Business wholesaler = businessRepository
                 .findById(req.getWholesalerBusinessId())
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
-        fg.setQuantityInStock(fg.getQuantityInStock() - req.getQuantity());
-        fg.setUpdatedAt(LocalDateTime.now());
-        finishedGoodsRepository.save(fg);
 
         String deliveryMode = "PICKUP".equals(req.getDeliveryMode()) ? "PICKUP" : "DELIVERY";
         BigDecimal deliveryFee = "DELIVERY".equals(deliveryMode) && req.getDeliveryFeeUsd() != null
                 ? req.getDeliveryFeeUsd() : BigDecimal.ZERO;
         BigDecimal totalAmount = req.getAmountUsd().add(deliveryFee);
+
+        if ("CARD".equals(req.getPaymentMode())) {
+            paystackTransactionVerifier.verifyPaid(req.getPaystackReference(), totalAmount);
+        }
+
+        fg.setQuantityInStock(fg.getQuantityInStock() - req.getQuantity());
+        fg.setUpdatedAt(LocalDateTime.now());
+        finishedGoodsRepository.save(fg);
 
         AppUser user = new AppUser(); user.setId(userId);
         Dispatch dispatch = new Dispatch();

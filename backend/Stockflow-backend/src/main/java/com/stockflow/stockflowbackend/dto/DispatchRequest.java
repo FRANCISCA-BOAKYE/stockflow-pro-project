@@ -19,4 +19,5 @@ public class DispatchRequest {
     private String driverContact;
     private String driverIdNumber;
     private Boolean wantsInvoice;
+    private String paystackReference; // required when paymentMode is CARD
 }

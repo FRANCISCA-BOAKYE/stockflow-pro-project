@@ -15,4 +15,5 @@ public class WholesaleSaleRequest {
     private String paymentMode;
     private LocalDate dueDate;
     private Boolean wantsInvoice;
+    private String paystackReference; // required when paymentMode is CARD
 }

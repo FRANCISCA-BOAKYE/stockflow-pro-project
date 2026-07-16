@@ -59,7 +59,7 @@ export default function POSScreen() {
     await recordSale('CASH');
   };
 
-  const recordSale = async (paymentMode: string) => {
+  const recordSale = async (paymentMode: string, paystackReference?: string) => {
     setSubmitting(true);
     try {
       const body: any = {
@@ -70,6 +70,9 @@ export default function POSScreen() {
         paymentMode,
         buyerName: creditBuyer || user?.name || 'Walk-in customer',
       };
+      if (paymentMode === 'CARD') {
+        body.paystackReference = paystackReference;
+      }
       if (paymentMode === 'CREDIT') {
         body.dueDate = dueDate;
         if (isPremium) {
@@ -96,7 +99,7 @@ export default function POSScreen() {
 
   const handlePaystackSuccess = async (reference: string) => {
     setShowPaystack(false);
-    await recordSale('CARD');
+    await recordSale('CARD', reference);
   };
 
   return (

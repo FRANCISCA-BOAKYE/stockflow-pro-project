@@ -20,4 +20,5 @@ public class POSRequest {
     private String buyerAddress; // walk-in customer address (Premium)
     private Long reservationId; // from /reserve endpoint
     private Boolean wantsInvoice;
+    private String paystackReference; // required when paymentMode is CARD
 }

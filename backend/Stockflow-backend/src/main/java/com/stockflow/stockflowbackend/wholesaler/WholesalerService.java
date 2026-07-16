@@ -5,6 +5,7 @@ import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
+import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
 import com.stockflow.stockflowbackend.pos.InvoiceNumberUtil;
 import com.stockflow.stockflowbackend.pos.InvoiceRepository;
 import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
@@ -28,6 +29,7 @@ public class WholesalerService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
+    private final PaystackTransactionVerifier paystackTransactionVerifier;
 
     public WholesalerService(
             WarehouseProductRepository warehouseProductRepository,
@@ -37,7 +39,8 @@ public class WholesalerService {
             CreditRepository creditRepository,
             InvoiceRepository invoiceRepository,
             InvoiceEmailService invoiceEmailService,
-            SubscriptionService subscriptionService) {
+            SubscriptionService subscriptionService,
+            PaystackTransactionVerifier paystackTransactionVerifier) {
         this.warehouseProductRepository = warehouseProductRepository;
         this.receiptRepository = receiptRepository;
         this.wholesaleSaleRepository = wholesaleSaleRepository;
@@ -46,6 +49,7 @@ public class WholesalerService {
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
+        this.paystackTransactionVerifier = paystackTransactionVerifier;
     }
 
     @Transactional
@@ -153,6 +157,10 @@ public class WholesalerService {
         if (product.getQuantity().compareTo(request.getQuantity()) < 0) {
             throw new RuntimeException("Insufficient stock. Available: "
                     + product.getQuantity());
+        }
+
+        if ("CARD".equals(request.getPaymentMode())) {
+            paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), request.getAmountUsd());
         }
 
         Business retailer = businessRepository

@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
+import PaystackPayment from '../../../components/PaystackPayment';
+import { USD_TO_GHS } from '../../../constants/subscriptionPlans';
 
 const PAYMENT_MODES = ['CASH', 'CARD', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CREDIT'];
 
@@ -21,6 +23,7 @@ export default function DispatchScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [showPaystack, setShowPaystack] = useState(false);
   const [selectedGood, setSelectedGood] = useState<any>(null);
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +71,11 @@ export default function DispatchScreen() {
       Alert.alert('Missing info', 'Please enter a due date for credit.');
       return;
     }
+    if (form.paymentMode === 'CARD') { setShowPaystack(true); return; }
+    await submitDispatch();
+  };
+
+  const submitDispatch = async (paystackReference?: string) => {
     setSubmitting(true);
     try {
       const body: any = {
@@ -79,6 +87,7 @@ export default function DispatchScreen() {
         deliveryMode: form.deliveryMode,
       };
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
+      if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
       if (isPremium) body.wantsInvoice = form.wantsInvoice;
       if (form.deliveryMode === 'DELIVERY') {
         if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
@@ -107,10 +116,22 @@ export default function DispatchScreen() {
     }
   };
 
+  const handlePaystackSuccess = async (reference: string) => {
+    setShowPaystack(false);
+    await submitDispatch(reference);
+  };
+
   if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
 
   return (
     <SafeAreaView style={s.page}>
+      <PaystackPayment
+        visible={showPaystack}
+        email={user?.email || 'customer@business.com'}
+        amount={(parseFloat(form.amountUsd) || 0) * USD_TO_GHS}
+        onSuccess={handlePaystackSuccess}
+        onClose={() => setShowPaystack(false)}
+      />
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />

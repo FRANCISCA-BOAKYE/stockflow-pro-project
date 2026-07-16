@@ -75,7 +75,7 @@ export default function WholesalerPOSScreen() {
     await recordSale(payment)
   }
 
-  const recordSale = async (paymentMode: string) => {
+  const recordSale = async (paymentMode: string, paystackReference?: string) => {
     setSubmitting(true)
     try {
       const body: any = {
@@ -86,6 +86,7 @@ export default function WholesalerPOSScreen() {
       }
       if (selectedPartner) body.retailerBusinessId = selectedPartner.id
       if (paymentMode === 'CREDIT') body.dueDate = dueDate
+      if (paymentMode === 'CARD') body.paystackReference = paystackReference
       if (isPremium) body.wantsInvoice = wantsInvoice
 
       await api.post('/wholesaler/sell', body)
@@ -101,7 +102,7 @@ export default function WholesalerPOSScreen() {
 
   const handlePaystackSuccess = async (reference: string) => {
     setShowPaystack(false)
-    await recordSale('CARD')
+    await recordSale('CARD', reference)
   }
 
   if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>

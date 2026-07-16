@@ -6,6 +6,7 @@ import com.stockflow.stockflowbackend.dto.POSRequest;
 import com.stockflow.stockflowbackend.dto.POSResponse;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
+import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
 import com.stockflow.stockflowbackend.reservation.ReservationRepository;
 import com.stockflow.stockflowbackend.retailer.ProductRepository;
 import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
@@ -28,6 +29,7 @@ public class POSService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
+    private final PaystackTransactionVerifier paystackTransactionVerifier;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -38,7 +40,8 @@ public class POSService {
                       BusinessRepository businessRepository,
                       InvoiceRepository invoiceRepository,
                       InvoiceEmailService invoiceEmailService,
-                      SubscriptionService subscriptionService) {
+                      SubscriptionService subscriptionService,
+                      PaystackTransactionVerifier paystackTransactionVerifier) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.creditRepository = creditRepository;
@@ -46,6 +49,7 @@ public class POSService {
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
+        this.paystackTransactionVerifier = paystackTransactionVerifier;
     }
 
     @Transactional
@@ -97,14 +101,18 @@ public class POSService {
                     + product.getQuantity());
         }
 
-        // 4. Deduct stock atomically
+        // 4. Calculate total, and confirm a CARD sale was actually paid before touching stock
+        BigDecimal total = request.getUnitPriceUsd()
+                .multiply(BigDecimal.valueOf(request.getQuantity()));
+
+        if ("CARD".equals(request.getPaymentMode())) {
+            paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), total);
+        }
+
+        // 5. Deduct stock atomically
         product.setQuantity(product.getQuantity().subtract(requested));
         product.setUpdatedAt(LocalDateTime.now());
         productRepository.save(product);
-
-        // 5. Calculate total
-        BigDecimal total = request.getUnitPriceUsd()
-                .multiply(BigDecimal.valueOf(request.getQuantity()));
 
         Business business = product.getBusiness();
 
