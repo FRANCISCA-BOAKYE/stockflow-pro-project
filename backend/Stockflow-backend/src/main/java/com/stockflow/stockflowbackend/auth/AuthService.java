@@ -64,6 +64,12 @@ public class AuthService {
         String token = jwtUtil.generateToken(
                 savedAdmin.getEmail(), savedBusiness.getId(), savedAdmin.getId(), "COMPANY_ADMIN");
 
+        String welcomeHtml = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
+                + "Welcome to StockFlow Pro, " + savedAdmin.getName() + "! Your account for <strong>"
+                + savedBusiness.getName() + "</strong> is ready, with a 14-day free trial already active. "
+                + "Log in any time with " + savedAdmin.getEmail() + " to get started.</p>";
+        emailSenderService.sendAsync(savedAdmin.getEmail(), "Welcome to StockFlow Pro", welcomeHtml);
+
         RegisterResponse response = new RegisterResponse();
         response.setToken(token);
         response.setName(savedAdmin.getName());
@@ -114,6 +120,16 @@ public class AuthService {
         subUser.setSubAccountRole(role);
         subUser.setMustChangePassword(true);
         userRepository.save(subUser);
+
+        String inviteHtml = "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
+                + inviter.getName() + " added you as a <strong>" + role + "</strong> on " + business.getName()
+                + "'s StockFlow Pro account.</p>"
+                + "<p style=\"font-family: system-ui, sans-serif; font-size: 15px; color: #374151;\">"
+                + "Login email: <strong>" + email + "</strong><br/>"
+                + "Temporary password: <strong>" + temporaryPassword + "</strong></p>"
+                + "<p style=\"font-family: system-ui, sans-serif; font-size: 13px; color: #6B7280;\">"
+                + "You'll be asked to set your own password the first time you log in.</p>";
+        emailSenderService.sendAsync(email, "You've been added to " + business.getName() + " on StockFlow Pro", inviteHtml);
 
         return Map.of(
                 "success", true,
