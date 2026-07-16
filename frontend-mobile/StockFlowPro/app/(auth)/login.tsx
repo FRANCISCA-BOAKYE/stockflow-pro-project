@@ -148,9 +148,9 @@ export default function Login() {
               <Text style={s.dividerText}>New to StockFlow Pro?</Text>
               <View style={s.dividerLine} />
             </View>
-<TouchableOpacity style={s.signupHint} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/signup')}>
+<TouchableOpacity style={s.signupHint} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/signup')}>
   <Ionicons name="globe-outline" size={14} color="#1A56DB" />
-  <Text style={s.signupText}>Sign up at <Text style={s.signupLink}>stockflowpro-web.netlify.app</Text></Text>
+  <Text style={s.signupText}>Sign up at <Text style={s.signupLink}>phenomenal-blini-7b80dd.netlify.app</Text></Text>
 </TouchableOpacity>
           </View>
 

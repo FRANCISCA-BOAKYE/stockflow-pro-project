@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 
-const HELP_URL = 'https://stockflowpro-web.netlify.app/help';
+const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
 const MENU_ITEMS = [
   { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },

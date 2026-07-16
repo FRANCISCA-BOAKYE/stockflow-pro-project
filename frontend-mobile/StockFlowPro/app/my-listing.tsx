@@ -78,7 +78,7 @@ export default function MyListingScreen() {
           <Ionicons name="lock-closed-outline" size={32} color="#C27803" />
           <Text style={s.upgradeTitle}>Premium feature</Text>
           <Text style={s.upgradeText}>Listing your business on the marketplace requires a Premium subscription.</Text>
-          <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/pricing')}>
+          <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/pricing')}>
             <Text style={s.upgradeBtnText}>View plans</Text>
           </TouchableOpacity>
         </View>

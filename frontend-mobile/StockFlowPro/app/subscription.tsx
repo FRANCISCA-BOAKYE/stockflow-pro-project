@@ -74,7 +74,7 @@ export default function SubscriptionScreen() {
               <Text style={s.price}>${prices.PREMIUM}</Text>
               <Text style={s.priceUnit}>/month</Text>
             </View>
-            <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/pricing')}>
+            <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/pricing')}>
               <Ionicons name="arrow-up-circle-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
               <Text style={s.upgradeBtnText}>Upgrade on web</Text>
             </TouchableOpacity>
@@ -83,7 +83,7 @@ export default function SubscriptionScreen() {
 
         {/* Pay */}
         {status === 'EXPIRED' && (
-          <TouchableOpacity style={s.payBtn} onPress={() => Linking.openURL('https://stockflowpro-web.netlify.app/trial-expired')}>
+          <TouchableOpacity style={s.payBtn} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/trial-expired')}>
             <Ionicons name="card-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
             <Text style={s.payBtnText}>Subscribe now on web</Text>
           </TouchableOpacity>

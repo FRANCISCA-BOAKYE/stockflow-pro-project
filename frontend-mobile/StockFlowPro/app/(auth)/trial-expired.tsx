@@ -15,7 +15,7 @@ export default function TrialExpired() {
   const PLANS = getPlansForTier(user?.tierType);
 
   const handleSubscribe = () => {
-    Linking.openURL('https://stockflowpro-web.netlify.app/pricing');
+    Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/pricing');
   };
 
   const handleLogout = async () => {
