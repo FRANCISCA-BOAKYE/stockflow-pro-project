@@ -2,8 +2,6 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Mail, User, Shield, Send } from "lucide-react"
-import { toast } from "sonner"
-import { sendEmail, inviteEmailHtml } from "@/lib/email"
 import { API_BASE_URL } from "@/lib/api"
 
 const ROLES: Record<string, string[]> = {
@@ -50,13 +48,6 @@ export default function InvitePage() {
         throw new Error(d.message || d.error || "Failed to create sub-account")
       }
       setTemporaryPassword(d.temporaryPassword || "")
-      sendEmail(
-        email,
-        `You've been invited to join ${user.businessName} on StockFlow Pro`,
-        inviteEmailHtml(user.businessName, role, user.name || "Your admin")
-      ).catch(() => {
-        toast.error("Sub-account created, but the invite email failed to send. Share the credentials below directly.")
-      })
     } catch (err: any) {
       setError(err.message || "Something went wrong")
       setLoading(false)

@@ -11,6 +11,29 @@ const TIER_CONFIG: Record<string, { color: string; bg: string; icon: string }> =
   RETAILER: { color: '#059669', bg: '#ECFDF5', icon: 'storefront-outline' },
 };
 
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'One capital letter', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'One number', test: (p: string) => /[0-9]/.test(p) },
+  { label: 'One special character (? _ ! @ #)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+];
+
+function PasswordChecklist({ password }: { password: string }) {
+  return (
+    <View style={{ gap: 4, marginTop: -2 }}>
+      {PASSWORD_RULES.map(rule => {
+        const passed = rule.test(password);
+        return (
+          <View key={rule.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name={passed ? 'checkmark-circle' : 'close-circle-outline'} size={13} color={passed ? '#059669' : '#D1D5DB'} />
+            <Text style={{ fontSize: 11, color: passed ? '#059669' : '#9CA3AF' }}>{rule.label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, clearAuth, updateUser, updateToken } = useAuthStore();
@@ -91,7 +114,8 @@ export default function ProfileScreen() {
 
   const savePassword = async () => {
     if (!currentPassword.trim()) { Alert.alert('Missing info', 'Enter your current password.'); return; }
-    if (newPassword.length < 8) { Alert.alert('Weak password', 'New password must be at least 8 characters.'); return; }
+    const failedRule = PASSWORD_RULES.find(rule => !rule.test(newPassword));
+    if (failedRule) { Alert.alert('Weak password', `Password needs: ${failedRule.label.toLowerCase()}.`); return; }
     if (newPassword !== confirmPassword) { Alert.alert('Mismatch', 'New password and confirmation do not match.'); return; }
     setSavingPassword(true);
     try {
@@ -271,10 +295,11 @@ export default function ProfileScreen() {
               <TextInput style={s.fieldInput} placeholder="Enter current password" placeholderTextColor="#9CA3AF"
                 value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
             </View>
-            <View>
+            <View style={{ gap: 8 }}>
               <Text style={s.fieldLabel}>New password</Text>
               <TextInput style={s.fieldInput} placeholder="At least 8 characters" placeholderTextColor="#9CA3AF"
                 value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <PasswordChecklist password={newPassword} />
             </View>
             <View>
               <Text style={s.fieldLabel}>Confirm new password</Text>

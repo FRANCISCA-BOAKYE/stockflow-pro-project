@@ -2,13 +2,11 @@
 import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Factory, Truck, Store, Check, ArrowRight, ArrowLeft, Mail, Building2, User, Lock, Users, Zap } from "lucide-react"
+import { Factory, Truck, Store, Check, X, ArrowRight, ArrowLeft, Mail, Building2, User, Lock, Users, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
-import { sendEmail, welcomeEmailHtml } from "@/lib/email"
 import { API_BASE_URL } from "@/lib/api"
 import { MONTHLY_PRICE_USD as planPrices, SUB_ACCOUNT_LIMITS as ACCOUNT_LIMITS } from "@/lib/subscription-plans"
 
@@ -17,6 +15,29 @@ const tiers = [
   { id: "WHOLESALER", name: "Wholesaler", icon: Truck, description: "Warehouse management, receiving, selling to retailers, credit", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", gradient: "from-amber-500 to-orange-500" },
   { id: "RETAILER", name: "Retailer", icon: Store, description: "Products, POS, stock tracking, credit owed to wholesalers", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", gradient: "from-emerald-500 to-green-600" },
 ]
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "One capital letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "One number", test: (p: string) => /[0-9]/.test(p) },
+  { label: "One special character (? _ ! @ #)", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+]
+
+function PasswordChecklist({ password }: { password: string }) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      {PASSWORD_RULES.map(rule => {
+        const passed = rule.test(password)
+        return (
+          <div key={rule.label} className="flex items-center gap-1.5">
+            {passed ? <Check className="w-3 h-3 text-emerald-600" /> : <X className="w-3 h-3 text-slate-300" />}
+            <span className={`text-xs ${passed ? "text-emerald-600" : "text-slate-400"}`}>{rule.label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function SignupContent() {
   const searchParams = useSearchParams()
@@ -32,6 +53,7 @@ function SignupContent() {
     if (step === 1) return !!selectedTier
     if (step === 2) return !!selectedPlan
     if (step === 3) return !!(formData.businessName && formData.adminName && formData.email && formData.password)
+      && PASSWORD_RULES.every(rule => rule.test(formData.password))
     return false
   }
 
@@ -55,13 +77,6 @@ setRegistered({
   plan: json.subscriptionPlan || selectedPlan,
 })
 setStep(4)
-
-// Send welcome email
-sendEmail(
-  formData.email,
-  `Welcome to StockFlow Pro — ${formData.businessName}`,
-  welcomeEmailHtml(formData.businessName, selectedTier, selectedPlan, formData.email, formData.password)
-).catch(() => toast.warning("Account created, but the welcome email failed to send. Your credentials are shown below."))
 
     } catch (err: any) {
       setError(err.message || "Something went wrong.")
@@ -208,6 +223,7 @@ sendEmail(
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input type="password" className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white" placeholder="Create a strong password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
                   </div>
+                  <PasswordChecklist password={formData.password} />
                 </div>
                 {error && <div className="bg-red-50 text-red-600 text-sm rounded-xl p-4 border border-red-100">{error}</div>}
                 <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">

@@ -2,8 +2,31 @@
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react"
+import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, Check, X } from "lucide-react"
 import { API_BASE_URL } from "@/lib/api"
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "One capital letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "One number", test: (p: string) => /[0-9]/.test(p) },
+  { label: "One special character (? _ ! @ #)", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+]
+
+function PasswordChecklist({ password }: { password: string }) {
+  return (
+    <div style={{ marginTop: '8px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {PASSWORD_RULES.map(rule => {
+        const passed = rule.test(password)
+        return (
+          <div key={rule.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {passed ? <Check style={{ width: '13px', height: '13px', color: '#059669' }} /> : <X style={{ width: '13px', height: '13px', color: '#cbd5e1' }} />}
+            <span style={{ fontSize: '12px', color: passed ? '#059669' : '#94a3b8' }}>{rule.label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
@@ -37,7 +60,8 @@ function ResetPasswordForm() {
     e.preventDefault()
     setError("")
     if (!token) { setError("This reset link is missing its token. Request a new one."); return }
-    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return }
+    const failedRule = PASSWORD_RULES.find(rule => !rule.test(newPassword))
+    if (failedRule) { setError(`Password needs: ${failedRule.label.toLowerCase()}.`); return }
     if (newPassword !== confirmPassword) { setError("Passwords don't match."); return }
 
     setLoading(true)
@@ -110,6 +134,7 @@ function ResetPasswordForm() {
                     {showPassword ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
                   </button>
                 </div>
+                <PasswordChecklist password={newPassword} />
               </div>
 
               <div style={{ marginBottom: '20px' }}>

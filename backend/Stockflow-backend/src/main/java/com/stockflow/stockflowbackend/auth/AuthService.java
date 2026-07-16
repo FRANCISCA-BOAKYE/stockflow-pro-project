@@ -48,6 +48,7 @@ public class AuthService {
         if (userRepository.findByEmail(req.getAdminEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
+        PasswordValidator.validate(req.getAdminPassword());
 
         Business business = new Business();
         business.setName(req.getBusinessName());
@@ -252,9 +253,7 @@ public class AuthService {
                 || !passwordEncoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Current password is incorrect");
         }
-        if (req.getNewPassword() == null || req.getNewPassword().length() < 8) {
-            throw new RuntimeException("New password must be at least 8 characters");
-        }
+        PasswordValidator.validate(req.getNewPassword());
 
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
@@ -303,9 +302,7 @@ public class AuthService {
         if (req.getToken() == null || req.getToken().isBlank()) {
             throw new RuntimeException("Reset token is required");
         }
-        if (req.getNewPassword() == null || req.getNewPassword().length() < 8) {
-            throw new RuntimeException("New password must be at least 8 characters");
-        }
+        PasswordValidator.validate(req.getNewPassword());
 
         AppUser user = userRepository.findByResetToken(req.getToken())
                 .orElseThrow(() -> new RuntimeException("Invalid or expired reset link"));

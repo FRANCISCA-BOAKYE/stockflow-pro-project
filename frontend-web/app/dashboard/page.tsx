@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone, Clock, ArrowDownCircle, ArrowUpCircle, Shield, Mail, KeyRound } from "lucide-react"
+import { Package, AlertTriangle, CreditCard, ShoppingCart, LogOut, DollarSign, Factory, Users, FileText, Smartphone, Store, TrendingUp, ArrowRight, Bell, Megaphone, Clock, ArrowDownCircle, ArrowUpCircle, Shield, Mail, KeyRound, Check, X } from "lucide-react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
 import { clearAuthSession, setAuthSession } from "@/lib/auth"
@@ -22,6 +22,29 @@ const Logo = () => (
     </defs>
   </svg>
 )
+
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "One capital letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "One number", test: (p: string) => /[0-9]/.test(p) },
+  { label: "One special character (? _ ! @ #)", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+]
+
+function PasswordChecklist({ password }: { password: string }) {
+  return (
+    <div style={{ marginTop: '6px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+      {PASSWORD_RULES.map(rule => {
+        const passed = rule.test(password)
+        return (
+          <div key={rule.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {passed ? <Check style={{ width: '12px', height: '12px', color: '#059669' }} /> : <X style={{ width: '12px', height: '12px', color: '#cbd5e1' }} />}
+            <span style={{ fontSize: '11px', color: passed ? '#059669' : '#94a3b8' }}>{rule.label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -114,7 +137,8 @@ export default function DashboardPage() {
 
   const savePassword = async () => {
     if (!currentPassword.trim()) { toast.error("Enter your current password"); return }
-    if (newPassword.length < 8) { toast.error("New password must be at least 8 characters"); return }
+    const failedRule = PASSWORD_RULES.find(rule => !rule.test(newPassword))
+    if (failedRule) { toast.error(`Password needs: ${failedRule.label.toLowerCase()}`); return }
     if (newPassword !== confirmPassword) { toast.error("New password and confirmation do not match"); return }
     setSavingPassword(true)
     try {
@@ -351,7 +375,8 @@ export default function DashboardPage() {
               <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>Current password</label>
               <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
               <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>New password</label>
-              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
+              <PasswordChecklist password={newPassword} />
               <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: '6px' }}>Confirm new password</label>
               <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }} />
               <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '14px' }}>We'll email you to confirm this change.</p>
