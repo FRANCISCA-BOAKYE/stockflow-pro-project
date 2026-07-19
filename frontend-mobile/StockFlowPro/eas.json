@@ -8,6 +8,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-XX:MaxMetaspaceSize=1g -Xmx4g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8\" -Dorg.gradle.parallel=false -Dorg.gradle.daemon=false"
       }
     },
     "production": {
