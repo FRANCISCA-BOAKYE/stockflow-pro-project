@@ -57,9 +57,12 @@ public class CreditService {
         CreditRecord record = creditRepository.findById(request.getCreditRecordId())
                 .orElseThrow(() -> new RuntimeException("Credit record not found"));
 
-        if (!callerBusinessId.equals(record.getCreditorBusiness().getId())
-                && !callerBusinessId.equals(record.getDebtorBusiness().getId())) {
-            throw new RuntimeException("Unauthorized: this credit record does not belong to your business");
+        if (!callerBusinessId.equals(record.getCreditorBusiness().getId())) {
+            throw new RuntimeException("Unauthorized: only the business owed this credit can record a payment");
+        }
+
+        if (request.getAmountPaid() == null || request.getAmountPaid().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Payment amount must be greater than zero");
         }
 
         BigDecimal remaining = record.getAmountUsd().subtract(request.getAmountPaid());
@@ -77,13 +80,10 @@ public class CreditService {
         // Individual (non-business) debtors have no account to notify, so only
         // notify when both sides of this record are real registered businesses.
         if (record.getDebtorBusiness() != null) {
-            boolean callerIsCreditor = callerBusinessId.equals(record.getCreditorBusiness().getId());
-            Business recipient = callerIsCreditor ? record.getDebtorBusiness() : record.getCreditorBusiness();
-            Business actor = callerIsCreditor ? record.getCreditorBusiness() : record.getDebtorBusiness();
             String settledNote = "SETTLED".equals(saved.getStatus()) ? " — fully settled" : "";
-            notificationService.notify(recipient, "CREDIT_PAYMENT", "success",
+            notificationService.notify(record.getDebtorBusiness(), "CREDIT_PAYMENT", "success",
                     "Payment recorded",
-                    actor.getName() + " recorded a payment of $" + request.getAmountPaid() + settledNote);
+                    record.getCreditorBusiness().getName() + " recorded a payment of $" + request.getAmountPaid() + settledNote);
         }
 
         return saved;

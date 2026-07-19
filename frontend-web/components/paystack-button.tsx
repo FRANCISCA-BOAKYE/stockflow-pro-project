@@ -1,5 +1,6 @@
 "use client"
 import { useEffect } from "react"
+import { toast } from "sonner"
 
 interface PaystackButtonProps {
   email: string
@@ -13,6 +14,10 @@ interface PaystackButtonProps {
 
 export function PaystackButton({ email, amount, publicKey, onSuccess, onClose, label, style }: PaystackButtonProps) {
   const handlePayment = () => {
+    if (!(window as any).PaystackPop) {
+      toast.error("Payment is still loading. Please wait a moment and try again.")
+      return
+    }
     const handler = (window as any).PaystackPop.setup({
       key: publicKey,
       email,

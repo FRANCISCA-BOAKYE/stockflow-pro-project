@@ -8,24 +8,24 @@ import java.util.List;
 
 @Getter
 @Setter
-public class POSResponse {
+public class WholesaleSaleResponse {
     private String invoiceNumber;
     private List<LineItemSummary> items;
     private BigDecimal totalUsd;
     private String paymentMode;
     private String status;
-    private LocalDateTime recordedAt;
+    private LocalDateTime soldAt;
     private Long creditRecordId;
 
-    public POSResponse(String invoiceNumber, List<LineItemSummary> items,
-                       BigDecimal totalUsd, String paymentMode, String status,
-                       LocalDateTime recordedAt, Long creditRecordId) {
+    public WholesaleSaleResponse(String invoiceNumber, List<LineItemSummary> items,
+                                  BigDecimal totalUsd, String paymentMode, String status,
+                                  LocalDateTime soldAt, Long creditRecordId) {
         this.invoiceNumber = invoiceNumber;
         this.items = items;
         this.totalUsd = totalUsd;
         this.paymentMode = paymentMode;
         this.status = status;
-        this.recordedAt = recordedAt;
+        this.soldAt = soldAt;
         this.creditRecordId = creditRecordId;
     }
 }

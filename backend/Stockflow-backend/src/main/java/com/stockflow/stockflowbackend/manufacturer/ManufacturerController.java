@@ -89,7 +89,7 @@ public class ManufacturerController {
     }
 
     @PostMapping("/dispatch")
-    public ResponseEntity<Dispatch> dispatch(
+    public ResponseEntity<DispatchResponse> dispatch(
             @RequestBody DispatchRequest req, Authentication auth) {
         return ResponseEntity.ok(manufacturerService.dispatch(
                 req, getBusinessId(auth), getUserId(auth)));

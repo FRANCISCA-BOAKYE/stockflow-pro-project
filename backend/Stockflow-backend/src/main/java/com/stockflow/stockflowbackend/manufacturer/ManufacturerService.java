@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -97,6 +98,9 @@ public class ManufacturerService {
     // STOCK IN MATERIAL
     @Transactional
     public Material stockInMaterial(MaterialStockInRequest req, Long businessId) {
+        if (req.getQuantity() == null || req.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero");
+        }
         Material m = materialRepository
                 .findByBusinessIdAndId(businessId, req.getMaterialId())
                 .orElseThrow(() -> new RuntimeException("Material not found"));
@@ -136,6 +140,9 @@ public class ManufacturerService {
     // PRODUCTION CALCULATE
     @Transactional(readOnly = true)
     public ProductionPreview calculate(ProductionCalculateRequest req, Long businessId) {
+        if (req.getTargetGroups() == null || req.getTargetGroups() <= 0) {
+            throw new RuntimeException("Target groups must be greater than zero");
+        }
         Recipe recipe = recipeRepository
                 .findByBusinessIdAndId(businessId, req.getRecipeId())
                 .orElseThrow(() -> new RuntimeException("Recipe not found"));
@@ -202,19 +209,31 @@ public class ManufacturerService {
 
     // DISPATCH TO WHOLESALER
     @Transactional
-    public Dispatch dispatch(DispatchRequest req, Long businessId, Long userId) {
-        if (req.getQuantity() == null || req.getQuantity() <= 0) {
-            throw new RuntimeException("Quantity must be greater than zero");
+    public DispatchResponse dispatch(DispatchRequest req, Long businessId, Long userId) {
+        if (req.getItems() == null || req.getItems().isEmpty()) {
+            throw new RuntimeException("At least one item is required");
         }
-        if (req.getAmountUsd() == null || req.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("Amount cannot be negative");
+        for (DispatchItemRequest item : req.getItems()) {
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new RuntimeException("Quantity must be greater than zero");
+            }
+            if (item.getAmountUsd() == null || item.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
+                throw new RuntimeException("Amount cannot be negative");
+            }
         }
 
-        FinishedGoods fg = finishedGoodsRepository.findByBusinessIdAndId(businessId, req.getFinishedGoodId())
-                .orElseThrow(() -> new RuntimeException("Finished goods not found"));
-        if (fg.getQuantityInStock() < req.getQuantity()) {
-            throw new RuntimeException("Insufficient finished goods");
+        List<FinishedGoods> goods = new ArrayList<>();
+        BigDecimal itemsTotal = BigDecimal.ZERO;
+        for (DispatchItemRequest item : req.getItems()) {
+            FinishedGoods fg = finishedGoodsRepository.findByBusinessIdAndId(businessId, item.getFinishedGoodId())
+                    .orElseThrow(() -> new RuntimeException("Finished goods not found"));
+            if (fg.getQuantityInStock() < item.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for " + fg.getRecipe().getProductName());
+            }
+            goods.add(fg);
+            itemsTotal = itemsTotal.add(item.getAmountUsd());
         }
+
         Business wholesaler = businessRepository
                 .findById(req.getWholesalerBusinessId())
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
@@ -222,35 +241,26 @@ public class ManufacturerService {
         String deliveryMode = "PICKUP".equals(req.getDeliveryMode()) ? "PICKUP" : "DELIVERY";
         BigDecimal deliveryFee = "DELIVERY".equals(deliveryMode) && req.getDeliveryFeeUsd() != null
                 ? req.getDeliveryFeeUsd() : BigDecimal.ZERO;
-        BigDecimal totalAmount = req.getAmountUsd().add(deliveryFee);
+        BigDecimal totalAmount = itemsTotal.add(deliveryFee);
 
         if ("CARD".equals(req.getPaymentMode())) {
             paystackTransactionVerifier.verifyPaid(req.getPaystackReference(), totalAmount);
         }
 
-        fg.setQuantityInStock(fg.getQuantityInStock() - req.getQuantity());
-        fg.setUpdatedAt(LocalDateTime.now());
-        finishedGoodsRepository.save(fg);
+        for (int i = 0; i < goods.size(); i++) {
+            FinishedGoods fg = goods.get(i);
+            fg.setQuantityInStock(fg.getQuantityInStock() - req.getItems().get(i).getQuantity());
+            fg.setUpdatedAt(LocalDateTime.now());
+            finishedGoodsRepository.save(fg);
+        }
 
+        Business business = goods.get(0).getBusiness();
         AppUser user = new AppUser(); user.setId(userId);
-        Dispatch dispatch = new Dispatch();
-        dispatch.setBusiness(fg.getBusiness());
-        dispatch.setFinishedGood(fg);
-        dispatch.setWholesalerBusiness(wholesaler);
-        dispatch.setQuantity(req.getQuantity());
-        dispatch.setAmountUsd(totalAmount);
-        dispatch.setPaymentMode(req.getPaymentMode());
-        dispatch.setRecordedBy(user);
-        dispatch.setDeliveryMode(deliveryMode);
-        dispatch.setDeliveryFeeUsd(deliveryFee.compareTo(BigDecimal.ZERO) > 0 ? deliveryFee : null);
-        dispatch.setDriverName(req.getDriverName());
-        dispatch.setVehicleNumber(req.getVehicleNumber());
-        dispatch.setDriverContact(req.getDriverContact());
-        dispatch.setDriverIdNumber(req.getDriverIdNumber());
+
         Long creditRecordId = null;
         if ("CREDIT".equals(req.getPaymentMode()) && req.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
-            credit.setCreditorBusiness(fg.getBusiness());
+            credit.setCreditorBusiness(business);
             credit.setDebtorBusiness(wholesaler);
             credit.setAmountUsd(totalAmount);
             credit.setDueDate(req.getDueDate());
@@ -258,20 +268,44 @@ public class ManufacturerService {
             credit.setHoldPlaced(false);
             CreditRecord saved = creditRepository.save(credit);
             creditRecordId = saved.getId();
+        }
+
+        List<Dispatch> dispatches = new ArrayList<>();
+        for (int i = 0; i < goods.size(); i++) {
+            FinishedGoods fg = goods.get(i);
+            DispatchItemRequest item = req.getItems().get(i);
+            Dispatch dispatch = new Dispatch();
+            dispatch.setBusiness(business);
+            dispatch.setFinishedGood(fg);
+            dispatch.setWholesalerBusiness(wholesaler);
+            dispatch.setQuantity(item.getQuantity());
+            // Delivery fee (if any) is only carried on the first line so it isn't
+            // double-counted when the dispatch total is summed across rows.
+            dispatch.setAmountUsd(i == 0 ? item.getAmountUsd().add(deliveryFee) : item.getAmountUsd());
+            dispatch.setPaymentMode(req.getPaymentMode());
+            dispatch.setRecordedBy(user);
+            dispatch.setDeliveryMode(deliveryMode);
+            dispatch.setDeliveryFeeUsd(i == 0 && deliveryFee.compareTo(BigDecimal.ZERO) > 0 ? deliveryFee : null);
+            dispatch.setDriverName(req.getDriverName());
+            dispatch.setVehicleNumber(req.getVehicleNumber());
+            dispatch.setDriverContact(req.getDriverContact());
+            dispatch.setDriverIdNumber(req.getDriverIdNumber());
             dispatch.setCreditRecordId(creditRecordId);
+            dispatches.add(dispatch);
         }
 
         // Standard tier always gets an invoice; Premium can be asked per-dispatch
         // whether the buyer wants one at all.
         boolean canSkipInvoice = subscriptionService.hasFeature(
-                fg.getBusiness(), SubscriptionFeature.INVOICE_ON_DEMAND);
+                business, SubscriptionFeature.INVOICE_ON_DEMAND);
         boolean wantsInvoice = req.getWantsInvoice() == null || req.getWantsInvoice();
 
+        Invoice savedInvoice = null;
         if (!canSkipInvoice || wantsInvoice) {
             Invoice invoice = new Invoice();
-            invoice.setSellerBusiness(fg.getBusiness());
+            invoice.setSellerBusiness(business);
             invoice.setBuyerBusiness(wholesaler);
-            invoice.setSubtotalUsd(totalAmount);
+            invoice.setSubtotalUsd(itemsTotal);
             invoice.setTotalUsd(totalAmount);
             invoice.setPaymentMode(req.getPaymentMode());
             invoice.setStatus("CREDIT".equals(req.getPaymentMode()) ? "UNPAID" : "PAID");
@@ -280,20 +314,70 @@ public class ManufacturerService {
             }
             invoice.setCreditRecordId(creditRecordId);
             invoice.setGeneratedByUser(user);
-            Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
-                    invoiceRepository, businessId, invoice);
-            dispatch.setInvoiceId(savedInvoice.getId());
-            invoiceEmailService.sendIfEligible(savedInvoice, fg.getBusiness());
+
+            List<InvoiceItem> invoiceItems = new ArrayList<>();
+            for (int i = 0; i < goods.size(); i++) {
+                FinishedGoods fg = goods.get(i);
+                DispatchItemRequest item = req.getItems().get(i);
+                InvoiceItem ii = new InvoiceItem();
+                ii.setInvoice(invoice);
+                ii.setProductName(fg.getRecipe().getProductName());
+                ii.setQuantity(BigDecimal.valueOf(item.getQuantity()));
+                ii.setUnit(fg.getRecipe().getUnitLabel());
+                ii.setUnitPriceUsd(item.getQuantity() > 0
+                        ? item.getAmountUsd().divide(BigDecimal.valueOf(item.getQuantity()), 4, java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO);
+                ii.setLineTotalUsd(item.getAmountUsd());
+                invoiceItems.add(ii);
+            }
+            if (deliveryFee.compareTo(BigDecimal.ZERO) > 0) {
+                InvoiceItem feeItem = new InvoiceItem();
+                feeItem.setInvoice(invoice);
+                feeItem.setProductName("Delivery fee");
+                feeItem.setQuantity(BigDecimal.ONE);
+                feeItem.setUnit("fee");
+                feeItem.setUnitPriceUsd(deliveryFee);
+                feeItem.setLineTotalUsd(deliveryFee);
+                invoiceItems.add(feeItem);
+            }
+            invoice.setItems(invoiceItems);
+
+            savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(invoiceRepository, businessId, invoice);
+            Long invoiceId = savedInvoice.getId();
+            for (Dispatch dispatch : dispatches) {
+                dispatch.setInvoiceId(invoiceId);
+            }
+            invoiceEmailService.sendIfEligible(savedInvoice, business);
         }
 
-        Dispatch savedDispatch = dispatchRepository.save(dispatch);
+        for (Dispatch dispatch : dispatches) {
+            dispatchRepository.save(dispatch);
+        }
 
+        String productList = goods.stream().map(fg -> fg.getRecipe().getProductName())
+                .distinct().collect(Collectors.joining(", "));
         notificationService.notify(wholesaler, "DISPATCH_RECEIVED", "info",
                 "Incoming dispatch",
-                fg.getBusiness().getName() + " dispatched " + req.getQuantity() + " units of "
-                        + fg.getRecipe().getProductName() + " to you");
+                business.getName() + " dispatched " + productList + " to you");
 
-        return savedDispatch;
+        List<LineItemSummary> summaries = new ArrayList<>();
+        for (int i = 0; i < goods.size(); i++) {
+            FinishedGoods fg = goods.get(i);
+            DispatchItemRequest item = req.getItems().get(i);
+            BigDecimal unitPrice = item.getQuantity() > 0
+                    ? item.getAmountUsd().divide(BigDecimal.valueOf(item.getQuantity()), 4, java.math.RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            summaries.add(new LineItemSummary(fg.getRecipe().getProductName(),
+                    BigDecimal.valueOf(item.getQuantity()), fg.getRecipe().getUnitLabel(),
+                    unitPrice, item.getAmountUsd()));
+        }
+
+        return new DispatchResponse(
+                savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
+                summaries, deliveryFee, totalAmount, req.getPaymentMode(),
+                "CREDIT".equals(req.getPaymentMode()) ? "UNPAID" : "PAID",
+                dispatches.get(0).getDispatchedAt(), creditRecordId
+        );
     }
 
     @Transactional(readOnly = true)

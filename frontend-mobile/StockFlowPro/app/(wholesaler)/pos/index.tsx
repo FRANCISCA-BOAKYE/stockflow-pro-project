@@ -20,14 +20,15 @@ const PAYMENT_MODES = [
   { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
 ]
 
+type CartLine = { productId: number; name: string; unit: string; priceUsd: number; available: number; qty: number };
+
 export default function WholesalerPOSScreen() {
   const { user } = useAuthStore()
   const [stock, setStock] = useState<any[]>([])
   const [partners, setPartners] = useState<any[]>([])
   const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<any>(null)
+  const [cart, setCart] = useState<CartLine[]>([])
   const [selectedPartner, setSelectedPartner] = useState<any>(null)
-  const [qty, setQty] = useState(MIN_QTY)
   const [payment, setPayment] = useState('CASH')
   const [dueDate, setDueDate] = useState('')
   const [mobileNumber, setMobileNumber] = useState('')
@@ -65,10 +66,36 @@ export default function WholesalerPOSScreen() {
     ? stock.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
     : []
 
-  const total = selected ? (Number(selected.priceUsd || 0) * qty).toFixed(2) : '0.00'
+  const total = cart.reduce((sum, l) => sum + l.priceUsd * l.qty, 0);
+
+  const addToCart = (p: any) => {
+    setSearch('')
+    setCart(c => {
+      const existing = c.find(l => l.productId === p.id);
+      if (existing) {
+        return c.map(l => l.productId === p.id ? { ...l, qty: Math.min(l.available, l.qty + MIN_QTY) } : l);
+      }
+      return [...c, { productId: p.id, name: p.name, unit: p.unit, priceUsd: Number(p.priceUsd || 0), available: p.quantity, qty: Math.min(p.quantity, MIN_QTY) }];
+    });
+  };
+
+  const updateQty = (productId: number, delta: number) => {
+    setCart(c => c.map(l => l.productId === productId
+      ? { ...l, qty: Math.max(MIN_QTY, Math.min(l.available, l.qty + delta)) }
+      : l));
+  };
+
+  const removeLine = (productId: number) => {
+    setCart(c => c.filter(l => l.productId !== productId));
+  };
+
+  const resetForm = () => {
+    setCart([]); setSearch(''); setPayment('CASH'); setDueDate('');
+    setSelectedPartner(null); setWantsInvoice(true); setMobileNumber('');
+  };
 
   const confirmOrder = async () => {
-    if (!selected) { Alert.alert('Missing info', 'Please select a product.'); return }
+    if (cart.length === 0) { Alert.alert('Empty cart', 'Add at least one product.'); return }
     if (payment === 'MOBILE_MONEY' && !mobileNumber.trim()) { Alert.alert('Missing info', 'Please enter the mobile money number.'); return }
     if (payment === 'CREDIT' && !dueDate.trim()) { Alert.alert('Missing info', 'Please enter a due date for credit payment.'); return }
     if (payment === 'CARD') { setShowPaystack(true); return }
@@ -79,9 +106,7 @@ export default function WholesalerPOSScreen() {
     setSubmitting(true)
     try {
       const body: any = {
-        productId: selected.id,
-        quantity: qty,
-        amountUsd: parseFloat(total),
+        items: cart.map(l => ({ productId: l.productId, quantity: l.qty, amountUsd: Number((l.priceUsd * l.qty).toFixed(2)) })),
         paymentMode,
       }
       if (selectedPartner) body.retailerBusinessId = selectedPartner.id
@@ -89,9 +114,11 @@ export default function WholesalerPOSScreen() {
       if (paymentMode === 'CARD') body.paystackReference = paystackReference
       if (isPremium) body.wantsInvoice = wantsInvoice
 
-      await api.post('/wholesaler/sell', body)
-      Alert.alert('Order confirmed ✓', `${selected.name} x${qty} — $${total} via ${paymentMode}`, [
-        { text: 'OK', onPress: () => { setSelected(null); setSearch(''); setQty(MIN_QTY); setPayment('CASH'); setDueDate(''); setSelectedPartner(null); setWantsInvoice(true); fetchData() } }
+      const res = await api.post('/wholesaler/sell', body)
+      const sale = res.data
+      const itemLines = (sale.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n')
+      Alert.alert('Order confirmed ✓', `${itemLines}\nTotal: $${Number(sale.totalUsd).toFixed(2)} via ${paymentMode}`, [
+        { text: 'OK', onPress: () => { resetForm(); fetchData() } }
       ])
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.')
@@ -112,7 +139,7 @@ export default function WholesalerPOSScreen() {
       <PaystackPayment
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
-        amount={parseFloat(total) * USD_TO_GHS}
+        amount={total * USD_TO_GHS}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
       />
@@ -136,10 +163,10 @@ export default function WholesalerPOSScreen() {
         {/* Stock search */}
         <View style={s.searchBox}>
           <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput style={s.searchInput} placeholder="Search warehouse stock..." placeholderTextColor="#9CA3AF"
-            value={search} onChangeText={text => { setSearch(text); setSelected(null); setQty(MIN_QTY) }} />
+          <TextInput style={s.searchInput} placeholder="Search warehouse stock to add..." placeholderTextColor="#9CA3AF"
+            value={search} onChangeText={setSearch} />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearch(''); setSelected(null) }}>
+            <TouchableOpacity onPress={() => setSearch('')}>
               <Ionicons name="close-circle" size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
@@ -148,36 +175,47 @@ export default function WholesalerPOSScreen() {
         {results.length > 0 && (
           <View style={s.resultsBox}>
             {results.map(p => (
-              <TouchableOpacity key={p.id} style={s.result} onPress={() => { setSelected(p); setSearch(p.name) }}>
+              <TouchableOpacity key={p.id} style={s.result} onPress={() => addToCart(p)}>
                 <View style={s.resultIcon}>
                   <Ionicons name="archive-outline" size={16} color="#1A56DB" />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
                 <Text style={s.resultStock}>${Number(p.priceUsd || 0).toFixed(2)} · {p.quantity} {p.unit}</Text>
+                <Ionicons name="add-circle" size={20} color="#059669" style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ))}
           </View>
         )}
 
-        {selected && (
-          <View style={s.card}>
-            <Text style={s.prodName}>{selected.name}</Text>
-            <Text style={s.prodPrice}>${Number(selected.priceUsd || 0).toFixed(2)} per {selected.unit}</Text>
-            <View style={s.reserveRow}>
-              <Ionicons name="lock-closed-outline" size={12} color="#1A56DB" />
-              <Text style={s.reserveText}> {qty} units reserved · {selected.quantity - qty} available</Text>
-            </View>
-            <View style={s.stepperRow}>
-              <Text style={s.stepLabel}>Quantity (min {MIN_QTY})</Text>
-              <View style={s.stepper}>
-                <TouchableOpacity style={s.stepBtn} onPress={() => setQty(q => Math.max(MIN_QTY, q - 10))}>
-                  <Ionicons name="remove" size={18} color="#374151" />
-                </TouchableOpacity>
-                <Text style={s.stepNum}>{qty}</Text>
-                <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => setQty(q => Math.min(selected.quantity, q + 10))}>
-                  <Ionicons name="add" size={18} color="#fff" />
-                </TouchableOpacity>
-              </View>
+        {cart.length > 0 && (
+          <View>
+            <Text style={s.sectionLabel}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</Text>
+            <View style={{ gap: 8, marginTop: 8 }}>
+              {cart.map(line => (
+                <View key={line.productId} style={s.card}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.prodName}>{line.name}</Text>
+                      <Text style={s.prodPrice}>${line.priceUsd.toFixed(2)} per {line.unit} · {line.available} available</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removeLine(line.productId)}>
+                      <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={s.stepperRow}>
+                    <Text style={s.stepLabel}>Quantity (min {MIN_QTY})</Text>
+                    <View style={s.stepper}>
+                      <TouchableOpacity style={s.stepBtn} onPress={() => updateQty(line.productId, -MIN_QTY)}>
+                        <Ionicons name="remove" size={18} color="#374151" />
+                      </TouchableOpacity>
+                      <Text style={s.stepNum}>{line.qty}</Text>
+                      <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => updateQty(line.productId, MIN_QTY)}>
+                        <Ionicons name="add" size={18} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ))}
             </View>
           </View>
         )}
@@ -224,35 +262,37 @@ export default function WholesalerPOSScreen() {
           </View>
         )}
 
-        {isPremium && selected && (
+        {isPremium && cart.length > 0 && (
           <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setWantsInvoice(v => !v)}>
             <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
             <Text style={s.invoiceToggleText}>Buyer wants an invoice</Text>
           </TouchableOpacity>
         )}
 
-        {selected && (
+        {cart.length > 0 && (
           <View style={s.card}>
             <Text style={s.sectionLabel}>Order summary</Text>
-            <View style={s.summaryRow}>
-              <Text style={s.summaryItem}>{selected.name} x{qty}</Text>
-              <Text style={s.summaryAmt}>${total}</Text>
-            </View>
+            {cart.map(line => (
+              <View key={line.productId} style={s.summaryRow}>
+                <Text style={s.summaryItem}>{line.name} x{line.qty}</Text>
+                <Text style={s.summaryAmt}>${(line.priceUsd * line.qty).toFixed(2)}</Text>
+              </View>
+            ))}
             <View style={s.dividerLine} />
             <View style={s.summaryRow}>
               <Text style={s.totalLabel}>Total</Text>
-              <Text style={s.totalAmt}>${total}</Text>
+              <Text style={s.totalAmt}>${total.toFixed(2)}</Text>
             </View>
           </View>
         )}
       </ScrollView>
 
       <View style={s.footer}>
-        <TouchableOpacity style={[s.confirmBtn, (!selected || submitting) && { opacity: 0.4 }]} onPress={confirmOrder} disabled={!selected || submitting}>
+        <TouchableOpacity style={[s.confirmBtn, (cart.length === 0 || submitting) && { opacity: 0.4 }]} onPress={confirmOrder} disabled={cart.length === 0 || submitting}>
           {submitting ? <ActivityIndicator color="#fff" /> : (
             <>
               <Ionicons name="checkmark-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={s.confirmText}>Confirm Order · ${total}</Text>
+              <Text style={s.confirmText}>Confirm Order · ${total.toFixed(2)}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -312,10 +352,8 @@ const s = StyleSheet.create({
   resultName: { flex: 1, fontSize: 13, color: '#0F172A' },
   resultStock: { fontSize: 12, color: '#6B7280' },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', gap: 8 },
-  reserveRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 8, padding: 8 },
-  reserveText: { fontSize: 10.5, color: '#1A56DB' },
   prodName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  prodPrice: { fontSize: 12, color: '#6B7280' },
+  prodPrice: { fontSize: 12, color: '#6B7280', marginTop: 2 },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   stepLabel: { fontSize: 13, color: '#374151', fontWeight: '500' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },

@@ -8,9 +8,12 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
+
+    Optional<Reservation> findByBusinessIdAndId(Long businessId, Long id);
 
     @Query("SELECT COALESCE(SUM(r.quantity), 0) FROM Reservation r " +
             "WHERE r.business.id = :businessId AND r.productId = :productId " +

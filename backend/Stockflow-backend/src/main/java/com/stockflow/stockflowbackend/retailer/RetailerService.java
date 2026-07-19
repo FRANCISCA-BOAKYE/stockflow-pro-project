@@ -52,7 +52,7 @@ public class RetailerService {
 
         if (request.getCategoryId() != null) {
             Category category = categoryRepository
-                    .findById(request.getCategoryId())
+                    .findByBusinessIdAndId(businessId, request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Category not found"));
             product.setCategory(category);
         }
@@ -112,6 +112,9 @@ public class RetailerService {
     @Transactional
     public RetailTransaction stockIn(StockInRequest request,
                                      Long businessId, Long userId) {
+        if (request.getQuantity() == null || request.getQuantity().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero");
+        }
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 

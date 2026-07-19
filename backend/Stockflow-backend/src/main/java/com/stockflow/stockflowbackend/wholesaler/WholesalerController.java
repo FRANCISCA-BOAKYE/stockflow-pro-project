@@ -2,7 +2,6 @@ package com.stockflow.stockflowbackend.wholesaler;
 
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.model.Receipt;
-import com.stockflow.stockflowbackend.model.WholesaleSale;
 import com.stockflow.stockflowbackend.model.WarehouseProduct;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -52,7 +51,7 @@ public class WholesalerController {
     }
 
     @PostMapping("/sell")
-    public ResponseEntity<WholesaleSale> sell(
+    public ResponseEntity<WholesaleSaleResponse> sell(
             @RequestBody WholesaleSaleRequest request,
             Authentication authentication) {
         return ResponseEntity.ok(wholesalerService.sellToRetailer(

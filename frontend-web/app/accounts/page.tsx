@@ -31,6 +31,9 @@ const [loadingAccounts, setLoadingAccounts] = useState(true)
   const u = JSON.parse(stored)
   setUser(u)
 
+  const adminRow = { name: u.name || "You", role: u.role || "Admin", email: u.email, isAdmin: true }
+  setAccounts([adminRow])
+
   fetch(`${API_BASE_URL}/auth/sub-accounts`, {
     headers: { Authorization: `Bearer ${token}` }
   })
@@ -38,7 +41,7 @@ const [loadingAccounts, setLoadingAccounts] = useState(true)
     .then(data => {
       if (Array.isArray(data)) {
         setAccounts([
-          { name: u.name || "You", role: u.role || "Admin", email: u.email, isAdmin: true },
+          adminRow,
           ...data.map((acc: any) => ({
             name: acc.role,
             role: acc.role,

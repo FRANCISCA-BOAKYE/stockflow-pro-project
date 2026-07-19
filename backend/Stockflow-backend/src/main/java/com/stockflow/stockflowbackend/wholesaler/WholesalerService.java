@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -83,6 +84,12 @@ public class WholesalerService {
     @Transactional
     public Receipt receiveFromManufacturer(ReceiveStockRequest request,
                                            Long businessId, Long userId) {
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero");
+        }
+        if (request.getAmountUsd() == null || request.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Amount cannot be negative");
+        }
         WarehouseProduct product = warehouseProductRepository
                 .findByBusinessIdAndId(businessId, request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -141,26 +148,36 @@ public class WholesalerService {
     }
 
     @Transactional
-    public WholesaleSale sellToRetailer(WholesaleSaleRequest request,
+    public WholesaleSaleResponse sellToRetailer(WholesaleSaleRequest request,
                                         Long businessId, Long userId) {
-        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Quantity must be greater than zero");
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("At least one item is required");
         }
-        if (request.getAmountUsd() == null || request.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("Amount cannot be negative");
+        for (WholesaleSaleItemRequest item : request.getItems()) {
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Quantity must be greater than zero");
+            }
+            if (item.getAmountUsd() == null || item.getAmountUsd().compareTo(BigDecimal.ZERO) < 0) {
+                throw new RuntimeException("Amount cannot be negative");
+            }
         }
 
-        WarehouseProduct product = warehouseProductRepository
-                .findByBusinessIdAndId(businessId, request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-
-        if (product.getQuantity().compareTo(request.getQuantity()) < 0) {
-            throw new RuntimeException("Insufficient stock. Available: "
-                    + product.getQuantity());
+        List<WarehouseProduct> products = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (WholesaleSaleItemRequest item : request.getItems()) {
+            WarehouseProduct product = warehouseProductRepository
+                    .findByBusinessIdAndId(businessId, item.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+            if (product.getQuantity().compareTo(item.getQuantity()) < 0) {
+                throw new RuntimeException("Insufficient stock for " + product.getName()
+                        + ". Available: " + product.getQuantity());
+            }
+            products.add(product);
+            total = total.add(item.getAmountUsd());
         }
 
         if ("CARD".equals(request.getPaymentMode())) {
-            paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), request.getAmountUsd());
+            paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), total);
         }
 
         Business retailer = businessRepository
@@ -168,50 +185,61 @@ public class WholesalerService {
                 .orElseThrow(() ->
                         new RuntimeException("Retailer not found"));
 
-        product.setQuantity(
-                product.getQuantity().subtract(request.getQuantity()));
-        product.setUpdatedAt(LocalDateTime.now());
-        warehouseProductRepository.save(product);
+        for (int i = 0; i < products.size(); i++) {
+            WarehouseProduct product = products.get(i);
+            BigDecimal requested = request.getItems().get(i).getQuantity();
+            product.setQuantity(product.getQuantity().subtract(requested));
+            product.setUpdatedAt(LocalDateTime.now());
+            warehouseProductRepository.save(product);
+        }
 
-        WholesaleSale sale = new WholesaleSale();
-        sale.setBusiness(product.getBusiness());
-        sale.setProduct(product);
-        sale.setQuantity(request.getQuantity());
-        sale.setRetailerBusiness(retailer);
-        sale.setAmountUsd(request.getAmountUsd());
-        sale.setPaymentMode(request.getPaymentMode());
-
+        Business business = products.get(0).getBusiness();
         AppUser user = new AppUser();
         user.setId(userId);
-        sale.setRecordedBy(user);
 
         Long creditRecordId = null;
         if ("CREDIT".equals(request.getPaymentMode())
                 && request.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
-            credit.setCreditorBusiness(product.getBusiness());
+            credit.setCreditorBusiness(business);
             credit.setDebtorBusiness(retailer);
-            credit.setAmountUsd(request.getAmountUsd());
+            credit.setAmountUsd(total);
             credit.setDueDate(request.getDueDate());
             credit.setStatus("OUTSTANDING");
             credit.setHoldPlaced(false);
             CreditRecord saved = creditRepository.save(credit);
             creditRecordId = saved.getId();
+        }
+
+        List<WholesaleSale> sales = new ArrayList<>();
+        for (int i = 0; i < products.size(); i++) {
+            WarehouseProduct product = products.get(i);
+            WholesaleSaleItemRequest item = request.getItems().get(i);
+            WholesaleSale sale = new WholesaleSale();
+            sale.setBusiness(business);
+            sale.setProduct(product);
+            sale.setQuantity(item.getQuantity());
+            sale.setRetailerBusiness(retailer);
+            sale.setAmountUsd(item.getAmountUsd());
+            sale.setPaymentMode(request.getPaymentMode());
+            sale.setRecordedBy(user);
             sale.setCreditRecordId(creditRecordId);
+            sales.add(sale);
         }
 
         // Standard tier always gets an invoice; Premium can be asked per-sale
         // whether the buyer wants one at all.
         boolean canSkipInvoice = subscriptionService.hasFeature(
-                product.getBusiness(), SubscriptionFeature.INVOICE_ON_DEMAND);
+                business, SubscriptionFeature.INVOICE_ON_DEMAND);
         boolean wantsInvoice = request.getWantsInvoice() == null || request.getWantsInvoice();
 
+        Invoice savedInvoice = null;
         if (!canSkipInvoice || wantsInvoice) {
             Invoice invoice = new Invoice();
-            invoice.setSellerBusiness(product.getBusiness());
+            invoice.setSellerBusiness(business);
             invoice.setBuyerBusiness(retailer);
-            invoice.setSubtotalUsd(request.getAmountUsd());
-            invoice.setTotalUsd(request.getAmountUsd());
+            invoice.setSubtotalUsd(total);
+            invoice.setTotalUsd(total);
             invoice.setPaymentMode(request.getPaymentMode());
             invoice.setStatus("CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID");
             if (request.getDueDate() != null) {
@@ -219,12 +247,52 @@ public class WholesalerService {
             }
             invoice.setCreditRecordId(creditRecordId);
             invoice.setGeneratedByUser(user);
-            Invoice savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(
-                    invoiceRepository, businessId, invoice);
-            sale.setInvoiceId(savedInvoice.getId());
-            invoiceEmailService.sendIfEligible(savedInvoice, product.getBusiness());
+
+            List<InvoiceItem> invoiceItems = new ArrayList<>();
+            for (int i = 0; i < products.size(); i++) {
+                WarehouseProduct product = products.get(i);
+                WholesaleSaleItemRequest item = request.getItems().get(i);
+                InvoiceItem ii = new InvoiceItem();
+                ii.setInvoice(invoice);
+                ii.setProductName(product.getName());
+                ii.setQuantity(item.getQuantity());
+                ii.setUnit(product.getUnit());
+                ii.setUnitPriceUsd(item.getQuantity().compareTo(BigDecimal.ZERO) > 0
+                        ? item.getAmountUsd().divide(item.getQuantity(), 4, java.math.RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO);
+                ii.setLineTotalUsd(item.getAmountUsd());
+                invoiceItems.add(ii);
+            }
+            invoice.setItems(invoiceItems);
+
+            savedInvoice = InvoiceNumberUtil.saveWithUniqueNumber(invoiceRepository, businessId, invoice);
+            Long invoiceId = savedInvoice.getId();
+            for (WholesaleSale sale : sales) {
+                sale.setInvoiceId(invoiceId);
+            }
+            invoiceEmailService.sendIfEligible(savedInvoice, business);
         }
 
-        return wholesaleSaleRepository.save(sale);
+        for (WholesaleSale sale : sales) {
+            wholesaleSaleRepository.save(sale);
+        }
+
+        List<LineItemSummary> summaries = new ArrayList<>();
+        for (int i = 0; i < products.size(); i++) {
+            WarehouseProduct product = products.get(i);
+            WholesaleSaleItemRequest item = request.getItems().get(i);
+            BigDecimal unitPrice = item.getQuantity().compareTo(BigDecimal.ZERO) > 0
+                    ? item.getAmountUsd().divide(item.getQuantity(), 4, java.math.RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            summaries.add(new LineItemSummary(product.getName(), item.getQuantity(),
+                    product.getUnit(), unitPrice, item.getAmountUsd()));
+        }
+
+        return new WholesaleSaleResponse(
+                savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
+                summaries, total, request.getPaymentMode(),
+                "CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID",
+                sales.get(0).getSoldAt(), creditRecordId
+        );
     }
 }
