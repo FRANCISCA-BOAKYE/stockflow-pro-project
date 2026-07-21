@@ -7,8 +7,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -16,21 +18,25 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final SubscriptionAccessFilter subscriptionAccessFilter;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
-                          SubscriptionAccessFilter subscriptionAccessFilter) {
+                          SubscriptionAccessFilter subscriptionAccessFilter,
+                          CorsConfigurationSource corsConfigurationSource) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.subscriptionAccessFilter = subscriptionAccessFilter;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/register", "/auth/login", "/auth/forgot-password", "/auth/reset-password").permitAll()
                         .requestMatchers("/marketplace/listings").permitAll()
                         .requestMatchers("/payments/webhook").permitAll()
