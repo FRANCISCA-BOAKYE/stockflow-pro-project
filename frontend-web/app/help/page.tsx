@@ -58,6 +58,39 @@ export default function HelpPage() {
             <p className="text-lg text-blue-200 max-w-xl mx-auto mb-8">
               Recipes, production, stock, credit, and how the three business tiers connect — explained in plain terms.
             </p>
+            <div className="mx-auto max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+              <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto block">
+                <rect width="400" height="220" fill="#ffffff" />
+                <rect x="0" y="0" width="400" height="34" fill="#ffffff" />
+                <rect x="16" y="9" width="16" height="16" rx="5" fill="#0F172A" />
+                <text x="40" y="21" fontFamily="sans-serif" fontSize="11" fontWeight="700" fill="#0f172a">Adjei&apos;s Corner Shop</text>
+                <text x="40" y="30" fontFamily="sans-serif" fontSize="6" fill="#94a3b8">Retailer · PREMIUM · ACTIVE</text>
+                <rect x="330" y="8" width="54" height="18" rx="9" fill="#f8fafc" stroke="#e2e8f0" />
+                <text x="357" y="20" fontFamily="sans-serif" fontSize="7" fill="#64748b" textAnchor="middle">Log out</text>
+                <rect x="16" y="46" width="368" height="60" rx="14" fill="#059669" />
+                <circle cx="360" cy="76" r="34" fill="#ffffff" opacity="0.08" />
+                <text x="32" y="66" fontFamily="sans-serif" fontSize="7" fontWeight="700" fill="#bbf7d0" letterSpacing="1">GOOD TO HAVE YOU BACK</text>
+                <text x="32" y="85" fontFamily="sans-serif" fontSize="14" fontWeight="700" fill="#ffffff">Yaw Adjei</text>
+                <text x="32" y="98" fontFamily="sans-serif" fontSize="7" fill="#d1fae5">Adjei&apos;s Corner Shop · retailer account</text>
+                <g>
+                  <rect x="16" y="118" width="114" height="66" rx="12" fill="#ffffff" stroke="#f1f5f9" />
+                  <text x="26" y="136" fontFamily="sans-serif" fontSize="6" fontWeight="700" fill="#94a3b8" letterSpacing="0.5">TODAY&apos;S SALES</text>
+                  <text x="26" y="162" fontFamily="sans-serif" fontSize="17" fontWeight="800" fill="#0f172a">$1.60</text>
+                </g>
+                <g>
+                  <rect x="143" y="118" width="114" height="66" rx="12" fill="#ffffff" stroke="#f1f5f9" />
+                  <text x="153" y="136" fontFamily="sans-serif" fontSize="6" fontWeight="700" fill="#94a3b8" letterSpacing="0.5">LOW STOCK</text>
+                  <text x="153" y="162" fontFamily="sans-serif" fontSize="17" fontWeight="800" fill="#0f172a">0</text>
+                </g>
+                <g>
+                  <rect x="270" y="118" width="114" height="66" rx="12" fill="#ffffff" stroke="#f1f5f9" />
+                  <text x="280" y="136" fontFamily="sans-serif" fontSize="6" fontWeight="700" fill="#94a3b8" letterSpacing="0.5">CREDIT OWED</text>
+                  <text x="280" y="162" fontFamily="sans-serif" fontSize="17" fontWeight="800" fill="#0f172a">$250.00</text>
+                </g>
+                <rect x="16" y="196" width="368" height="16" rx="8" fill="#f8fafc" />
+              </svg>
+            </div>
+            <p className="text-xs text-blue-300 mt-3">A real business dashboard on the web app — sales, stock, and credit at a glance.</p>
           </div>
         </section>
 
@@ -192,10 +225,14 @@ export default function HelpPage() {
                 <p>From POS, pick a warehouse product, quantity, and payment mode. Credit sales require a due date and
                 create a credit record the retailer owes you, plus an invoice.</p>
               } />
-              <Accordion q="Why didn't a cash/card/mobile money sale create an invoice?" a={
-                <p>Currently, invoices are only generated automatically for Credit-mode wholesale transactions. Cash,
-                card, and mobile money sales are recorded as a stock movement but don't yet produce a separate invoice
-                document — this is a known gap, not a bug on your end.</p>
+              <Accordion q="Does every sale get an invoice, no matter the payment mode?" a={
+                <p>Yes — cash, card, mobile money, bank transfer, and credit all generate an invoice and email it to
+                the buyer's registered email if they have one. Premium accounts can ask per-sale whether the buyer
+                wants an invoice at all; Standard accounts always get one.</p>
+              } />
+              <Accordion q="What if the buyer is collecting the order later instead of taking it now?" a={
+                <p>Mark the sale as pickup and enter the buyer's email. They'll get a short pickup code by email —
+                ask them for it when they arrive to collect, so you know it's really them.</p>
               } />
               <Accordion q="What does 'Credit hold' do?" a={
                 <p>It flags an outstanding credit record for follow-up on your side. It's a visibility marker for your
@@ -214,6 +251,40 @@ export default function HelpPage() {
               </div>
               <h2 className="text-2xl font-bold text-slate-900">Retailer tier</h2>
             </div>
+
+            <div className="flex flex-col sm:flex-row gap-6 items-center mb-8 rounded-2xl bg-white border border-slate-100 p-6">
+              <svg viewBox="0 0 220 260" xmlns="http://www.w3.org/2000/svg" className="w-40 h-auto flex-shrink-0">
+                <rect x="4" y="4" width="212" height="252" rx="24" fill="#0F172A" />
+                <rect x="14" y="18" width="192" height="228" rx="14" fill="#F0F4F8" />
+                <rect x="14" y="18" width="192" height="30" rx="14" fill="#ffffff" />
+                <text x="26" y="37" fontFamily="sans-serif" fontSize="10" fontWeight="700" fill="#0f172a">POS</text>
+                <text x="180" y="37" fontFamily="sans-serif" fontSize="7" fill="#6b7280" textAnchor="end">New sale</text>
+                <rect x="26" y="58" width="168" height="26" rx="8" fill="#ffffff" stroke="#e5e7eb" />
+                <text x="34" y="75" fontFamily="sans-serif" fontSize="7" fill="#0f172a">Coca-Cola 350ml x2</text>
+                <text x="180" y="75" fontFamily="sans-serif" fontSize="7" fill="#0f172a" textAnchor="end">$1.60</text>
+                <rect x="26" y="92" width="168" height="30" rx="10" fill="#ffffff" stroke="#1A56DB" strokeWidth="1.5" />
+                <rect x="34" y="100" width="12" height="12" rx="3" fill="#1A56DB" />
+                <text x="52" y="110" fontFamily="sans-serif" fontSize="6.5" fontWeight="600" fill="#374151">Customer is collecting later</text>
+                <rect x="26" y="130" width="168" height="24" rx="8" fill="#ffffff" stroke="#e5e7eb" />
+                <text x="34" y="145" fontFamily="sans-serif" fontSize="6.5" fill="#9CA3AF">customer@email.com</text>
+                <rect x="26" y="168" width="168" height="34" rx="12" fill="#ECFDF5" stroke="#a7f3d0" />
+                <text x="110" y="182" fontFamily="sans-serif" fontSize="6.5" fontWeight="700" fill="#065f46" textAnchor="middle">PICKUP CODE</text>
+                <text x="110" y="196" fontFamily="sans-serif" fontSize="12" fontWeight="800" fill="#059669" textAnchor="middle" letterSpacing="2">33HPG2</text>
+                <rect x="26" y="216" width="168" height="26" rx="10" fill="#059669" />
+                <text x="110" y="233" fontFamily="sans-serif" fontSize="8" fontWeight="700" fill="#ffffff" textAnchor="middle">Confirm Sale · $1.60</text>
+              </svg>
+              <div>
+                <p className="text-sm font-bold text-slate-900 mb-2">Selling to a walk-in or collect-later customer</p>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  At POS, ring up the sale as normal. If the customer isn&apos;t taking it with them right now, check
+                  <strong> &quot;Customer is collecting later&quot;</strong> and enter their email. They get a short code by
+                  email (like <strong>33HPG2</strong>) — ask for it when they come back, so you know it&apos;s really them
+                  before you hand the order over. Works the same way for wholesalers selling to retailers and
+                  manufacturers dispatching to wholesalers.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <Accordion q="When does a product count as low stock?" a={
                 <p>When its quantity drops to or below the "min threshold" you set when adding the product. Low-stock
