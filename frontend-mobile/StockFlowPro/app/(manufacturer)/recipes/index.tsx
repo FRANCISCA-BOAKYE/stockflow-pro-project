@@ -201,15 +201,23 @@ export default function RecipesScreen() {
               <TextInput style={s.fieldInput} placeholder="e.g. Golden Butter Biscuits" placeholderTextColor="#9CA3AF"
                 value={form.productName} onChangeText={v => setForm(f => ({ ...f, productName: v }))} />
             </View>
+            <View style={s.explainerBox}>
+              <Text style={s.explainerTitle}>How production is measured for this recipe</Text>
+              <Text style={s.explainerText}>
+                "Unit" is the single smallest item you make (e.g. a bottle, a bag, a shirt).{"\n"}
+                "Group" is how you produce and dispatch them in bulk (e.g. a batch, a carton, a crate).{"\n"}
+                "Units per group" is how many single units make up one of those groups.
+              </Text>
+            </View>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={s.fieldLabel}>Unit label *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. pack" placeholderTextColor="#9CA3AF"
+                <TextInput style={s.fieldInput} placeholder="e.g. bottle" placeholderTextColor="#9CA3AF"
                   value={form.unitLabel} onChangeText={v => setForm(f => ({ ...f, unitLabel: v }))} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.fieldLabel}>Group label *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. carton" placeholderTextColor="#9CA3AF"
+                <TextInput style={s.fieldInput} placeholder="e.g. batch" placeholderTextColor="#9CA3AF"
                   value={form.groupLabel} onChangeText={v => setForm(f => ({ ...f, groupLabel: v }))} />
               </View>
             </View>
@@ -218,6 +226,14 @@ export default function RecipesScreen() {
               <TextInput style={s.fieldInput} placeholder="e.g. 24" placeholderTextColor="#9CA3AF"
                 value={form.unitsPerGroup} onChangeText={v => setForm(f => ({ ...f, unitsPerGroup: v }))} keyboardType="numeric" />
             </View>
+            {!!(form.unitLabel && form.groupLabel && form.unitsPerGroup) && (
+              <View style={s.previewBox}>
+                <Ionicons name="eye-outline" size={14} color="#1A56DB" />
+                <Text style={s.previewText}>
+                  1 {form.groupLabel} = {form.unitsPerGroup} {form.unitLabel}{Number(form.unitsPerGroup) === 1 ? '' : 's'} of {form.productName || 'this product'}
+                </Text>
+              </View>
+            )}
 
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -329,6 +345,11 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
   fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  explainerBox: { backgroundColor: '#F5F3FF', borderRadius: 12, padding: 12, gap: 4 },
+  explainerTitle: { fontSize: 12, fontWeight: '700', color: '#5B21B6' },
+  explainerText: { fontSize: 12, color: '#6D28D9', lineHeight: 18 },
+  previewBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', borderRadius: 10, padding: 10 },
+  previewText: { fontSize: 12, color: '#1A56DB', fontWeight: '600', flex: 1 },
   addMatBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
   addMatBtnText: { fontSize: 12, color: '#1A56DB', fontWeight: '600' },
   matLineCard: { flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'flex-start', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.05)' },

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../services/api';
+import UnitPicker from '../../../components/UnitPicker';
 
 export default function MaterialsScreen() {
   const [materials, setMaterials] = useState<any[]>([]);
@@ -213,21 +214,25 @@ export default function MaterialsScreen() {
             )}
             {[
               { label: 'Material name *', key: 'name', placeholder: 'e.g. Cotton Fabric' },
-              { label: 'Unit *', key: 'unit', placeholder: 'e.g. metres, kg, litres' },
               { label: 'Initial quantity *', key: 'quantity', placeholder: '1000', keyboard: 'decimal-pad' },
               { label: 'Min threshold', key: 'minThreshold', placeholder: '100', keyboard: 'decimal-pad' },
               { label: 'Cost per unit (USD)', key: 'costPerUnit', placeholder: '2.50', keyboard: 'decimal-pad' },
-            ].map(field => (
-              <View key={field.key} style={{ marginBottom: 16 }}>
-                <Text style={s.fieldLabel}>{field.label}</Text>
-                <TextInput
-                  style={s.fieldInput}
-                  placeholder={field.placeholder}
-                  placeholderTextColor="#9CA3AF"
-                  value={(form as any)[field.key]}
-                  onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
-                  keyboardType={(field.keyboard as any) || 'default'}
-                />
+            ].map((field, i) => (
+              <View key={field.key}>
+                {i === 1 && (
+                  <UnitPicker value={form.unit} onChange={v => setForm(f => ({ ...f, unit: v }))} label="Unit *" />
+                )}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={s.fieldLabel}>{field.label}</Text>
+                  <TextInput
+                    style={s.fieldInput}
+                    placeholder={field.placeholder}
+                    placeholderTextColor="#9CA3AF"
+                    value={(form as any)[field.key]}
+                    onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                    keyboardType={(field.keyboard as any) || 'default'}
+                  />
+                </View>
               </View>
             ))}
             <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddMaterial} disabled={addLoading}>

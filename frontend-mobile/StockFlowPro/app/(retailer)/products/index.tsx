@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
 import { api } from '../../../services/api';
+import UnitPicker from '../../../components/UnitPicker';
 
 const LOW_STOCK = 10;
 
@@ -206,19 +207,23 @@ export default function ProductsScreen() {
               { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola 500ml' },
               { label: 'Price (USD) *', key: 'priceUsd', placeholder: '1.50', keyboard: 'decimal-pad' },
               { label: 'Quantity *', key: 'quantity', placeholder: '100', keyboard: 'numeric' },
-              { label: 'Unit *', key: 'unit', placeholder: 'e.g. bottle, kg, crate' },
               { label: 'Min threshold', key: 'minThreshold', placeholder: '10', keyboard: 'numeric' },
-            ].map(field => (
-              <View key={field.key} style={{ marginBottom: 16 }}>
-                <Text style={s.fieldLabel}>{field.label}</Text>
-                <TextInput
-                  style={s.fieldInput}
-                  placeholder={field.placeholder}
-                  placeholderTextColor="#9CA3AF"
-                  value={(form as any)[field.key]}
-                  onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
-                  keyboardType={(field.keyboard as any) || 'default'}
-                />
+            ].map((field, i) => (
+              <View key={field.key}>
+                {i === 2 && (
+                  <UnitPicker value={form.unit} onChange={v => setForm(f => ({ ...f, unit: v }))} label="Unit *" />
+                )}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={s.fieldLabel}>{field.label}</Text>
+                  <TextInput
+                    style={s.fieldInput}
+                    placeholder={field.placeholder}
+                    placeholderTextColor="#9CA3AF"
+                    value={(form as any)[field.key]}
+                    onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                    keyboardType={(field.keyboard as any) || 'default'}
+                  />
+                </View>
               </View>
             ))}
 
