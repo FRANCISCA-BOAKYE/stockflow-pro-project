@@ -1,10 +1,13 @@
 package com.stockflow.stockflowbackend.credit;
 
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.dto.*;
+import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.model.CreditRecord;
 import com.stockflow.stockflowbackend.notification.NotificationService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +22,19 @@ public class CreditService {
 
     private final CreditRepository creditRepository;
     private final BusinessRepository businessRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
 
     public CreditService(CreditRepository creditRepository,
                          BusinessRepository businessRepository,
+                         UserRepository userRepository,
+                         PasswordEncoder passwordEncoder,
                          NotificationService notificationService) {
         this.creditRepository = creditRepository;
         this.businessRepository = businessRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
         this.notificationService = notificationService;
     }
 
@@ -116,6 +125,26 @@ public class CreditService {
         }
 
         return saved;
+    }
+
+    @Transactional
+    public void deleteRecord(Long creditRecordId, DeleteCreditRequest request,
+                              Long callerBusinessId, Long callerUserId) {
+        CreditRecord record = creditRepository.findById(creditRecordId)
+                .orElseThrow(() -> new RuntimeException("Credit record not found"));
+
+        if (!callerBusinessId.equals(record.getCreditorBusiness().getId())) {
+            throw new RuntimeException("Unauthorized: only the business owed this credit can delete it");
+        }
+
+        AppUser user = userRepository.findById(callerUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (request.getCurrentPassword() == null
+                || !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        creditRepository.delete(record);
     }
 
     @Transactional

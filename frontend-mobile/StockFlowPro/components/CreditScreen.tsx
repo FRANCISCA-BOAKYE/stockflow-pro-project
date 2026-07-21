@@ -23,6 +23,10 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteAccount, setDeleteAccount] = useState<any>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -83,6 +87,22 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
         }
       ]
     );
+  };
+
+  const handleDeleteRecord = async () => {
+    if (!deleteAccount || !deletePassword.trim()) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/credit/${deleteAccount.id}`, { data: { currentPassword: deletePassword } });
+      setShowDeleteModal(false);
+      setDeletePassword('');
+      setDeleteAccount(null);
+      fetchAccounts();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to delete record');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const data = accounts.filter(a => a.direction === (tab === 'owe_me' ? 'OWED_TO_ME' : 'I_OWE'));
@@ -193,6 +213,12 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
                     )}
                   </View>
                 )}
+                {tab === 'owe_me' && (
+                  <TouchableOpacity style={s.deleteBtn} onPress={() => { setDeleteAccount(item); setDeletePassword(''); setShowDeleteModal(true); }}>
+                    <Ionicons name="trash-outline" size={12} color="#9CA3AF" style={{ marginRight: 4 }} />
+                    <Text style={s.deleteBtnText}>Delete record</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           }}
@@ -222,6 +248,39 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
             </Text>
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleRecordPayment} disabled={submitting}>
               {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Payment</Text>}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={showDeleteModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowDeleteModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Delete Credit Record</Text>
+            <TouchableOpacity onPress={() => setShowDeleteModal(false)}>
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ padding: 16 }}>
+            <Text style={{ fontSize: 13, color: '#991B1B', marginBottom: 16, lineHeight: 19 }}>
+              This permanently removes the credit record for {deleteAccount?.partnerBusinessName}
+              (${Number(deleteAccount?.amountUsd || 0).toFixed(2)}). This cannot be undone.
+            </Text>
+            <Text style={s.fieldLabel}>Enter your password to confirm</Text>
+            <TextInput
+              style={s.fieldInput}
+              placeholder="Your account password"
+              placeholderTextColor="#9CA3AF"
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+            />
+            <TouchableOpacity
+              style={[s.deleteConfirmBtn, (deleting || !deletePassword.trim()) && { opacity: 0.5 }]}
+              onPress={handleDeleteRecord}
+              disabled={deleting || !deletePassword.trim()}
+            >
+              {deleting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Delete Permanently</Text>}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -267,6 +326,9 @@ const s = StyleSheet.create({
   holdBtnActive: { backgroundColor: '#DC2626' },
   holdBtnText: { fontSize: 11.5, color: '#DC2626', fontWeight: '600' },
   holdBtnTextActive: { color: '#fff' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
+  deleteBtnText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+  deleteConfirmBtn: { backgroundColor: '#DC2626', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 20 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
   emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },

@@ -22,6 +22,10 @@ public class CreditController {
         return (Long) authentication.getDetails();
     }
 
+    private Long getUserId(Authentication authentication) {
+        return (Long) authentication.getCredentials();
+    }
+
     @PostMapping("/record")
     public ResponseEntity<CreditRecord> createRecord(
             @RequestBody CreateCreditRequest request,
@@ -58,5 +62,14 @@ public class CreditController {
             Authentication authentication) {
         return ResponseEntity.ok(
                 creditService.getOverdueAccounts(getBusinessId(authentication)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRecord(
+            @PathVariable Long id,
+            @RequestBody DeleteCreditRequest request,
+            Authentication authentication) {
+        creditService.deleteRecord(id, request, getBusinessId(authentication), getUserId(authentication));
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,8 +1,9 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Wallet, Calendar, Lock, CheckCircle, TrendingDown, Phone, MapPin } from "lucide-react"
+import { ArrowLeft, Wallet, Calendar, Lock, CheckCircle, TrendingDown, Phone, MapPin, Trash2, X } from "lucide-react"
 import { API_BASE_URL } from "@/lib/api"
+import { toast } from "sonner"
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
   OVERDUE: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
@@ -17,6 +18,9 @@ export default function CreditPage() {
   const [accounts, setAccounts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<"owe_me" | "i_owe">("owe_me")
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [deletePassword, setDeletePassword] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("sf_user")
@@ -38,6 +42,34 @@ export default function CreditPage() {
       setAccounts([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget || !deletePassword.trim()) return
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem("sf_token")
+      const res = await fetch(`${API_BASE_URL}/credit/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ currentPassword: deletePassword }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || data.message || "Failed to delete record")
+      }
+      toast.success("Credit record deleted")
+      setDeleteTarget(null)
+      setDeletePassword("")
+      fetchCreditAccounts(user)
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete record")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -140,6 +172,13 @@ export default function CreditPage() {
                           {status.replace('_', ' ')}
                         </span>
                       </div>
+                      {tab === 'owe_me' && (
+                        <button onClick={() => { setDeleteTarget(acc); setDeletePassword("") }}
+                          style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #f1f5f9', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                          title="Delete record">
+                          <Trash2 style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -148,6 +187,38 @@ export default function CreditPage() {
           </>
         )}
       </main>
+
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <p style={{ fontWeight: 700, fontSize: '16px', color: '#0f172a' }}>Delete Credit Record</p>
+              <button onClick={() => setDeleteTarget(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X style={{ width: '18px', height: '18px', color: '#64748b' }} />
+              </button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#dc2626', marginBottom: '16px', lineHeight: '1.5' }}>
+              This permanently removes the credit record for {deleteTarget.partnerBusinessName}
+              (${Number(deleteTarget.amountUsd || 0).toLocaleString()}). This cannot be undone.
+            </p>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>Enter your password to confirm</label>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              placeholder="Your account password"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e5e7eb', fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={handleDelete}
+              disabled={deleting || !deletePassword.trim()}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: deleting || !deletePassword.trim() ? 'not-allowed' : 'pointer', opacity: deleting || !deletePassword.trim() ? 0.6 : 1 }}
+            >
+              {deleting ? 'Deleting...' : 'Delete Permanently'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
