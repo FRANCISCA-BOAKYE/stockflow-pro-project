@@ -330,6 +330,11 @@ public class ManufacturerService {
             }
             invoice.setCreditRecordId(creditRecordId);
             invoice.setGeneratedByUser(user);
+            boolean isPickup = "PICKUP".equals(deliveryMode)
+                    && req.getBuyerEmail() != null && !req.getBuyerEmail().isBlank();
+            if (isPickup) {
+                invoice.setPickupCode(com.stockflow.stockflowbackend.email.PickupCodeUtil.generate());
+            }
 
             List<InvoiceItem> invoiceItems = new ArrayList<>();
             for (int i = 0; i < goods.size(); i++) {
@@ -364,6 +369,9 @@ public class ManufacturerService {
                 dispatch.setInvoiceId(invoiceId);
             }
             invoiceEmailService.sendIfEligible(savedInvoice, business);
+            if (isPickup) {
+                invoiceEmailService.sendPickupNotification(savedInvoice, business, req.getBuyerEmail());
+            }
         }
 
         for (Dispatch dispatch : dispatches) {
@@ -394,7 +402,8 @@ public class ManufacturerService {
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries, deliveryFee, totalAmount, req.getPaymentMode(),
                 "CREDIT".equals(req.getPaymentMode()) ? "UNPAID" : "PAID",
-                dispatches.get(0).getDispatchedAt(), creditRecordId
+                dispatches.get(0).getDispatchedAt(), creditRecordId,
+                savedInvoice != null ? savedInvoice.getPickupCode() : null
         );
     }
 

@@ -17,11 +17,12 @@ public class DispatchResponse {
     private String status;
     private LocalDateTime dispatchedAt;
     private Long creditRecordId;
+    private String pickupCode;
 
     public DispatchResponse(String invoiceNumber, List<LineItemSummary> items,
                              BigDecimal deliveryFeeUsd, BigDecimal totalUsd,
                              String paymentMode, String status,
-                             LocalDateTime dispatchedAt, Long creditRecordId) {
+                             LocalDateTime dispatchedAt, Long creditRecordId, String pickupCode) {
         this.invoiceNumber = invoiceNumber;
         this.items = items;
         this.deliveryFeeUsd = deliveryFeeUsd;
@@ -30,5 +31,6 @@ public class DispatchResponse {
         this.status = status;
         this.dispatchedAt = dispatchedAt;
         this.creditRecordId = creditRecordId;
+        this.pickupCode = pickupCode;
     }
 }

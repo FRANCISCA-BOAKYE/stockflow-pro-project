@@ -34,7 +34,7 @@ export default function DispatchScreen() {
     paymentMode: 'CASH', dueDate: '',
     deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
     driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
-    wantsInvoice: true,
+    wantsInvoice: true, buyerEmail: '',
   });
 
   const fetchData = useCallback(async () => {
@@ -87,7 +87,7 @@ export default function DispatchScreen() {
       paymentMode: 'CASH', dueDate: '',
       deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
       driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
-      wantsInvoice: true,
+      wantsInvoice: true, buyerEmail: '',
     });
     setSelectedPartner(null);
     setBuyerName('');
@@ -125,7 +125,9 @@ export default function DispatchScreen() {
       else body.buyerName = buyerName.trim();
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
       if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
-      if (isPremium) body.wantsInvoice = form.wantsInvoice;
+      const wantsPickupCode = form.deliveryMode === 'PICKUP' && form.buyerEmail.trim();
+      if (isPremium) body.wantsInvoice = wantsPickupCode ? true : form.wantsInvoice;
+      if (wantsPickupCode) body.buyerEmail = form.buyerEmail.trim();
       if (form.deliveryMode === 'DELIVERY') {
         if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
         if (form.driverName) body.driverName = form.driverName;
@@ -137,7 +139,8 @@ export default function DispatchScreen() {
       const res = await api.post('/manufacturer/dispatch', body);
       const dispatch = res.data;
       const itemLines = (dispatch.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
-      Alert.alert('Success', `${itemLines}\nTotal: $${Number(dispatch.totalUsd).toFixed(2)}`);
+      const pickupLine = dispatch.pickupCode ? `\nPickup code: ${dispatch.pickupCode} (emailed to buyer)` : '';
+      Alert.alert('Success', `${itemLines}\nTotal: $${Number(dispatch.totalUsd).toFixed(2)}${pickupLine}`);
       setShowModal(false);
       resetForm();
       fetchData();
@@ -313,6 +316,15 @@ export default function DispatchScreen() {
                 ))}
               </View>
             </View>
+
+            {form.deliveryMode === 'PICKUP' && (
+              <View>
+                <Text style={s.fieldLabel}>Buyer email (optional — sends a pickup code)</Text>
+                <TextInput style={s.fieldInput} placeholder="buyer@email.com" placeholderTextColor="#9CA3AF"
+                  value={form.buyerEmail} onChangeText={v => setForm(f => ({ ...f, buyerEmail: v }))}
+                  keyboardType="email-address" autoCapitalize="none" />
+              </View>
+            )}
 
             {form.deliveryMode === 'DELIVERY' && (
               <>

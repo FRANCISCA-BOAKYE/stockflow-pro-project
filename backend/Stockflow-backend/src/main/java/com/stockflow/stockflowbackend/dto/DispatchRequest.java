@@ -18,6 +18,7 @@ public class DispatchRequest {
     private String vehicleNumber;
     private String driverContact;
     private String driverIdNumber;
+    private String buyerEmail; // optional — if set and deliveryMode is PICKUP, a pickup code is emailed here
     private Boolean wantsInvoice;
     private String paystackReference; // required when paymentMode is CARD
 }

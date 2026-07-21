@@ -51,6 +51,27 @@ public class InvoiceEmailService {
         }
     }
 
+    /** Sends the order ID + pickup code to a buyer's email, in addition to the normal invoice. */
+    public void sendPickupNotification(Invoice invoice, Business seller, String buyerEmail) {
+        try {
+            if (buyerEmail == null || buyerEmail.isBlank() || invoice.getPickupCode() == null) {
+                return;
+            }
+            emailSenderService.sendAsync(
+                    buyerEmail,
+                    "Your order is ready for pickup — " + invoice.getInvoiceNumber(),
+                    EmailTemplateUtil.wrap(
+                            "Ready for pickup",
+                            seller.getName(),
+                            EmailTemplateUtil.paragraph("Your order is ready. Show this code when you arrive to collect it.")
+                                    + EmailTemplateUtil.credentialBox("Order ID", invoice.getInvoiceNumber(),
+                                            "Pickup code", invoice.getPickupCode())
+                                    + EmailTemplateUtil.smallNote("Keep this email — you may be asked for the pickup code at collection.")));
+        } catch (Exception e) {
+            log.warn("Failed to send pickup notification for {}: {}", invoice.getInvoiceNumber(), e.getMessage());
+        }
+    }
+
     private String buildInvoiceHtml(Invoice invoice, Business seller) {
         String dueDateRow = invoice.getDueDate() != null
                 ? "<p style=\"color: #374151; font-size: 15px; margin: 0 0 8px;\">Due date: " + invoice.getDueDate() + "</p>"

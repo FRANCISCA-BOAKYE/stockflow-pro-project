@@ -214,6 +214,11 @@ public class POSService {
             if (request.getBuyerName() != null) {
                 invoice.setBuyerName(request.getBuyerName());
             }
+            boolean isPickup = Boolean.TRUE.equals(request.getIsPickup())
+                    && request.getBuyerEmail() != null && !request.getBuyerEmail().isBlank();
+            if (isPickup) {
+                invoice.setPickupCode(com.stockflow.stockflowbackend.email.PickupCodeUtil.generate());
+            }
 
             List<InvoiceItem> invoiceItems = new ArrayList<>();
             for (int i = 0; i < products.size(); i++) {
@@ -236,6 +241,9 @@ public class POSService {
                 tx.setInvoiceId(invoiceId);
             }
             invoiceEmailService.sendIfEligible(savedInvoice, business);
+            if (isPickup) {
+                invoiceEmailService.sendPickupNotification(savedInvoice, business, request.getBuyerEmail());
+            }
         }
 
         List<LineItemSummary> summaries = new ArrayList<>();
@@ -258,7 +266,8 @@ public class POSService {
                 request.getPaymentMode(),
                 "CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID",
                 transactions.get(0).getRecordedAt(),
-                creditRecordId
+                creditRecordId,
+                savedInvoice != null ? savedInvoice.getPickupCode() : null
         );
     }
 }

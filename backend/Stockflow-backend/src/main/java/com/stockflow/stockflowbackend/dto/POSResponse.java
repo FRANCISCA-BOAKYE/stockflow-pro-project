@@ -16,10 +16,11 @@ public class POSResponse {
     private String status;
     private LocalDateTime recordedAt;
     private Long creditRecordId;
+    private String pickupCode;
 
     public POSResponse(String invoiceNumber, List<LineItemSummary> items,
                        BigDecimal totalUsd, String paymentMode, String status,
-                       LocalDateTime recordedAt, Long creditRecordId) {
+                       LocalDateTime recordedAt, Long creditRecordId, String pickupCode) {
         this.invoiceNumber = invoiceNumber;
         this.items = items;
         this.totalUsd = totalUsd;
@@ -27,5 +28,6 @@ public class POSResponse {
         this.status = status;
         this.recordedAt = recordedAt;
         this.creditRecordId = creditRecordId;
+        this.pickupCode = pickupCode;
     }
 }

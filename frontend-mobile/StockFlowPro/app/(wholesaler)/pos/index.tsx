@@ -34,6 +34,8 @@ export default function WholesalerPOSScreen() {
   const [dueDate, setDueDate] = useState('')
   const [mobileNumber, setMobileNumber] = useState('')
   const [wantsInvoice, setWantsInvoice] = useState(true)
+  const [isPickup, setIsPickup] = useState(false)
+  const [buyerEmail, setBuyerEmail] = useState('')
   const [showPaystack, setShowPaystack] = useState(false)
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -93,6 +95,7 @@ export default function WholesalerPOSScreen() {
   const resetForm = () => {
     setCart([]); setSearch(''); setPayment('CASH'); setDueDate('');
     setSelectedPartner(null); setBuyerName(''); setWantsInvoice(true); setMobileNumber('');
+    setIsPickup(false); setBuyerEmail('');
   };
 
   const confirmOrder = async () => {
@@ -100,6 +103,7 @@ export default function WholesalerPOSScreen() {
     if (!selectedPartner && !buyerName.trim()) { Alert.alert('Missing info', 'Select a linked retailer, or enter a buyer name for a walk-in sale.'); return }
     if (payment === 'MOBILE_MONEY' && !mobileNumber.trim()) { Alert.alert('Missing info', 'Please enter the mobile money number.'); return }
     if (payment === 'CREDIT' && !dueDate.trim()) { Alert.alert('Missing info', 'Please enter a due date for credit payment.'); return }
+    if (isPickup && !buyerEmail.trim()) { Alert.alert('Missing info', "Enter the buyer's email to send the pickup code."); return }
     if (payment === 'CARD') { setShowPaystack(true); return }
     await recordSale(payment)
   }
@@ -115,12 +119,14 @@ export default function WholesalerPOSScreen() {
       else body.buyerName = buyerName.trim()
       if (paymentMode === 'CREDIT') body.dueDate = dueDate
       if (paymentMode === 'CARD') body.paystackReference = paystackReference
-      if (isPremium) body.wantsInvoice = wantsInvoice
+      if (isPremium) body.wantsInvoice = isPickup ? true : wantsInvoice
+      if (isPickup) { body.isPickup = true; body.buyerEmail = buyerEmail.trim() }
 
       const res = await api.post('/wholesaler/sell', body)
       const sale = res.data
       const itemLines = (sale.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n')
-      Alert.alert('Order confirmed ✓', `${itemLines}\nTotal: $${Number(sale.totalUsd).toFixed(2)} via ${paymentMode}`, [
+      const pickupLine = sale.pickupCode ? `\nPickup code: ${sale.pickupCode} (emailed to buyer)` : ''
+      Alert.alert('Order confirmed ✓', `${itemLines}\nTotal: $${Number(sale.totalUsd).toFixed(2)} via ${paymentMode}${pickupLine}`, [
         { text: 'OK', onPress: () => { resetForm(); fetchData() } }
       ])
     } catch (e: any) {
@@ -281,6 +287,24 @@ export default function WholesalerPOSScreen() {
             <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
             <Text style={s.invoiceToggleText}>Buyer wants an invoice</Text>
           </TouchableOpacity>
+        )}
+
+        {cart.length > 0 && (
+          <View>
+            <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setIsPickup(v => !v)}>
+              <Ionicons name={isPickup ? 'checkbox' : 'square-outline'} size={20} color={isPickup ? '#1A56DB' : '#9CA3AF'} />
+              <Text style={s.invoiceToggleText}>Buyer is collecting later (send pickup code)</Text>
+            </TouchableOpacity>
+            {isPickup && (
+              <View style={[s.card, { marginTop: 8 }]}>
+                <Text style={s.fieldLabel}>Buyer email</Text>
+                <View style={s.fieldInputRow}>
+                  <TextInput style={s.fieldInput} placeholder="buyer@email.com" placeholderTextColor="#9CA3AF"
+                    value={buyerEmail} onChangeText={setBuyerEmail} keyboardType="email-address" autoCapitalize="none" />
+                </View>
+              </View>
+            )}
+          </View>
         )}
 
         {cart.length > 0 && (

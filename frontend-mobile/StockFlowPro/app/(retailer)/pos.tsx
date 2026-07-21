@@ -23,6 +23,8 @@ export default function POSScreen() {
   const [buyerContact, setBuyerContact] = useState('');
   const [buyerAddress, setBuyerAddress] = useState('');
   const [wantsInvoice, setWantsInvoice] = useState(true);
+  const [isPickup, setIsPickup] = useState(false);
+  const [buyerEmail, setBuyerEmail] = useState('');
   const [showPaystack, setShowPaystack] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -76,6 +78,7 @@ export default function POSScreen() {
     setCart([]); setSearch(''); setPayment('CASH'); setCreditBuyer('');
     setDueDate(''); setMobileNumber(''); setBuyerContact(''); setBuyerAddress('');
     setWantsInvoice(true);
+    setIsPickup(false); setBuyerEmail('');
   };
 
   const confirmSale = async () => {
@@ -83,6 +86,7 @@ export default function POSScreen() {
     if (payment === 'CREDIT' && !creditBuyer.trim()) { Alert.alert('Missing info', 'Enter the buyer name for credit.'); return; }
     if (payment === 'MOBILE_MONEY' && !mobileNumber.trim()) { Alert.alert('Missing info', 'Enter the mobile money number.'); return; }
     if (payment === 'CREDIT' && !dueDate.trim()) { Alert.alert('Missing info', 'Enter a due date for credit.'); return; }
+    if (isPickup && !buyerEmail.trim()) { Alert.alert('Missing info', 'Enter the customer\'s email to send the pickup code.'); return; }
     if (payment === 'CARD') { setShowPaystack(true); return; }
     await recordSale(payment);
   };
@@ -106,14 +110,19 @@ export default function POSScreen() {
         }
       }
       if (isPremium) {
-        body.wantsInvoice = wantsInvoice;
+        body.wantsInvoice = isPickup ? true : wantsInvoice;
+      }
+      if (isPickup) {
+        body.isPickup = true;
+        body.buyerEmail = buyerEmail.trim();
       }
       const res = await api.post('/pos/retail', body);
       const inv = res.data;
       const itemLines = (inv.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
+      const pickupLine = inv.pickupCode ? `\nPickup code: ${inv.pickupCode} (emailed to customer)` : '';
       Alert.alert(
         'Sale confirmed ✓',
-        `${itemLines}\nTotal: $${Number(inv.totalUsd).toFixed(2)}\nInvoice: ${inv.invoiceNumber || '—'}`,
+        `${itemLines}\nTotal: $${Number(inv.totalUsd).toFixed(2)}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}`,
         [{ text: 'OK', onPress: () => { resetForm(); fetchProducts(); } }]
       );
     } catch (e: any) {
@@ -249,6 +258,24 @@ export default function POSScreen() {
             <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
             <Text style={s.invoiceToggleText}>Customer wants an invoice</Text>
           </TouchableOpacity>
+        )}
+
+        {cart.length > 0 && (
+          <View>
+            <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setIsPickup(v => !v)}>
+              <Ionicons name={isPickup ? 'checkbox' : 'square-outline'} size={20} color={isPickup ? '#1A56DB' : '#9CA3AF'} />
+              <Text style={s.invoiceToggleText}>Customer is collecting later (send pickup code)</Text>
+            </TouchableOpacity>
+            {isPickup && (
+              <View style={[s.card, { marginTop: 8 }]}>
+                <Text style={s.fieldLabel}>Customer email</Text>
+                <View style={s.fieldInputRow}>
+                  <TextInput style={s.fieldInput} placeholder="customer@email.com" placeholderTextColor="#9CA3AF"
+                    value={buyerEmail} onChangeText={setBuyerEmail} keyboardType="email-address" autoCapitalize="none" />
+                </View>
+              </View>
+            )}
+          </View>
         )}
 
         {payment === 'MOBILE_MONEY' && (

@@ -262,6 +262,11 @@ public class WholesalerService {
             }
             invoice.setCreditRecordId(creditRecordId);
             invoice.setGeneratedByUser(user);
+            boolean isPickup = Boolean.TRUE.equals(request.getIsPickup())
+                    && request.getBuyerEmail() != null && !request.getBuyerEmail().isBlank();
+            if (isPickup) {
+                invoice.setPickupCode(com.stockflow.stockflowbackend.email.PickupCodeUtil.generate());
+            }
 
             List<InvoiceItem> invoiceItems = new ArrayList<>();
             for (int i = 0; i < products.size(); i++) {
@@ -286,6 +291,9 @@ public class WholesalerService {
                 sale.setInvoiceId(invoiceId);
             }
             invoiceEmailService.sendIfEligible(savedInvoice, business);
+            if (isPickup) {
+                invoiceEmailService.sendPickupNotification(savedInvoice, business, request.getBuyerEmail());
+            }
         }
 
         for (WholesaleSale sale : sales) {
@@ -307,7 +315,8 @@ public class WholesalerService {
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries, total, request.getPaymentMode(),
                 "CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID",
-                sales.get(0).getSoldAt(), creditRecordId
+                sales.get(0).getSoldAt(), creditRecordId,
+                savedInvoice != null ? savedInvoice.getPickupCode() : null
         );
     }
 }

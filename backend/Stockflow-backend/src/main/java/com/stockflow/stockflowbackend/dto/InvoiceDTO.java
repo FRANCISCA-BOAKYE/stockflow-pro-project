@@ -22,6 +22,7 @@ public class InvoiceDTO {
     private String paymentMode;
     private LocalDate dueDate;
     private String status;
+    private String pickupCode;
     private LocalDateTime createdAt;
     private List<LineItemSummary> items;
 
@@ -38,6 +39,7 @@ public class InvoiceDTO {
         this.paymentMode = invoice.getPaymentMode();
         this.dueDate = invoice.getDueDate();
         this.status = invoice.getStatus();
+        this.pickupCode = invoice.getPickupCode();
         this.createdAt = invoice.getCreatedAt();
         this.items = invoice.getItems() == null ? List.of() : invoice.getItems().stream()
                 .map(i -> new LineItemSummary(i.getProductName(), i.getQuantity(), i.getUnit(),

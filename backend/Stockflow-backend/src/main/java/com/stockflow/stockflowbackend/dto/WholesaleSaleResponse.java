@@ -16,10 +16,11 @@ public class WholesaleSaleResponse {
     private String status;
     private LocalDateTime soldAt;
     private Long creditRecordId;
+    private String pickupCode;
 
     public WholesaleSaleResponse(String invoiceNumber, List<LineItemSummary> items,
                                   BigDecimal totalUsd, String paymentMode, String status,
-                                  LocalDateTime soldAt, Long creditRecordId) {
+                                  LocalDateTime soldAt, Long creditRecordId, String pickupCode) {
         this.invoiceNumber = invoiceNumber;
         this.items = items;
         this.totalUsd = totalUsd;
@@ -27,5 +28,6 @@ public class WholesaleSaleResponse {
         this.status = status;
         this.soldAt = soldAt;
         this.creditRecordId = creditRecordId;
+        this.pickupCode = pickupCode;
     }
 }

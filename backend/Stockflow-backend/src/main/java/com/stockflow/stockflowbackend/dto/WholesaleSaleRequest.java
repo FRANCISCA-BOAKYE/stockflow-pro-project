@@ -13,6 +13,8 @@ public class WholesaleSaleRequest {
     private String buyerName; // required when retailerBusinessId is omitted
     private String paymentMode;
     private LocalDate dueDate;
+    private Boolean isPickup; // buyer will collect in person and wants a pickup code by email
+    private String buyerEmail; // required when isPickup is true
     private Boolean wantsInvoice;
     private String paystackReference; // required when paymentMode is CARD
 }

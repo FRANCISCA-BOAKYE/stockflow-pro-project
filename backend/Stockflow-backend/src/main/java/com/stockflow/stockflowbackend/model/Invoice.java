@@ -38,6 +38,10 @@ public class Invoice {
     @Column(name = "buyer_name", length = 200)
     private String buyerName;
 
+    /** Set only when the buyer chose pickup and asked to be notified by email. */
+    @Column(name = "pickup_code", length = 10)
+    private String pickupCode;
+
     @Column(name = "credit_record_id")
     private Long creditRecordId;
 

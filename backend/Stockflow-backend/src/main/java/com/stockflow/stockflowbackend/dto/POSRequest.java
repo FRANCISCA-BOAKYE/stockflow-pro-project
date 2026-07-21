@@ -16,6 +16,8 @@ public class POSRequest {
     private String buyerContact; // walk-in customer phone (Premium)
     private String buyerAddress; // walk-in customer address (Premium)
     private Long reservationId; // from /reserve endpoint — only valid for a single-item sale
+    private Boolean isPickup; // customer will collect in person and wants a pickup code by email
+    private String buyerEmail; // required when isPickup is true
     private Boolean wantsInvoice;
     private String paystackReference; // required when paymentMode is CARD
 }
