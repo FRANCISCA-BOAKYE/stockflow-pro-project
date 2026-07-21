@@ -153,6 +153,10 @@ public class WholesalerService {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
+        if (request.getRetailerBusinessId() == null
+                && (request.getBuyerName() == null || request.getBuyerName().isBlank())) {
+            throw new RuntimeException("Enter a buyer name, or select a linked retailer");
+        }
         for (WholesaleSaleItemRequest item : request.getItems()) {
             if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("Quantity must be greater than zero");
@@ -180,10 +184,12 @@ public class WholesalerService {
             paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), total);
         }
 
-        Business retailer = businessRepository
-                .findById(request.getRetailerBusinessId())
-                .orElseThrow(() ->
-                        new RuntimeException("Retailer not found"));
+        Business retailer = null;
+        if (request.getRetailerBusinessId() != null) {
+            retailer = businessRepository
+                    .findById(request.getRetailerBusinessId())
+                    .orElseThrow(() -> new RuntimeException("Retailer not found"));
+        }
 
         for (int i = 0; i < products.size(); i++) {
             WarehouseProduct product = products.get(i);
@@ -202,7 +208,11 @@ public class WholesalerService {
                 && request.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
             credit.setCreditorBusiness(business);
-            credit.setDebtorBusiness(retailer);
+            if (retailer != null) {
+                credit.setDebtorBusiness(retailer);
+            } else {
+                credit.setDebtorName(request.getBuyerName());
+            }
             credit.setAmountUsd(total);
             credit.setDueDate(request.getDueDate());
             credit.setStatus("OUTSTANDING");
@@ -220,6 +230,7 @@ public class WholesalerService {
             sale.setProduct(product);
             sale.setQuantity(item.getQuantity());
             sale.setRetailerBusiness(retailer);
+            sale.setBuyerName(retailer != null ? null : request.getBuyerName());
             sale.setAmountUsd(item.getAmountUsd());
             sale.setPaymentMode(request.getPaymentMode());
             sale.setRecordedBy(user);
@@ -237,7 +248,11 @@ public class WholesalerService {
         if (!canSkipInvoice || wantsInvoice) {
             Invoice invoice = new Invoice();
             invoice.setSellerBusiness(business);
-            invoice.setBuyerBusiness(retailer);
+            if (retailer != null) {
+                invoice.setBuyerBusiness(retailer);
+            } else {
+                invoice.setBuyerName(request.getBuyerName());
+            }
             invoice.setSubtotalUsd(total);
             invoice.setTotalUsd(total);
             invoice.setPaymentMode(request.getPaymentMode());

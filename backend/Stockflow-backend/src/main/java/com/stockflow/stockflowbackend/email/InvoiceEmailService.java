@@ -4,8 +4,6 @@ import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.model.Invoice;
-import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
-import com.stockflow.stockflowbackend.subscription.SubscriptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,8 +11,9 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 /**
- * Emails a copy of an invoice to the buyer business, gated behind the
- * INVOICE_DELIVERY premium feature.
+ * Emails a copy of an invoice to the buyer business. Every invoice involves
+ * real money, so this runs for every plan/tier — it is intentionally not
+ * gated behind a premium feature.
  */
 @Service
 public class InvoiceEmailService {
@@ -22,23 +21,17 @@ public class InvoiceEmailService {
     private static final Logger log = LoggerFactory.getLogger(InvoiceEmailService.class);
 
     private final UserRepository userRepository;
-    private final SubscriptionService subscriptionService;
     private final EmailSenderService emailSenderService;
 
     public InvoiceEmailService(UserRepository userRepository,
-                               SubscriptionService subscriptionService,
                                EmailSenderService emailSenderService) {
         this.userRepository = userRepository;
-        this.subscriptionService = subscriptionService;
         this.emailSenderService = emailSenderService;
     }
 
     public void sendIfEligible(Invoice invoice, Business seller) {
         try {
             if (invoice.getBuyerBusiness() == null) {
-                return;
-            }
-            if (!subscriptionService.hasFeature(seller, SubscriptionFeature.INVOICE_DELIVERY)) {
                 return;
             }
 
@@ -62,12 +55,28 @@ public class InvoiceEmailService {
         String dueDateRow = invoice.getDueDate() != null
                 ? "<p style=\"color: #374151; font-size: 15px; margin: 0 0 8px;\">Due date: " + invoice.getDueDate() + "</p>"
                 : "";
+
+        StringBuilder itemsHtml = new StringBuilder();
+        if (invoice.getItems() != null && !invoice.getItems().isEmpty()) {
+            itemsHtml.append("<table style=\"width: 100%; border-collapse: collapse; margin: 0 0 16px;\">");
+            itemsHtml.append("<tr style=\"border-bottom: 1px solid #f1f5f9;\">")
+                    .append("<td style=\"padding: 6px 0; font-size: 12px; color: #94a3b8;\">Item</td>")
+                    .append("<td style=\"padding: 6px 0; font-size: 12px; color: #94a3b8; text-align: right;\">Qty</td>")
+                    .append("<td style=\"padding: 6px 0; font-size: 12px; color: #94a3b8; text-align: right;\">Total</td></tr>");
+            invoice.getItems().forEach(item -> itemsHtml.append("<tr style=\"border-bottom: 1px solid #f8fafc;\">")
+                    .append("<td style=\"padding: 6px 0; font-size: 14px; color: #374151;\">").append(item.getProductName()).append("</td>")
+                    .append("<td style=\"padding: 6px 0; font-size: 14px; color: #374151; text-align: right;\">").append(item.getQuantity()).append(" ").append(item.getUnit()).append("</td>")
+                    .append("<td style=\"padding: 6px 0; font-size: 14px; color: #374151; text-align: right;\">$").append(item.getLineTotalUsd()).append("</td></tr>"));
+            itemsHtml.append("</table>");
+        }
+
         return "<div style=\"font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 24px; background: #f8fafc;\">"
                 + "<div style=\"background: linear-gradient(135deg, #0f172a, #1e1b4b); border-radius: 20px; padding: 40px; margin-bottom: 24px; text-align: center;\">"
                 + "<h1 style=\"color: #ffffff; font-size: 24px; font-weight: 800; margin: 0 0 8px;\">Invoice " + invoice.getInvoiceNumber() + "</h1>"
                 + "<p style=\"color: #94a3b8; margin: 0;\">from " + seller.getName() + "</p>"
                 + "</div>"
                 + "<div style=\"background: #ffffff; border-radius: 16px; padding: 32px; border: 1px solid #f1f5f9;\">"
+                + itemsHtml
                 + "<p style=\"color: #374151; font-size: 15px; margin: 0 0 8px;\">Amount: <strong>$" + invoice.getTotalUsd() + "</strong></p>"
                 + "<p style=\"color: #374151; font-size: 15px; margin: 0 0 8px;\">Payment mode: " + invoice.getPaymentMode() + "</p>"
                 + dueDateRow

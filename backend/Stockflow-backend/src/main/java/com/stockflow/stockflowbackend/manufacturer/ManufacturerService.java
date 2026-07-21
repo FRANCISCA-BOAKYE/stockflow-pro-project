@@ -213,6 +213,10 @@ public class ManufacturerService {
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
+        if (req.getWholesalerBusinessId() == null
+                && (req.getBuyerName() == null || req.getBuyerName().isBlank())) {
+            throw new RuntimeException("Enter a buyer name, or select a linked wholesaler");
+        }
         for (DispatchItemRequest item : req.getItems()) {
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
                 throw new RuntimeException("Quantity must be greater than zero");
@@ -234,9 +238,12 @@ public class ManufacturerService {
             itemsTotal = itemsTotal.add(item.getAmountUsd());
         }
 
-        Business wholesaler = businessRepository
-                .findById(req.getWholesalerBusinessId())
-                .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
+        Business wholesaler = null;
+        if (req.getWholesalerBusinessId() != null) {
+            wholesaler = businessRepository
+                    .findById(req.getWholesalerBusinessId())
+                    .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
+        }
 
         String deliveryMode = "PICKUP".equals(req.getDeliveryMode()) ? "PICKUP" : "DELIVERY";
         BigDecimal deliveryFee = "DELIVERY".equals(deliveryMode) && req.getDeliveryFeeUsd() != null
@@ -261,7 +268,11 @@ public class ManufacturerService {
         if ("CREDIT".equals(req.getPaymentMode()) && req.getDueDate() != null) {
             CreditRecord credit = new CreditRecord();
             credit.setCreditorBusiness(business);
-            credit.setDebtorBusiness(wholesaler);
+            if (wholesaler != null) {
+                credit.setDebtorBusiness(wholesaler);
+            } else {
+                credit.setDebtorName(req.getBuyerName());
+            }
             credit.setAmountUsd(totalAmount);
             credit.setDueDate(req.getDueDate());
             credit.setStatus("OUTSTANDING");
@@ -278,6 +289,7 @@ public class ManufacturerService {
             dispatch.setBusiness(business);
             dispatch.setFinishedGood(fg);
             dispatch.setWholesalerBusiness(wholesaler);
+            dispatch.setBuyerName(wholesaler != null ? null : req.getBuyerName());
             dispatch.setQuantity(item.getQuantity());
             // Delivery fee (if any) is only carried on the first line so it isn't
             // double-counted when the dispatch total is summed across rows.
@@ -304,7 +316,11 @@ public class ManufacturerService {
         if (!canSkipInvoice || wantsInvoice) {
             Invoice invoice = new Invoice();
             invoice.setSellerBusiness(business);
-            invoice.setBuyerBusiness(wholesaler);
+            if (wholesaler != null) {
+                invoice.setBuyerBusiness(wholesaler);
+            } else {
+                invoice.setBuyerName(req.getBuyerName());
+            }
             invoice.setSubtotalUsd(itemsTotal);
             invoice.setTotalUsd(totalAmount);
             invoice.setPaymentMode(req.getPaymentMode());
@@ -356,9 +372,11 @@ public class ManufacturerService {
 
         String productList = goods.stream().map(fg -> fg.getRecipe().getProductName())
                 .distinct().collect(Collectors.joining(", "));
-        notificationService.notify(wholesaler, "DISPATCH_RECEIVED", "info",
-                "Incoming dispatch",
-                business.getName() + " dispatched " + productList + " to you");
+        if (wholesaler != null) {
+            notificationService.notify(wholesaler, "DISPATCH_RECEIVED", "info",
+                    "Incoming dispatch",
+                    business.getName() + " dispatched " + productList + " to you");
+        }
 
         List<LineItemSummary> summaries = new ArrayList<>();
         for (int i = 0; i < goods.size(); i++) {

@@ -33,5 +33,17 @@ public class SchemaPatchRunner implements CommandLineRunner {
         } catch (Exception e) {
             log.warn("Schema patch (debtor_business_id nullable) failed or already applied: {}", e.getMessage());
         }
+        try {
+            jdbcTemplate.execute(
+                    "ALTER TABLE wholesale_sales ALTER COLUMN retailer_business_id DROP NOT NULL");
+        } catch (Exception e) {
+            log.warn("Schema patch (retailer_business_id nullable) failed or already applied: {}", e.getMessage());
+        }
+        try {
+            jdbcTemplate.execute(
+                    "ALTER TABLE dispatches ALTER COLUMN wholesaler_business_id DROP NOT NULL");
+        } catch (Exception e) {
+            log.warn("Schema patch (wholesaler_business_id nullable) failed or already applied: {}", e.getMessage());
+        }
     }
 }

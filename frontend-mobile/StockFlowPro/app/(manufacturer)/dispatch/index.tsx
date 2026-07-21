@@ -28,6 +28,7 @@ export default function DispatchScreen() {
   const [showPaystack, setShowPaystack] = useState(false);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
+  const [buyerName, setBuyerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     paymentMode: 'CASH', dueDate: '',
@@ -89,6 +90,7 @@ export default function DispatchScreen() {
       wantsInvoice: true,
     });
     setSelectedPartner(null);
+    setBuyerName('');
   };
 
   const handleDispatch = async () => {
@@ -99,8 +101,8 @@ export default function DispatchScreen() {
         return;
       }
     }
-    if (!selectedPartner) {
-      Alert.alert('Missing info', 'Please select which wholesaler this is going to.');
+    if (!selectedPartner && !buyerName.trim()) {
+      Alert.alert('Missing info', 'Select a linked wholesaler, or enter a buyer name for a walk-in dispatch.');
       return;
     }
     if (form.paymentMode === 'CREDIT' && !form.dueDate) {
@@ -116,10 +118,11 @@ export default function DispatchScreen() {
     try {
       const body: any = {
         items: cart.map(l => ({ finishedGoodId: l.finishedGoodId, quantity: l.qty, amountUsd: parseFloat(l.amountUsd) })),
-        wholesalerBusinessId: selectedPartner.id,
         paymentMode: form.paymentMode,
         deliveryMode: form.deliveryMode,
       };
+      if (selectedPartner) body.wholesalerBusinessId = selectedPartner.id;
+      else body.buyerName = buyerName.trim();
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
       if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
       if (isPremium) body.wantsInvoice = form.wantsInvoice;
@@ -233,10 +236,19 @@ export default function DispatchScreen() {
             <TouchableOpacity style={s.partnerBtn} onPress={() => setShowPartnerModal(true)}>
               <Ionicons name="business-outline" size={16} color="#1A56DB" />
               <Text style={[s.partnerBtnText, selectedPartner && { color: '#0F172A' }]}>
-                {selectedPartner ? selectedPartner.name : 'Select linked wholesaler *'}
+                {selectedPartner ? selectedPartner.name : 'Select linked wholesaler (optional)'}
               </Text>
               <Ionicons name="chevron-down-outline" size={14} color="#9CA3AF" />
             </TouchableOpacity>
+
+            {!selectedPartner && (
+              <View style={s.lineCard}>
+                <Text style={s.fieldLabel}>Buyer name (walk-in / not-yet-linked business) *</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. Adom Wholesale" placeholderTextColor="#9CA3AF"
+                  value={buyerName} onChangeText={setBuyerName} />
+                <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Dispatching to someone with no StockFlow Pro account yet? Enter their business name here instead of picking a linked wholesaler.</Text>
+              </View>
+            )}
 
             <View style={{ gap: 10 }}>
               {cart.map(line => (

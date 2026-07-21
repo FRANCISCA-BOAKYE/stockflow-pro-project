@@ -29,6 +29,7 @@ export default function WholesalerPOSScreen() {
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartLine[]>([])
   const [selectedPartner, setSelectedPartner] = useState<any>(null)
+  const [buyerName, setBuyerName] = useState('')
   const [payment, setPayment] = useState('CASH')
   const [dueDate, setDueDate] = useState('')
   const [mobileNumber, setMobileNumber] = useState('')
@@ -91,11 +92,12 @@ export default function WholesalerPOSScreen() {
 
   const resetForm = () => {
     setCart([]); setSearch(''); setPayment('CASH'); setDueDate('');
-    setSelectedPartner(null); setWantsInvoice(true); setMobileNumber('');
+    setSelectedPartner(null); setBuyerName(''); setWantsInvoice(true); setMobileNumber('');
   };
 
   const confirmOrder = async () => {
     if (cart.length === 0) { Alert.alert('Empty cart', 'Add at least one product.'); return }
+    if (!selectedPartner && !buyerName.trim()) { Alert.alert('Missing info', 'Select a linked retailer, or enter a buyer name for a walk-in sale.'); return }
     if (payment === 'MOBILE_MONEY' && !mobileNumber.trim()) { Alert.alert('Missing info', 'Please enter the mobile money number.'); return }
     if (payment === 'CREDIT' && !dueDate.trim()) { Alert.alert('Missing info', 'Please enter a due date for credit payment.'); return }
     if (payment === 'CARD') { setShowPaystack(true); return }
@@ -110,6 +112,7 @@ export default function WholesalerPOSScreen() {
         paymentMode,
       }
       if (selectedPartner) body.retailerBusinessId = selectedPartner.id
+      else body.buyerName = buyerName.trim()
       if (paymentMode === 'CREDIT') body.dueDate = dueDate
       if (paymentMode === 'CARD') body.paystackReference = paystackReference
       if (isPremium) body.wantsInvoice = wantsInvoice
@@ -159,6 +162,17 @@ export default function WholesalerPOSScreen() {
           </Text>
           <Ionicons name="chevron-down-outline" size={14} color="#9CA3AF" />
         </TouchableOpacity>
+
+        {!selectedPartner && (
+          <View style={s.card}>
+            <Text style={s.fieldLabel}>Buyer name (walk-in / not-yet-linked business)</Text>
+            <View style={s.fieldInputRow}>
+              <TextInput style={s.fieldInput} placeholder="e.g. Kojo's Store" placeholderTextColor="#9CA3AF"
+                value={buyerName} onChangeText={setBuyerName} />
+            </View>
+            <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Selling to someone with no StockFlow Pro account yet? Enter their business name here instead of picking a linked retailer.</Text>
+          </View>
+        )}
 
         {/* Stock search */}
         <View style={s.searchBox}>

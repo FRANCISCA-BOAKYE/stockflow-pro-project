@@ -6,7 +6,8 @@ import java.util.List;
 @Getter @Setter
 public class DispatchRequest {
     private List<DispatchItemRequest> items;
-    private Long wholesalerBusinessId;
+    private Long wholesalerBusinessId; // omit for a walk-in buyer with no linked account
+    private String buyerName; // required when wholesalerBusinessId is omitted
     private String paymentMode;
     private LocalDate dueDate;
 

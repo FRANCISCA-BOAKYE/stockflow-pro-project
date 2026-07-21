@@ -30,8 +30,12 @@ public class WholesaleSale {
     private BigDecimal quantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "retailer_business_id", nullable = false)
+    @JoinColumn(name = "retailer_business_id")
     private Business retailerBusiness;
+
+    /** Set when the buyer is a walk-in business with no StockFlow Pro account. */
+    @Column(name = "buyer_name", length = 200)
+    private String buyerName;
 
     @Column(name = "amount_usd", nullable = false, precision = 12, scale = 2)
     private BigDecimal amountUsd;

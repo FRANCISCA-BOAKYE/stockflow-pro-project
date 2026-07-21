@@ -27,8 +27,12 @@ public class Dispatch {
     private FinishedGoods finishedGood;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wholesaler_business_id", nullable = false)
+    @JoinColumn(name = "wholesaler_business_id")
     private Business wholesalerBusiness;
+
+    /** Set when the buyer is a walk-in business with no StockFlow Pro account. */
+    @Column(name = "buyer_name", length = 200)
+    private String buyerName;
 
     @Column(nullable = false)
     private Integer quantity;

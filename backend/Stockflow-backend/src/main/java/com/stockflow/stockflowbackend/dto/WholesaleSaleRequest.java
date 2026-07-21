@@ -9,7 +9,8 @@ import java.util.List;
 @Setter
 public class WholesaleSaleRequest {
     private List<WholesaleSaleItemRequest> items;
-    private Long retailerBusinessId;
+    private Long retailerBusinessId; // omit for a walk-in buyer with no linked account
+    private String buyerName; // required when retailerBusinessId is omitted
     private String paymentMode;
     private LocalDate dueDate;
     private Boolean wantsInvoice;

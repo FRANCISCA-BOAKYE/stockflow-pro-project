@@ -147,12 +147,16 @@ export default function MaterialsScreen() {
                 <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#ECFDF5' }]}>
                   <Ionicons name={isLow ? 'warning-outline' : 'flask-outline'} size={18} color={isLow ? '#DC2626' : '#059669'} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, gap: 3 }}>
                   <Text style={s.name}>{item.name}</Text>
-                  <Text style={s.unit}>{item.unit} · ${Number(item.costPerUnit).toFixed(2)}/unit</Text>
                   <Text style={[s.qty, isLow && { color: '#DC2626' }]}>
-                    {Number(item.quantity).toFixed(0)} {item.unit} · Min: {item.minThreshold}
+                    {Number(item.quantity).toFixed(0)} {item.unit} in stock
                   </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={s.unit}>Min {item.minThreshold} {item.unit}</Text>
+                    <Text style={s.metaDot}>·</Text>
+                    <Text style={s.unit}>${Number(item.costPerUnit).toFixed(2)}/{item.unit}</Text>
+                  </View>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
                   <View style={[s.badge, isLow ? s.badgeRed : s.badgeGreen]}>
@@ -273,11 +277,12 @@ const s = StyleSheet.create({
   body: { flex: 1, padding: 12 },
   searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
   searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: '#374151' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  unit: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  qty: { fontSize: 11, color: '#059669', fontWeight: '500', marginTop: 2 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  cardIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  name: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  unit: { fontSize: 12, color: '#9CA3AF' },
+  metaDot: { fontSize: 12, color: '#D1D5DB' },
+  qty: { fontSize: 13, color: '#059669', fontWeight: '600' },
   badge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   badgeGreen: { backgroundColor: '#D1FAE5' },
   badgeRed: { backgroundColor: '#FEE2E2' },
