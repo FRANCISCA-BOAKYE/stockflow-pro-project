@@ -30,6 +30,7 @@ export default function DispatchScreen() {
   const [selectedPartner, setSelectedPartner] = useState<any>(null);
   const [buyerName, setBuyerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [returningToReview, setReturningToReview] = useState(false);
   const [form, setForm] = useState({
     paymentMode: 'CASH', dueDate: '',
     deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
@@ -70,7 +71,12 @@ export default function DispatchScreen() {
       if (c.find(l => l.finishedGoodId === item.id)) return c;
       return [...c, { finishedGoodId: item.id, name: item.recipe?.productName || `Product #${item.id}`, available: item.quantityInStock, qty: 1, amountUsd: '' }];
     });
-    setShowModal(false);
+    if (returningToReview) {
+      setReturningToReview(false);
+      setShowModal(true);
+    } else {
+      setShowModal(false);
+    }
   };
 
   const updateLine = (finishedGoodId: number, patch: Partial<CartLine>) => {
@@ -83,6 +89,7 @@ export default function DispatchScreen() {
 
   const resetForm = () => {
     setCart([]);
+    setReturningToReview(false);
     setForm({
       paymentMode: 'CASH', dueDate: '',
       deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
@@ -227,11 +234,11 @@ export default function DispatchScreen() {
       </View>
 
       {/* Dispatch Modal — review cart + checkout */}
-      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowModal(false)}>
+      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setReturningToReview(false); setShowModal(false); }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Dispatch — {cart.length} item{cart.length !== 1 ? 's' : ''}</Text>
-            <TouchableOpacity onPress={() => setShowModal(false)}>
+            <TouchableOpacity onPress={() => { setReturningToReview(false); setShowModal(false); }}>
               <Ionicons name="close" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
@@ -280,7 +287,7 @@ export default function DispatchScreen() {
             </View>
 
             {goods.filter(g => !cart.some(l => l.finishedGoodId === g.id)).length > 0 && (
-              <TouchableOpacity style={s.addMoreBtn} onPress={() => setShowModal(false)}>
+              <TouchableOpacity style={s.addMoreBtn} onPress={() => { setReturningToReview(true); setShowModal(false); }}>
                 <Ionicons name="add" size={16} color="#1A56DB" />
                 <Text style={s.addMoreText}>Add another product</Text>
               </TouchableOpacity>
