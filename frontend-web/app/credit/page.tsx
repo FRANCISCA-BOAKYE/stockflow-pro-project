@@ -96,7 +96,7 @@ export default function CreditPage() {
       <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>Loading...</div>
-        ) : displayed.length === 0 ? (
+        ) : accounts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
             <Wallet style={{ width: '40px', height: '40px', margin: '0 auto 12px', color: '#d1d5db' }} />
             <p style={{ fontWeight: 600, color: '#374151' }}>No credit accounts yet</p>
@@ -137,6 +137,14 @@ export default function CreditPage() {
             </div>
 
             {/* Accounts */}
+            {displayed.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+                <Wallet style={{ width: '32px', height: '32px', margin: '0 auto 10px', color: '#d1d5db' }} />
+                <p style={{ fontWeight: 600, color: '#374151' }}>
+                  {tab === 'owe_me' ? "Nobody owes you on credit right now" : "You don't owe anyone on credit right now"}
+                </p>
+              </div>
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {displayed.map((acc, i) => {
                 const name = acc.partnerBusinessName || 'Account'
@@ -184,6 +192,7 @@ export default function CreditPage() {
                 )
               })}
             </div>
+            )}
           </>
         )}
       </main>
