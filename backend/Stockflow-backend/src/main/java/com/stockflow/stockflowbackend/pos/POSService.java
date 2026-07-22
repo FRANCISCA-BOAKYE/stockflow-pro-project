@@ -62,6 +62,10 @@ public class POSService {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
+        if ("MOBILE_MONEY".equals(request.getPaymentMode())
+                && (request.getMobileMoneyNumber() == null || request.getMobileMoneyNumber().isBlank())) {
+            throw new RuntimeException("Mobile money number is required for this payment mode");
+        }
         for (POSItemRequest item : request.getItems()) {
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
                 throw new RuntimeException("Quantity must be greater than zero");
@@ -176,6 +180,7 @@ public class POSService {
             tx.setQuantity(BigDecimal.valueOf(item.getQuantity()));
             tx.setAmountUsd(item.getUnitPriceUsd().multiply(BigDecimal.valueOf(item.getQuantity())));
             tx.setPaymentMode(request.getPaymentMode());
+            tx.setMobileMoneyNumber(request.getMobileMoneyNumber());
             tx.setBuyerName(request.getBuyerName());
             tx.setRecordedBy(user);
             if (request.getBuyerBusinessId() != null) {
@@ -240,7 +245,7 @@ public class POSService {
             for (RetailTransaction tx : transactions) {
                 tx.setInvoiceId(invoiceId);
             }
-            invoiceEmailService.sendIfEligible(savedInvoice, business);
+            invoiceEmailService.sendIfEligible(savedInvoice, business, request.getBuyerEmail());
             if (isPickup) {
                 invoiceEmailService.sendPickupNotification(savedInvoice, business, request.getBuyerEmail());
             }

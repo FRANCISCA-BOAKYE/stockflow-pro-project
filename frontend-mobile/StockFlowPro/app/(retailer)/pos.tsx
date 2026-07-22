@@ -102,6 +102,9 @@ export default function POSScreen() {
       if (paymentMode === 'CARD') {
         body.paystackReference = paystackReference;
       }
+      if (paymentMode === 'MOBILE_MONEY') {
+        body.mobileMoneyNumber = mobileNumber.trim();
+      }
       if (paymentMode === 'CREDIT') {
         body.dueDate = dueDate;
         if (isPremium) {

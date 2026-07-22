@@ -157,6 +157,10 @@ public class WholesalerService {
                 && (request.getBuyerName() == null || request.getBuyerName().isBlank())) {
             throw new RuntimeException("Enter a buyer name, or select a linked retailer");
         }
+        if ("MOBILE_MONEY".equals(request.getPaymentMode())
+                && (request.getMobileMoneyNumber() == null || request.getMobileMoneyNumber().isBlank())) {
+            throw new RuntimeException("Mobile money number is required for this payment mode");
+        }
         for (WholesaleSaleItemRequest item : request.getItems()) {
             if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("Quantity must be greater than zero");
@@ -233,6 +237,7 @@ public class WholesalerService {
             sale.setBuyerName(retailer != null ? null : request.getBuyerName());
             sale.setAmountUsd(item.getAmountUsd());
             sale.setPaymentMode(request.getPaymentMode());
+            sale.setMobileMoneyNumber(request.getMobileMoneyNumber());
             sale.setRecordedBy(user);
             sale.setCreditRecordId(creditRecordId);
             sales.add(sale);
@@ -290,7 +295,7 @@ public class WholesalerService {
             for (WholesaleSale sale : sales) {
                 sale.setInvoiceId(invoiceId);
             }
-            invoiceEmailService.sendIfEligible(savedInvoice, business);
+            invoiceEmailService.sendIfEligible(savedInvoice, business, request.getBuyerEmail());
             if (isPickup) {
                 invoiceEmailService.sendPickupNotification(savedInvoice, business, request.getBuyerEmail());
             }

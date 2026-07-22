@@ -38,6 +38,9 @@ public class RetailTransaction {
     @Column(name = "payment_mode", nullable = false, length = 20)
     private String paymentMode;
 
+    @Column(name = "mobile_money_number", length = 20)
+    private String mobileMoneyNumber;
+
     @Column(name = "credit_record_id")
     private Long creditRecordId;
 

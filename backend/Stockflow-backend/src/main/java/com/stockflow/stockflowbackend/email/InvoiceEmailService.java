@@ -30,19 +30,34 @@ public class InvoiceEmailService {
     }
 
     public void sendIfEligible(Invoice invoice, Business seller) {
+        sendIfEligible(invoice, seller, null);
+    }
+
+    /**
+     * Emails the invoice to the registered buyer business if there is one; otherwise,
+     * for a walk-in buyer, falls back to whatever email address they gave at time of
+     * sale (e.g. for pickup) so they still receive the real invoice automatically.
+     */
+    public void sendIfEligible(Invoice invoice, Business seller, String walkInBuyerEmail) {
         try {
-            if (invoice.getBuyerBusiness() == null) {
-                return;
+            String recipientEmail = null;
+
+            if (invoice.getBuyerBusiness() != null) {
+                Optional<AppUser> recipient = userRepository
+                        .findFirstByBusiness_IdAndIsSubAccountFalse(invoice.getBuyerBusiness().getId());
+                if (recipient.isPresent()) {
+                    recipientEmail = recipient.get().getEmail();
+                }
+            } else if (walkInBuyerEmail != null && !walkInBuyerEmail.isBlank()) {
+                recipientEmail = walkInBuyerEmail.trim();
             }
 
-            Optional<AppUser> recipient = userRepository
-                    .findFirstByBusiness_IdAndIsSubAccountFalse(invoice.getBuyerBusiness().getId());
-            if (recipient.isEmpty()) {
+            if (recipientEmail == null) {
                 return;
             }
 
             emailSenderService.sendAsync(
-                    recipient.get().getEmail(),
+                    recipientEmail,
                     "Invoice " + invoice.getInvoiceNumber() + " from " + seller.getName(),
                     buildInvoiceHtml(invoice, seller));
         } catch (Exception e) {

@@ -9,6 +9,7 @@ public class DispatchRequest {
     private Long wholesalerBusinessId; // omit for a walk-in buyer with no linked account
     private String buyerName; // required when wholesalerBusinessId is omitted
     private String paymentMode;
+    private String mobileMoneyNumber; // required when paymentMode is MOBILE_MONEY
     private LocalDate dueDate;
 
     /** "PICKUP" (buyer collects) or "DELIVERY" (we bring it) — defaults to DELIVERY. */

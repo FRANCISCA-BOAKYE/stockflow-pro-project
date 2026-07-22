@@ -217,6 +217,10 @@ public class ManufacturerService {
                 && (req.getBuyerName() == null || req.getBuyerName().isBlank())) {
             throw new RuntimeException("Enter a buyer name, or select a linked wholesaler");
         }
+        if ("MOBILE_MONEY".equals(req.getPaymentMode())
+                && (req.getMobileMoneyNumber() == null || req.getMobileMoneyNumber().isBlank())) {
+            throw new RuntimeException("Mobile money number is required for this payment mode");
+        }
         for (DispatchItemRequest item : req.getItems()) {
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
                 throw new RuntimeException("Quantity must be greater than zero");
@@ -295,6 +299,7 @@ public class ManufacturerService {
             // double-counted when the dispatch total is summed across rows.
             dispatch.setAmountUsd(i == 0 ? item.getAmountUsd().add(deliveryFee) : item.getAmountUsd());
             dispatch.setPaymentMode(req.getPaymentMode());
+            dispatch.setMobileMoneyNumber(req.getMobileMoneyNumber());
             dispatch.setRecordedBy(user);
             dispatch.setDeliveryMode(deliveryMode);
             dispatch.setDeliveryFeeUsd(i == 0 && deliveryFee.compareTo(BigDecimal.ZERO) > 0 ? deliveryFee : null);
@@ -368,7 +373,7 @@ public class ManufacturerService {
             for (Dispatch dispatch : dispatches) {
                 dispatch.setInvoiceId(invoiceId);
             }
-            invoiceEmailService.sendIfEligible(savedInvoice, business);
+            invoiceEmailService.sendIfEligible(savedInvoice, business, req.getBuyerEmail());
             if (isPickup) {
                 invoiceEmailService.sendPickupNotification(savedInvoice, business, req.getBuyerEmail());
             }

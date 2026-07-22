@@ -10,6 +10,7 @@ import java.util.List;
 public class POSRequest {
     private List<POSItemRequest> items;
     private String paymentMode; // CASH, CARD, MOBILE_MONEY, CREDIT
+    private String mobileMoneyNumber; // required when paymentMode is MOBILE_MONEY
     private LocalDate dueDate; // only if CREDIT
     private Long buyerBusinessId; // wholesaler or retailer buying
     private String buyerName; // walk-in customer name for retailers

@@ -12,6 +12,7 @@ public class WholesaleSaleRequest {
     private Long retailerBusinessId; // omit for a walk-in buyer with no linked account
     private String buyerName; // required when retailerBusinessId is omitted
     private String paymentMode;
+    private String mobileMoneyNumber; // required when paymentMode is MOBILE_MONEY
     private LocalDate dueDate;
     private Boolean isPickup; // buyer will collect in person and wants a pickup code by email
     private String buyerEmail; // required when isPickup is true

@@ -32,7 +32,7 @@ export default function DispatchScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [returningToReview, setReturningToReview] = useState(false);
   const [form, setForm] = useState({
-    paymentMode: 'CASH', dueDate: '',
+    paymentMode: 'CASH', dueDate: '', mobileMoneyNumber: '',
     deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
     driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
     wantsInvoice: true, buyerEmail: '',
@@ -91,7 +91,7 @@ export default function DispatchScreen() {
     setCart([]);
     setReturningToReview(false);
     setForm({
-      paymentMode: 'CASH', dueDate: '',
+      paymentMode: 'CASH', dueDate: '', mobileMoneyNumber: '',
       deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
       driverName: '', vehicleNumber: '', driverContact: '', driverIdNumber: '',
       wantsInvoice: true, buyerEmail: '',
@@ -116,6 +116,10 @@ export default function DispatchScreen() {
       Alert.alert('Missing info', 'Please enter a due date for credit.');
       return;
     }
+    if (form.paymentMode === 'MOBILE_MONEY' && !form.mobileMoneyNumber.trim()) {
+      Alert.alert('Missing info', 'Please enter the mobile money number.');
+      return;
+    }
     if (form.paymentMode === 'CARD') { setShowPaystack(true); return; }
     await submitDispatch();
   };
@@ -132,6 +136,7 @@ export default function DispatchScreen() {
       else body.buyerName = buyerName.trim();
       if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
       if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
+      if (form.paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = form.mobileMoneyNumber.trim();
       const wantsPickupCode = form.deliveryMode === 'PICKUP' && form.buyerEmail.trim();
       if (isPremium) body.wantsInvoice = wantsPickupCode ? true : form.wantsInvoice;
       if (wantsPickupCode) body.buyerEmail = form.buyerEmail.trim();
@@ -309,6 +314,13 @@ export default function DispatchScreen() {
                 <Text style={s.fieldLabel}>Due date *</Text>
                 <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
                   value={form.dueDate} onChangeText={v => setForm(f => ({ ...f, dueDate: v }))} />
+              </View>
+            )}
+            {form.paymentMode === 'MOBILE_MONEY' && (
+              <View>
+                <Text style={s.fieldLabel}>Mobile money number *</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
+                  value={form.mobileMoneyNumber} onChangeText={v => setForm(f => ({ ...f, mobileMoneyNumber: v }))} keyboardType="phone-pad" />
               </View>
             )}
 

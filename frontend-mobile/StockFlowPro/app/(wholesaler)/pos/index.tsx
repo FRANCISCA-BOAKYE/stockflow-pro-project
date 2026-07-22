@@ -119,6 +119,7 @@ export default function WholesalerPOSScreen() {
       else body.buyerName = buyerName.trim()
       if (paymentMode === 'CREDIT') body.dueDate = dueDate
       if (paymentMode === 'CARD') body.paystackReference = paystackReference
+      if (paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = mobileNumber.trim()
       if (isPremium) body.wantsInvoice = isPickup ? true : wantsInvoice
       if (isPickup) { body.isPickup = true; body.buyerEmail = buyerEmail.trim() }
 
