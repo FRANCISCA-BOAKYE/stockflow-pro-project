@@ -119,8 +119,10 @@ public class ReportService {
             case "WHOLESALER" -> {
                 for (WholesaleSale w : wholesaleSaleRepository
                         .findByBusinessIdOrderBySoldAtDesc(businessId, top5)) {
+                    String buyerName = w.getRetailerBusiness() != null
+                            ? w.getRetailerBusiness().getName() : w.getBuyerName();
                     entries.add(Map.entry(w.getSoldAt(), activityEntry(
-                            "Sold to " + w.getRetailerBusiness().getName(),
+                            "Sold to " + buyerName,
                             w.getRecordedBy().getName(), w.getAmountUsd(), w.getSoldAt(), true)));
                 }
                 for (Receipt r : receiptRepository
@@ -133,8 +135,10 @@ public class ReportService {
             case "MANUFACTURER" -> {
                 for (Dispatch d : dispatchRepository
                         .findByBusinessIdOrderByDispatchedAtDesc(businessId, top5)) {
+                    String buyerName = d.getWholesalerBusiness() != null
+                            ? d.getWholesalerBusiness().getName() : d.getBuyerName();
                     entries.add(Map.entry(d.getDispatchedAt(), activityEntry(
-                            "Dispatched to " + d.getWholesalerBusiness().getName(),
+                            "Dispatched to " + buyerName,
                             d.getRecordedBy().getName(), d.getAmountUsd(), d.getDispatchedAt(), true)));
                 }
                 for (ProductionRun p : productionRunRepository
