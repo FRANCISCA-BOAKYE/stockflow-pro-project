@@ -50,7 +50,7 @@ export default function WholesalerPOSScreen() {
       ])
       setStock(stockRes.data || [])
       const retailers = (partnerRes.data || []).filter((p: any) =>
-        p.partnerBusiness?.tierType === 'RETAILER' || p.requesterBusiness?.tierType === 'RETAILER'
+        p.status === 'ACTIVE' && (p.partnerBusiness?.tierType === 'RETAILER' || p.requesterBusiness?.tierType === 'RETAILER')
       ).map((p: any) => {
         const retailer = p.partnerBusiness?.tierType === 'RETAILER' ? p.partnerBusiness : p.requesterBusiness
         return { id: retailer.id, name: retailer.name }

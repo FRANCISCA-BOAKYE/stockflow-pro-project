@@ -31,7 +31,7 @@ export default function ReceiveStockScreen() {
       ]);
       setStock(stockRes.data || []);
       const manufacturers = (partnersRes.data || []).filter((p: any) =>
-        p.partnerBusiness?.tierType === 'MANUFACTURER' || p.requesterBusiness?.tierType === 'MANUFACTURER'
+        p.status === 'ACTIVE' && (p.partnerBusiness?.tierType === 'MANUFACTURER' || p.requesterBusiness?.tierType === 'MANUFACTURER')
       ).map((p: any) => {
         const m = p.partnerBusiness?.tierType === 'MANUFACTURER' ? p.partnerBusiness : p.requesterBusiness;
         return { id: m.id, name: m.name };

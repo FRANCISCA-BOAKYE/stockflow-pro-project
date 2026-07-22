@@ -45,7 +45,7 @@ export default function DispatchScreen() {
       ]);
       setGoods(goodsRes.data || []);
       const wholesalers = (partnersRes.data || []).filter((p: any) =>
-        p.partnerBusiness?.tierType === 'WHOLESALER' || p.requesterBusiness?.tierType === 'WHOLESALER'
+        p.status === 'ACTIVE' && (p.partnerBusiness?.tierType === 'WHOLESALER' || p.requesterBusiness?.tierType === 'WHOLESALER')
       ).map((p: any) => {
         const w = p.partnerBusiness?.tierType === 'WHOLESALER' ? p.partnerBusiness : p.requesterBusiness;
         return { id: w.id, name: w.name };
