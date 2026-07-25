@@ -1,11 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
+import { useThemeColors } from '../../../hooks/useThemeColors';
+import { ThemeColors } from '../../../theme/colors';
 
 export default function FinishedGoodsScreen() {
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [goods, setGoods] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,7 +35,7 @@ export default function FinishedGoodsScreen() {
 
   if (loading) return (
     <View style={s.center}>
-      <ActivityIndicator size="large" color="#1A56DB" />
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
 
@@ -39,7 +43,7 @@ export default function FinishedGoodsScreen() {
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View>
           <Text style={s.title}>Finished Goods</Text>
@@ -49,8 +53,8 @@ export default function FinishedGoodsScreen() {
 
       <View style={s.body}>
         <View style={s.searchRow}>
-          <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput style={s.searchInput} placeholder="Search goods..." placeholderTextColor="#9CA3AF"
+          <Ionicons name="search-outline" size={16} color={colors.textPlaceholder} style={{ marginRight: 8 }} />
+          <TextInput style={s.searchInput} placeholder="Search goods..." placeholderTextColor={colors.textPlaceholder}
             value={search} onChangeText={setSearch} />
         </View>
 
@@ -59,10 +63,10 @@ export default function FinishedGoodsScreen() {
           keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchGoods(); }} tintColor="#1A56DB" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchGoods(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="cube-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="cube-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No finished goods yet</Text>
               <Text style={s.emptySub}>Run a production batch to create finished goods</Text>
             </View>
@@ -70,7 +74,7 @@ export default function FinishedGoodsScreen() {
           renderItem={({ item }) => (
             <View style={s.card}>
               <View style={s.cardIcon}>
-                <Ionicons name="cube-outline" size={18} color="#1A56DB" />
+                <Ionicons name="cube-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.name}>{item.recipe?.productName || `Product #${item.id}`}</Text>
@@ -90,26 +94,26 @@ export default function FinishedGoodsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { flex: 1, padding: 12 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
-  searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: '#374151' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  sku: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  stock: { fontSize: 11, color: '#059669', fontWeight: '500', marginTop: 2 },
-  updated: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
-  stockBadge: { alignItems: 'center', backgroundColor: '#EFF6FF', borderRadius: 12, padding: 10, minWidth: 50 },
-  stockBadgeText: { fontSize: 18, fontWeight: '800', color: '#1A56DB' },
-  stockBadgeUnit: { fontSize: 9, color: '#1A56DB', fontWeight: '500' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
+  searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: colors.textSecondary },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
+  cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
+  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  sku: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
+  stock: { fontSize: 11, color: colors.success, fontWeight: '500', marginTop: 2 },
+  updated: { fontSize: 10, color: colors.textPlaceholder, marginTop: 2 },
+  stockBadge: { alignItems: 'center', backgroundColor: colors.primarySurface, borderRadius: 12, padding: 10, minWidth: 50 },
+  stockBadgeText: { fontSize: 18, fontWeight: '800', color: colors.primary },
+  stockBadgeUnit: { fontSize: 9, color: colors.primary, fontWeight: '500' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
 });

@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
 
 // Mirrors backend PlanCatalog.ALLOWED_LINK_PAIRS
 const ALLOWED_LINK_PAIRS: Record<string, string[]> = {
@@ -12,15 +14,18 @@ const ALLOWED_LINK_PAIRS: Record<string, string[]> = {
   RETAILER: ['WHOLESALER'],
 };
 
-const TYPE_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  MANUFACTURER: { label: 'Manufacturer', bg: '#EFF6FF', color: '#1A56DB' },
-  WHOLESALER: { label: 'Wholesaler', bg: '#FFFBEB', color: '#C27803' },
-  RETAILER: { label: 'Retailer', bg: '#ECFDF5', color: '#059669' },
-};
+const TYPE_CONFIG_MAP = (colors: ThemeColors): Record<string, { label: string; bg: string; color: string }> => ({
+  MANUFACTURER: { label: 'Manufacturer', bg: colors.primarySurface, color: colors.primary },
+  WHOLESALER: { label: 'Wholesaler', bg: colors.warningSurface, color: colors.warning },
+  RETAILER: { label: 'Retailer', bg: colors.successSurface, color: colors.success },
+});
 
 export default function MarketplaceScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+  const TYPE_CONFIG = useMemo(() => TYPE_CONFIG_MAP(colors), [colors]);
   const [listings, setListings] = useState<any[]>([]);
   const [linkStatus, setLinkStatus] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
@@ -91,13 +96,13 @@ export default function MarketplaceScreen() {
     return matchSearch && matchFilter;
   });
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Marketplace</Text>
@@ -107,8 +112,8 @@ export default function MarketplaceScreen() {
 
       <View style={s.body}>
         <View style={s.searchRow}>
-          <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput style={s.searchInput} placeholder="Search businesses..." placeholderTextColor="#9CA3AF"
+          <Ionicons name="search-outline" size={16} color={colors.textPlaceholder} style={{ marginRight: 8 }} />
+          <TextInput style={s.searchInput} placeholder="Search businesses..." placeholderTextColor={colors.textPlaceholder}
             value={search} onChangeText={setSearch} />
         </View>
 
@@ -127,10 +132,10 @@ export default function MarketplaceScreen() {
           keyExtractor={item => item.id}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchListings(); }} tintColor="#1A56DB" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchListings(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="storefront-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="storefront-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No listings found</Text>
             </View>
           }
@@ -148,9 +153,9 @@ export default function MarketplaceScreen() {
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={s.name}>{item.name}</Text>
-                      {item.verified && <Ionicons name="checkmark-circle" size={14} color="#059669" />}
+                      {item.verified && <Ionicons name="checkmark-circle" size={14} color={colors.success} />}
                     </View>
-                    <Text style={s.location}><Ionicons name="location-outline" size={11} color="#9CA3AF" /> {item.location}</Text>
+                    <Text style={s.location}><Ionicons name="location-outline" size={11} color={colors.textPlaceholder} /> {item.location}</Text>
                   </View>
                   <View style={[s.typeBadge, { backgroundColor: tc.bg }]}>
                     <Text style={[s.typeBadgeText, { color: tc.color }]}>{tc.label}</Text>
@@ -166,7 +171,7 @@ export default function MarketplaceScreen() {
                   {canLink && (
                     status === 'ACTIVE' ? (
                       <View style={s.linkedBadge}>
-                        <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                        <Ionicons name="checkmark-circle" size={12} color={colors.success} />
                         <Text style={s.linkedBadgeText}>Linked</Text>
                       </View>
                     ) : status === 'PENDING' ? (
@@ -180,7 +185,7 @@ export default function MarketplaceScreen() {
                         onPress={() => handleRequestLink(item)}
                       >
                         {requestingId === item.id
-                          ? <ActivityIndicator size="small" color="#1A56DB" />
+                          ? <ActivityIndicator size="small" color={colors.primary} />
                           : <Text style={s.linkBtnText}>Request Link</Text>}
                       </TouchableOpacity>
                     )
@@ -195,37 +200,37 @@ export default function MarketplaceScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { flex: 1, padding: 12 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
-  searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: '#374151' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
+  searchInput: { flex: 1, paddingVertical: 10, fontSize: 13, color: colors.textSecondary },
   filters: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  chipActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  chipText: { fontSize: 12, color: '#374151' },
-  chipTextActive: { color: '#fff', fontWeight: '500' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', gap: 10 },
+  chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 12, color: colors.textSecondary },
+  chipTextActive: { color: colors.onPrimary, fontWeight: '500' },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: colors.border, gap: 10 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  location: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  location: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
   typeBadge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   typeBadgeText: { fontSize: 10, fontWeight: '600' },
-  headline: { fontSize: 12, color: '#1A56DB', fontWeight: '600' },
-  description: { fontSize: 12, color: '#475569', lineHeight: 17 },
-  terms: { fontSize: 11, color: '#6B7280' },
-  linkBtn: { backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 12 },
-  linkBtnText: { fontSize: 11, color: '#1A56DB', fontWeight: '600' },
-  linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#ECFDF5', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
-  linkedBadgeText: { fontSize: 11, color: '#059669', fontWeight: '500' },
-  pendingBadge: { backgroundColor: '#FFFBEB', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
-  pendingBadgeText: { fontSize: 11, color: '#C27803', fontWeight: '500' },
+  headline: { fontSize: 12, color: colors.primary, fontWeight: '600' },
+  description: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+  terms: { fontSize: 11, color: colors.textMuted },
+  linkBtn: { backgroundColor: colors.primarySurface, borderRadius: 8, paddingVertical: 5, paddingHorizontal: 12 },
+  linkBtnText: { fontSize: 11, color: colors.primary, fontWeight: '600' },
+  linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successSurface, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
+  linkedBadgeText: { fontSize: 11, color: colors.success, fontWeight: '500' },
+  pendingBadge: { backgroundColor: colors.warningSurface, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
+  pendingBadgeText: { fontSize: 11, color: colors.warning, fontWeight: '500' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
 });

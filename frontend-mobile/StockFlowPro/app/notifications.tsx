@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
 
-const TYPE_MAP: Record<string, { bg: string; color: string; icon: string }> = {
-  warning: { bg: '#FFFBEB', color: '#C27803', icon: 'warning-outline' },
-  success: { bg: '#ECFDF5', color: '#059669', icon: 'checkmark-circle-outline' },
-  info: { bg: '#EFF6FF', color: '#1A56DB', icon: 'information-circle-outline' },
-  error: { bg: '#FEF2F2', color: '#DC2626', icon: 'alert-circle-outline' },
-};
+const TYPE_MAP = (colors: ThemeColors): Record<string, { bg: string; color: string; icon: string }> => ({
+  warning: { bg: colors.warningSurface, color: colors.warning, icon: 'warning-outline' },
+  success: { bg: colors.successSurface, color: colors.success, icon: 'checkmark-circle-outline' },
+  info: { bg: colors.primarySurface, color: colors.primary, icon: 'information-circle-outline' },
+  error: { bg: colors.dangerSurface, color: colors.danger, icon: 'alert-circle-outline' },
+});
 
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -24,6 +26,9 @@ function timeAgo(iso: string) {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+  const TYPES = useMemo(() => TYPE_MAP(colors), [colors]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,13 +67,13 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Notifications</Text>
@@ -86,16 +91,16 @@ export default function NotificationsScreen() {
         keyExtractor={item => String(item.id)}
         contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNotifications(); }} tintColor="#1A56DB" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNotifications(); }} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={s.empty}>
-            <Ionicons name="notifications-outline" size={40} color="#D1D5DB" />
+            <Ionicons name="notifications-outline" size={40} color={colors.borderStrong} />
             <Text style={s.emptyText}>All caught up!</Text>
             <Text style={s.emptySub}>No alerts right now. Pull down to refresh.</Text>
           </View>
         }
         renderItem={({ item }) => {
-          const t = TYPE_MAP[item.type] || TYPE_MAP.info;
+          const t = TYPES[item.type] || TYPES.info;
           return (
             <TouchableOpacity
               style={[s.card, !item.read && s.cardUnread]}
@@ -120,24 +125,24 @@ export default function NotificationsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  markBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#EFF6FF', borderRadius: 20 },
-  markBtnText: { fontSize: 12, color: '#1A56DB', fontWeight: '500' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  cardUnread: { borderColor: '#1A56DB', borderWidth: 1 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  markBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: colors.primarySurface, borderRadius: 20 },
+  markBtnText: { fontSize: 12, color: colors.primary, fontWeight: '500' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', gap: 12, borderWidth: 0.5, borderColor: colors.border },
+  cardUnread: { borderColor: colors.primary, borderWidth: 1 },
   icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  notifTitle: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1A56DB' },
-  body: { fontSize: 12, color: '#6B7280', lineHeight: 17 },
-  time: { fontSize: 10, color: '#9CA3AF', marginTop: 4 },
+  notifTitle: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  body: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
+  time: { fontSize: 10, color: colors.textPlaceholder, marginTop: 4 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
 });

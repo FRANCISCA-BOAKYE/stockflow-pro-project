@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
 
 interface Props {
   imageUri: string | null | undefined; // data URI or remote URL
@@ -13,6 +15,8 @@ interface Props {
 /** A circular, tappable photo — pick from library or take a new one, like a profile picture. */
 export default function ImagePickerAvatar({ imageUri, onChange, size = 64, placeholderIcon = 'image-outline' }: Props) {
   const [uploading, setUploading] = useState(false);
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
 
   const handlePickedAsset = async (asset: ImagePicker.ImagePickerAsset) => {
     if (!asset.base64) return;
@@ -84,23 +88,23 @@ export default function ImagePickerAvatar({ imageUri, onChange, size = 64, place
         <Image source={{ uri: imageUri }} style={[s.image, { width: size, height: size, borderRadius: size / 2 }]} />
       ) : (
         <View style={[s.placeholder, { width: size, height: size, borderRadius: size / 2 }]}>
-          <Ionicons name={placeholderIcon} size={size * 0.4} color="#9CA3AF" />
+          <Ionicons name={placeholderIcon} size={size * 0.4} color={colors.textPlaceholder} />
         </View>
       )}
       <View style={s.cameraBadge}>
-        {uploading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={13} color="#fff" />}
+        {uploading ? <ActivityIndicator size="small" color={colors.onPrimary} /> : <Ionicons name="camera" size={13} color={colors.onPrimary} />}
       </View>
     </TouchableOpacity>
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { position: 'relative' },
-  image: { backgroundColor: '#F3F4F6' },
-  placeholder: { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
+  image: { backgroundColor: colors.border },
+  placeholder: { backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
   cameraBadge: {
     position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11,
-    backgroundColor: '#1A56DB', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.surface,
   },
 });

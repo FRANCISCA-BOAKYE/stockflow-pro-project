@@ -1,19 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
 
-const ACTION_ICONS: Record<string, { icon: string; color: string; bg: string }> = {
-  SALE: { icon: 'cash-outline', color: '#059669', bg: '#ECFDF5' },
-  DISPATCH: { icon: 'car-outline', color: '#1A56DB', bg: '#EFF6FF' },
-  PRODUCTION: { icon: 'cog-outline', color: '#7C3AED', bg: '#F5F3FF' },
-  CREDIT_PAYMENT: { icon: 'wallet-outline', color: '#059669', bg: '#ECFDF5' },
-  CREDIT_DELETE: { icon: 'trash-outline', color: '#DC2626', bg: '#FEF2F2' },
-};
+const ACTION_ICONS_MAP = (colors: ThemeColors): Record<string, { icon: string; color: string; bg: string }> => ({
+  SALE: { icon: 'cash-outline', color: colors.success, bg: colors.successSurface },
+  DISPATCH: { icon: 'car-outline', color: colors.primary, bg: colors.primarySurface },
+  PRODUCTION: { icon: 'cog-outline', color: colors.purpleDark, bg: colors.purpleSurface },
+  CREDIT_PAYMENT: { icon: 'wallet-outline', color: colors.success, bg: colors.successSurface },
+  CREDIT_DELETE: { icon: 'trash-outline', color: colors.danger, bg: colors.dangerSurface },
+});
 
 export function ActivityLogScreen() {
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+  const ACTION_ICONS = useMemo(() => ACTION_ICONS_MAP(colors), [colors]);
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,13 +37,13 @@ export function ActivityLogScreen() {
 
   useEffect(() => { fetchLog(); }, [fetchLog]);
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Team Activity</Text>
@@ -51,16 +56,16 @@ export function ActivityLogScreen() {
         keyExtractor={item => String(item.id)}
         contentContainerStyle={{ padding: 12, gap: 8, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchLog(); }} tintColor="#1A56DB" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchLog(); }} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={s.empty}>
-            <Ionicons name="list-outline" size={40} color="#D1D5DB" />
+            <Ionicons name="list-outline" size={40} color={colors.borderStrong} />
             <Text style={s.emptyText}>No activity yet</Text>
             <Text style={s.emptySub}>Sales, dispatches, and credit actions will show up here as your team records them</Text>
           </View>
         }
         renderItem={({ item }) => {
-          const cfg = ACTION_ICONS[item.actionType] || { icon: 'ellipse-outline', color: '#6B7280', bg: '#F3F4F6' };
+          const cfg = ACTION_ICONS[item.actionType] || { icon: 'ellipse-outline', color: colors.textMuted, bg: colors.border };
           return (
             <View style={s.card}>
               <View style={[s.icon, { backgroundColor: cfg.bg }]}>
@@ -89,23 +94,23 @@ export function ActivityLogScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 11, color: '#6B7280', marginTop: 2 },
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  card: { backgroundColor: colors.surface, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 0.5, borderColor: colors.border },
   icon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  description: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
+  description: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 3 },
-  actorName: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
-  time: { fontSize: 11, color: '#9CA3AF' },
-  subBadge: { backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1, marginLeft: 6 },
-  subBadgeText: { fontSize: 9, color: '#92400E', fontWeight: '700' },
-  amount: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  actorName: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
+  time: { fontSize: 11, color: colors.textPlaceholder },
+  subBadge: { backgroundColor: colors.warningSurface, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1, marginLeft: 6 },
+  subBadgeText: { fontSize: 9, color: colors.warningText, fontWeight: '700' },
+  amount: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8, paddingHorizontal: 40 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
 });
