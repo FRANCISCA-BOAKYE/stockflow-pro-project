@@ -107,10 +107,12 @@ export default function POSScreen() {
       }
       if (paymentMode === 'CREDIT') {
         body.dueDate = dueDate;
-        if (isPremium) {
-          body.buyerContact = buyerContact || undefined;
-          body.buyerAddress = buyerAddress || undefined;
-        }
+      }
+      if (buyerContact.trim()) {
+        body.buyerContact = buyerContact.trim();
+      }
+      if (isPremium && buyerAddress.trim()) {
+        body.buyerAddress = buyerAddress.trim();
       }
       if (isPremium) {
         body.wantsInvoice = isPickup ? true : wantsInvoice;
@@ -123,9 +125,10 @@ export default function POSScreen() {
       const inv = res.data;
       const itemLines = (inv.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
       const pickupLine = inv.pickupCode ? `\nPickup code: ${inv.pickupCode} (emailed to customer)` : '';
+      const customerLine = inv.customerId ? `\nCustomer ID: ${inv.customerId}` : '';
       Alert.alert(
         'Sale confirmed ✓',
-        `${itemLines}\nTotal: $${Number(inv.totalUsd).toFixed(2)}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}`,
+        `${itemLines}\nTotal: $${Number(inv.totalUsd).toFixed(2)}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}${customerLine}`,
         [{ text: 'OK', onPress: () => { resetForm(); fetchProducts(); } }]
       );
     } catch (e: any) {
@@ -227,25 +230,30 @@ export default function POSScreen() {
           </View>
         </View>
 
-        {payment === 'CREDIT' && (
+        {cart.length > 0 && (
           <View style={s.card}>
-            <Text style={s.fieldLabel}>Buyer name</Text>
+            <Text style={s.fieldLabel}>Buyer name {payment === 'CREDIT' ? '' : '(optional)'}</Text>
             <View style={s.fieldInputRow}>
               <TextInput style={s.fieldInput} placeholder="Customer name" placeholderTextColor="#9CA3AF"
                 value={creditBuyer} onChangeText={setCreditBuyer} />
             </View>
-            <Text style={s.fieldLabel}>Due date</Text>
+            <Text style={s.fieldLabel}>Customer phone (optional)</Text>
             <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
-                value={dueDate} onChangeText={setDueDate} />
+              <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
+                value={buyerContact} onChangeText={setBuyerContact} keyboardType="phone-pad" />
             </View>
+            <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Enter their phone to link this sale to their permanent customer ID — repeat visits build one purchase history instead of starting over each time.</Text>
+            {payment === 'CREDIT' && (
+              <>
+                <Text style={s.fieldLabel}>Due date</Text>
+                <View style={s.fieldInputRow}>
+                  <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
+                    value={dueDate} onChangeText={setDueDate} />
+                </View>
+              </>
+            )}
             {isPremium && (
               <>
-                <Text style={s.fieldLabel}>Contact (optional)</Text>
-                <View style={s.fieldInputRow}>
-                  <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
-                    value={buyerContact} onChangeText={setBuyerContact} keyboardType="phone-pad" />
-                </View>
                 <Text style={s.fieldLabel}>Address (optional)</Text>
                 <View style={s.fieldInputRow}>
                   <TextInput style={s.fieldInput} placeholder="Customer address" placeholderTextColor="#9CA3AF"

@@ -78,4 +78,19 @@ public class RetailerController {
         return ResponseEntity.ok(retailerService.addCategory(
                 body.get("name"), getBusinessId(authentication)));
     }
+
+    @GetMapping("/customers")
+    public ResponseEntity<List<CustomerResponse>> getCustomers(
+            Authentication authentication) {
+        return ResponseEntity.ok(retailerService.getCustomers(
+                getBusinessId(authentication)));
+    }
+
+    @GetMapping("/customers/{id}")
+    public ResponseEntity<List<CustomerPurchaseResponse>> getCustomerHistory(
+            @PathVariable Long id,
+            Authentication authentication) {
+        return ResponseEntity.ok(retailerService.getCustomerHistory(
+                getBusinessId(authentication), id));
+    }
 }

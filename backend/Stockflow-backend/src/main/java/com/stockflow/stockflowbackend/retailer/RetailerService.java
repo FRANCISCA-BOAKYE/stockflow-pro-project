@@ -22,17 +22,20 @@ public class RetailerService {
     private final RetailTransactionRepository transactionRepository;
     private final BusinessRepository businessRepository;
     private final CreditRepository creditRepository;
+    private final CustomerRepository customerRepository;
 
     public RetailerService(ProductRepository productRepository,
                            CategoryRepository categoryRepository,
                            RetailTransactionRepository transactionRepository,
                            BusinessRepository businessRepository,
-                           CreditRepository creditRepository) {
+                           CreditRepository creditRepository,
+                           CustomerRepository customerRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.transactionRepository = transactionRepository;
         this.businessRepository = businessRepository;
         this.creditRepository = creditRepository;
+        this.customerRepository = customerRepository;
     }
 
     @Transactional
@@ -177,5 +180,31 @@ public class RetailerService {
         category.setBusiness(business);
         category.setName(name);
         return categoryRepository.save(category);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerResponse> getCustomers(Long businessId) {
+        return customerRepository.findByBusinessIdOrderByNameAsc(businessId).stream()
+                .map(c -> {
+                    List<RetailTransaction> purchases = transactionRepository
+                            .findByCustomerIdOrderByRecordedAtDesc(c.getId());
+                    java.math.BigDecimal totalSpent = purchases.stream()
+                            .map(RetailTransaction::getAmountUsd)
+                            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                    return new CustomerResponse(c.getId(), c.getName(), c.getPhone(), c.getEmail(),
+                            c.getAddress(), totalSpent, purchases.size(),
+                            purchases.isEmpty() ? null : purchases.get(0).getRecordedAt());
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerPurchaseResponse> getCustomerHistory(Long businessId, Long customerId) {
+        customerRepository.findByBusinessIdAndId(businessId, customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+        return transactionRepository.findByCustomerIdOrderByRecordedAtDesc(customerId).stream()
+                .map(t -> new CustomerPurchaseResponse(t.getId(), t.getProduct().getName(),
+                        t.getQuantity(), t.getAmountUsd(), t.getPaymentMode(), t.getRecordedAt()))
+                .collect(Collectors.toList());
     }
 }

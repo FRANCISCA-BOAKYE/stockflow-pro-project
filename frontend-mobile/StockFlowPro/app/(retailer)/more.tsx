@@ -12,6 +12,7 @@ const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
 const MENU_ITEMS = [
   { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
+  { label: 'Customers', icon: 'people-outline', color: '#059669', bg: '#ECFDF5', route: '/(retailer)/customers' },
   { label: 'Stock In', icon: 'arrow-down-circle-outline', color: '#059669', bg: '#ECFDF5', route: '/stock-in' },
   { label: 'Reservations', icon: 'time-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/(retailer)/reservations' },
   { label: 'Invoices', icon: 'receipt-outline', color: '#C27803', bg: '#FFFBEB', route: '/invoices' },
