@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, ActivityIndicator, RefreshControl, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 const STATUS_MAP: Record<string, { bg: string; text: string; label: string; icon: string }> = {
   OVERDUE: { bg: '#FEE2E2', text: '#991B1B', label: 'Overdue', icon: 'alert-circle-outline' },
@@ -15,6 +16,7 @@ interface CreditScreenProps {
 }
 
 export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
+  const { user } = useAuthStore();
   const [tab, setTab] = useState<'owe_me' | 'i_owe'>('owe_me');
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +215,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
                     )}
                   </View>
                 )}
-                {tab === 'owe_me' && (
+                {tab === 'owe_me' && !user?.isSubAccount && (
                   <TouchableOpacity style={s.deleteBtn} onPress={() => { setDeleteAccount(item); setDeletePassword(''); setShowDeleteModal(true); }}>
                     <Ionicons name="trash-outline" size={12} color="#9CA3AF" style={{ marginRight: 4 }} />
                     <Text style={s.deleteBtnText}>Delete record</Text>

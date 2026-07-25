@@ -1,6 +1,8 @@
 package com.stockflow.stockflowbackend.manufacturer;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
@@ -35,6 +37,8 @@ public class ManufacturerService {
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
     private final PaystackTransactionVerifier paystackTransactionVerifier;
+    private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     public ManufacturerService(MaterialRepository materialRepository,
                                RecipeRepository recipeRepository,
@@ -48,7 +52,9 @@ public class ManufacturerService {
                                InvoiceRepository invoiceRepository,
                                InvoiceEmailService invoiceEmailService,
                                SubscriptionService subscriptionService,
-                               PaystackTransactionVerifier paystackTransactionVerifier) {
+                               PaystackTransactionVerifier paystackTransactionVerifier,
+                               UserRepository userRepository,
+                               ActivityLogService activityLogService) {
         this.materialRepository = materialRepository;
         this.recipeRepository = recipeRepository;
         this.productionRunRepository = productionRunRepository;
@@ -62,6 +68,8 @@ public class ManufacturerService {
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
+        this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     // ADD MATERIAL
@@ -198,6 +206,13 @@ public class ManufacturerService {
         fg.setQuantityInStock(fg.getQuantityInStock() + totalUnits);
         fg.setUpdatedAt(LocalDateTime.now());
         finishedGoodsRepository.save(fg);
+
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        activityLogService.log(business, actor, "PRODUCTION",
+                "Produced " + totalUnits + " units of " + recipe.getProductName()
+                        + " (consumed " + recipe.getMaterials().size() + " material" + (recipe.getMaterials().size() != 1 ? "s" : "") + ")",
+                totalCost);
+
         return savedRun;
     }
 
@@ -402,6 +417,12 @@ public class ManufacturerService {
                     BigDecimal.valueOf(item.getQuantity()), fg.getRecipe().getUnitLabel(),
                     unitPrice, item.getAmountUsd()));
         }
+
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        String dispatchBuyerLabel = wholesaler != null ? wholesaler.getName() : req.getBuyerName();
+        activityLogService.log(business, actor, "DISPATCH",
+                "Dispatched " + productList + " to " + dispatchBuyerLabel + " via " + req.getPaymentMode(),
+                totalAmount);
 
         return new DispatchResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,

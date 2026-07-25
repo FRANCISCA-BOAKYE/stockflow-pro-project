@@ -12,6 +12,7 @@ const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
 const MENU_ITEMS = [
   { label: 'Notifications', icon: 'notifications-outline', color: '#1A56DB', bg: '#EFF6FF', route: '/notifications' },
+  { label: 'Team Activity', icon: 'shield-checkmark-outline', color: '#7C3AED', bg: '#F5F3FF', route: '/(manufacturer)/activity', ownerOnly: true },
   { label: 'Finished Goods', icon: 'cube-outline', color: '#059669', bg: '#ECFDF5', route: '/(manufacturer)/finished-goods' },
   { label: 'Dispatch', icon: 'send-outline', color: '#C27803', bg: '#FFFBEB', route: '/(manufacturer)/dispatch' },
   { label: 'Recipes', icon: 'git-branch-outline', color: '#8B5CF6', bg: '#F5F3FF', route: '/(manufacturer)/recipes' },
@@ -81,10 +82,10 @@ export default function ManufacturerMoreScreen() {
 </TouchableOpacity>
         </View>
         <View style={s.menuCard}>
-          {MENU_ITEMS.map((item, index) => (
+          {MENU_ITEMS.filter(item => !item.ownerOnly || !user?.isSubAccount).map((item, index, arr) => (
             <TouchableOpacity
               key={item.label}
-              style={[s.menuItem, index < MENU_ITEMS.length - 1 && s.menuBorder]}
+              style={[s.menuItem, index < arr.length - 1 && s.menuBorder]}
               onPress={() => item.external ? Linking.openURL(item.route) : router.push(item.route as any)}
             >
               <View style={[s.menuIcon, { backgroundColor: item.bg }]}>

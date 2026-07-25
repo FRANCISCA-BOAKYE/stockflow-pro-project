@@ -1,6 +1,8 @@
 package com.stockflow.stockflowbackend.pos;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.LineItemSummary;
 import com.stockflow.stockflowbackend.dto.POSItemRequest;
@@ -36,6 +38,8 @@ public class POSService {
     private final SubscriptionService subscriptionService;
     private final PaystackTransactionVerifier paystackTransactionVerifier;
     private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -48,7 +52,9 @@ public class POSService {
                       InvoiceEmailService invoiceEmailService,
                       SubscriptionService subscriptionService,
                       PaystackTransactionVerifier paystackTransactionVerifier,
-                      CustomerRepository customerRepository) {
+                      CustomerRepository customerRepository,
+                      UserRepository userRepository,
+                      ActivityLogService activityLogService) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.creditRepository = creditRepository;
@@ -58,6 +64,8 @@ public class POSService {
         this.subscriptionService = subscriptionService;
         this.paystackTransactionVerifier = paystackTransactionVerifier;
         this.customerRepository = customerRepository;
+        this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -295,6 +303,12 @@ public class POSService {
                     item.getUnitPriceUsd().multiply(BigDecimal.valueOf(item.getQuantity()))
             ));
         }
+
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        String itemsLabel = summaries.size() == 1 ? summaries.get(0).getProductName()
+                : summaries.size() + " items";
+        activityLogService.log(business, actor, "SALE",
+                "Sold " + itemsLabel + " via " + request.getPaymentMode(), total);
 
         return new POSResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,

@@ -1,6 +1,8 @@
 package com.stockflow.stockflowbackend.wholesaler;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
@@ -31,6 +33,8 @@ public class WholesalerService {
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
     private final PaystackTransactionVerifier paystackTransactionVerifier;
+    private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     public WholesalerService(
             WarehouseProductRepository warehouseProductRepository,
@@ -41,7 +45,9 @@ public class WholesalerService {
             InvoiceRepository invoiceRepository,
             InvoiceEmailService invoiceEmailService,
             SubscriptionService subscriptionService,
-            PaystackTransactionVerifier paystackTransactionVerifier) {
+            PaystackTransactionVerifier paystackTransactionVerifier,
+            UserRepository userRepository,
+            ActivityLogService activityLogService) {
         this.warehouseProductRepository = warehouseProductRepository;
         this.receiptRepository = receiptRepository;
         this.wholesaleSaleRepository = wholesaleSaleRepository;
@@ -51,6 +57,8 @@ public class WholesalerService {
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
         this.paystackTransactionVerifier = paystackTransactionVerifier;
+        this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -315,6 +323,13 @@ public class WholesalerService {
             summaries.add(new LineItemSummary(product.getName(), item.getQuantity(),
                     product.getUnit(), unitPrice, item.getAmountUsd()));
         }
+
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        String itemsLabel = summaries.size() == 1 ? summaries.get(0).getProductName()
+                : summaries.size() + " items";
+        String buyerLabel = retailer != null ? retailer.getName() : request.getBuyerName();
+        activityLogService.log(business, actor, "SALE",
+                "Sold " + itemsLabel + " to " + buyerLabel + " via " + request.getPaymentMode(), total);
 
         return new WholesaleSaleResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,

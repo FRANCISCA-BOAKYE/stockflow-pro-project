@@ -1,5 +1,6 @@
 package com.stockflow.stockflowbackend.credit;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
 import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.dto.*;
@@ -25,17 +26,20 @@ public class CreditService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
+    private final ActivityLogService activityLogService;
 
     public CreditService(CreditRepository creditRepository,
                          BusinessRepository businessRepository,
                          UserRepository userRepository,
                          PasswordEncoder passwordEncoder,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         ActivityLogService activityLogService) {
         this.creditRepository = creditRepository;
         this.businessRepository = businessRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.notificationService = notificationService;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -62,7 +66,7 @@ public class CreditService {
     }
 
     @Transactional
-    public CreditRecord recordPayment(CreditPaymentRequest request, Long callerBusinessId) {
+    public CreditRecord recordPayment(CreditPaymentRequest request, Long callerBusinessId, Long callerUserId) {
         CreditRecord record = creditRepository.findById(request.getCreditRecordId())
                 .orElseThrow(() -> new RuntimeException("Credit record not found"));
 
@@ -94,6 +98,12 @@ public class CreditService {
                     "Payment recorded",
                     record.getCreditorBusiness().getName() + " recorded a payment of $" + request.getAmountPaid() + settledNote);
         }
+
+        AppUser actor = userRepository.findById(callerUserId).orElse(null);
+        String debtorLabel = record.getDebtorBusiness() != null
+                ? record.getDebtorBusiness().getName() : record.getDebtorName();
+        activityLogService.log(record.getCreditorBusiness(), actor, "CREDIT_PAYMENT",
+                "Recorded a payment from " + debtorLabel, request.getAmountPaid());
 
         return saved;
     }
@@ -139,10 +149,23 @@ public class CreditService {
 
         AppUser user = userRepository.findById(callerUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // A sub-account re-entering their own password proves nothing — it's their
+        // own password. Deleting a credit record can erase evidence of a debt, so
+        // this is restricted to the business owner outright, not password-gated.
+        if (Boolean.TRUE.equals(user.getIsSubAccount())) {
+            throw new RuntimeException("Unauthorized: only the business owner can delete credit records");
+        }
+
         if (request.getCurrentPassword() == null
                 || !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Current password is incorrect");
         }
+
+        String debtorLabel = record.getDebtorBusiness() != null
+                ? record.getDebtorBusiness().getName() : record.getDebtorName();
+        activityLogService.log(record.getCreditorBusiness(), user, "CREDIT_DELETE",
+                "Deleted the credit record for " + debtorLabel, record.getAmountUsd());
 
         creditRepository.delete(record);
     }

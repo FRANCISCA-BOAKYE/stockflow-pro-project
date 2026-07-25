@@ -25,6 +25,7 @@ export default function WholesalerLayout() {
       <Tabs.Screen name="credit/index" options={{ title: 'Credit', tabBarIcon: ({ color, size }) => <Ionicons name="wallet-outline" size={size} color={color} /> }} />
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal-outline" size={size} color={color} /> }} />
       <Tabs.Screen name="linked-partners/index" options={{ href: null }} />
+      <Tabs.Screen name="activity/index" options={{ href: null }} />
     </Tabs>
   );
 }
