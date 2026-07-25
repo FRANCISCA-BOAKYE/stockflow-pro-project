@@ -52,6 +52,7 @@ public class RetailerService {
         product.setMinThreshold(request.getMinThreshold());
         product.setUnit(request.getUnit() != null ? request.getUnit() : "pcs");
         product.setIsActive(true);
+        product.setImageBase64(request.getImageBase64());
 
         if (request.getCategoryId() != null) {
             Category category = categoryRepository
@@ -67,7 +68,23 @@ public class RetailerService {
         return new ProductResponse(saved.getId(), saved.getName(),
                 categoryName, saved.getUnit(), saved.getPriceUsd(),
                 saved.getQuantity(), saved.getMinThreshold(),
-                saved.getIsActive());
+                saved.getIsActive(), saved.getImageBase64());
+    }
+
+    @Transactional
+    public ProductResponse updateProductImage(Long businessId, Long productId, String imageBase64) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        if (!product.getBusiness().getId().equals(businessId)) {
+            throw new RuntimeException("Product does not belong to this business");
+        }
+        product.setImageBase64(imageBase64);
+        product.setUpdatedAt(LocalDateTime.now());
+        Product saved = productRepository.save(product);
+        return new ProductResponse(saved.getId(), saved.getName(),
+                saved.getCategory() != null ? saved.getCategory().getName() : null,
+                saved.getUnit(), saved.getPriceUsd(), saved.getQuantity(),
+                saved.getMinThreshold(), saved.getIsActive(), saved.getImageBase64());
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +113,7 @@ public class RetailerService {
                 p.getId(), p.getName(),
                 p.getCategory() != null ? p.getCategory().getName() : null,
                 p.getUnit(), p.getPriceUsd(), p.getQuantity(),
-                p.getMinThreshold(), p.getIsActive()));
+                p.getMinThreshold(), p.getIsActive(), p.getImageBase64()));
     }
 
     @Transactional(readOnly = true)

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
 import { api } from '../../../services/api';
 import UnitPicker from '../../../components/UnitPicker';
+import ImagePickerAvatar from '../../../components/ImagePickerAvatar';
 
 const LOW_STOCK = 10;
 
@@ -29,6 +30,7 @@ export default function ProductsScreen() {
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ name: '', categoryId: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' });
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newProductImage, setNewProductImage] = useState<string | null>(null);
   const [lastAdded, setLastAdded] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
 
@@ -57,24 +59,32 @@ export default function ProductsScreen() {
     }
     setAddLoading(true);
     try {
-      await api.post('/retailer/products', {
+      const body: any = {
         name: form.name,
         categoryId: form.categoryId ? parseInt(form.categoryId) : null,
         priceUsd: parseFloat(form.priceUsd),
         quantity: parseInt(form.quantity),
         minThreshold: form.minThreshold ? parseInt(form.minThreshold) : 10,
         unit: form.unit,
-      });
+      };
+      if (newProductImage) body.imageBase64 = newProductImage;
+      await api.post('/retailer/products', body);
       setLastAdded(form.name);
       // Keep the modal open (and the category selected) so multiple items can be
       // added back-to-back instead of reopening the modal for each one.
       setForm(f => ({ ...f, name: '', priceUsd: '', quantity: '', minThreshold: '', unit: '' }));
+      setNewProductImage(null);
       fetchData();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add product');
     } finally {
       setAddLoading(false);
     }
+  };
+
+  const handleUpdateProductImage = async (productId: number, dataUri: string) => {
+    await api.put(`/retailer/products/${productId}/image`, { imageBase64: dataUri });
+    fetchData();
   };
 
   const handleAddCategory = async (name: string) => {
@@ -159,9 +169,12 @@ export default function ProductsScreen() {
             const isLow = item.isLowStock || item.quantity < LOW_STOCK;
             return (
               <View style={s.card}>
-                <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#EFF6FF' }]}>
-                  <Ionicons name="cube-outline" size={18} color={isLow ? '#DC2626' : '#1A56DB'} />
-                </View>
+                <ImagePickerAvatar
+                  imageUri={item.imageBase64}
+                  onChange={(uri) => handleUpdateProductImage(item.id, uri)}
+                  size={40}
+                  placeholderIcon="cube-outline"
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{item.name}</Text>
                   <Text style={s.sku}>{item.categoryName || 'Uncategorized'} · {item.unit}</Text>
@@ -203,6 +216,9 @@ export default function ProductsScreen() {
             ) : (
               <Text style={s.bulkHint}>Tip: this stays open after each save so you can add several items in a row.</Text>
             )}
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              <ImagePickerAvatar imageUri={newProductImage} onChange={(uri) => setNewProductImage(uri)} size={72} placeholderIcon="cube-outline" />
+            </View>
             {[
               { label: 'Product name *', key: 'name', placeholder: 'e.g. Coca Cola 500ml' },
               { label: 'Price (USD) *', key: 'priceUsd', placeholder: '1.50', keyboard: 'decimal-pad' },

@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../services/api';
 import UnitPicker from '../../../components/UnitPicker';
+import ImagePickerAvatar from '../../../components/ImagePickerAvatar';
 
 export default function MaterialsScreen() {
   const [materials, setMaterials] = useState<any[]>([]);
@@ -18,6 +19,7 @@ export default function MaterialsScreen() {
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '', packageUnit: '', unitsPerPackage: '' });
+  const [newMaterialImage, setNewMaterialImage] = useState<string | null>(null);
   const [stockInMode, setStockInMode] = useState<'base' | 'package'>('base');
   const [stockInQty, setStockInQty] = useState('');
   const [stockInPackages, setStockInPackages] = useState('');
@@ -55,9 +57,11 @@ export default function MaterialsScreen() {
         body.packageUnit = form.packageUnit.trim();
         body.unitsPerPackage = parseFloat(form.unitsPerPackage);
       }
+      if (newMaterialImage) body.imageBase64 = newMaterialImage;
       await api.post('/manufacturer/materials', body);
       setLastAdded(form.name);
       setForm({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '', packageUnit: '', unitsPerPackage: '' });
+      setNewMaterialImage(null);
       fetchMaterials();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add material');
@@ -91,6 +95,11 @@ export default function MaterialsScreen() {
     } finally {
       setAddLoading(false);
     }
+  };
+
+  const handleUpdateMaterialImage = async (materialId: number, dataUri: string) => {
+    await api.put(`/manufacturer/materials/${materialId}/image`, { imageBase64: dataUri });
+    fetchMaterials();
   };
 
   const handleDeleteMaterial = async (id: string | number) => {
@@ -160,9 +169,12 @@ export default function MaterialsScreen() {
                 setStockInMode('base'); setStockInQty(''); setStockInPackages('');
                 setShowStockInModal(true);
               }}>
-                <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#ECFDF5' }]}>
-                  <Ionicons name={isLow ? 'warning-outline' : 'flask-outline'} size={18} color={isLow ? '#DC2626' : '#059669'} />
-                </View>
+                <ImagePickerAvatar
+                  imageUri={item.imageBase64}
+                  onChange={(uri) => handleUpdateMaterialImage(item.id, uri)}
+                  size={44}
+                  placeholderIcon={isLow ? 'warning-outline' : 'flask-outline'}
+                />
                 <View style={{ flex: 1, gap: 3 }}>
                   <Text style={s.name}>{item.name}</Text>
                   <Text style={[s.qty, isLow && { color: '#DC2626' }]}>
@@ -230,6 +242,9 @@ export default function MaterialsScreen() {
             ) : (
               <Text style={s.bulkHint}>Tip: this stays open after each save so you can add several materials in a row.</Text>
             )}
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              <ImagePickerAvatar imageUri={newMaterialImage} onChange={(uri) => setNewMaterialImage(uri)} size={72} placeholderIcon="flask-outline" />
+            </View>
             {[
               { label: 'Material name *', key: 'name', placeholder: 'e.g. Cotton Fabric' },
               { label: 'Initial quantity *', key: 'quantity', placeholder: '1000', keyboard: 'decimal-pad' },

@@ -33,6 +33,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#0F172A"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow StockFlow Pro to access your photos to add a picture of a material or product.",
+          "cameraPermission": "Allow StockFlow Pro to use your camera to take a picture of a material or product."
+        }
       ]
     ],
     "extra": {

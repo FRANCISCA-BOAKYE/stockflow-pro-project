@@ -89,6 +89,18 @@ public class ManufacturerService {
             m.setPackageUnit(req.getPackageUnit().trim());
             m.setUnitsPerPackage(req.getUnitsPerPackage());
         }
+        m.setImageBase64(req.getImageBase64());
+        m.setUpdatedAt(LocalDateTime.now());
+        return materialRepository.save(m);
+    }
+
+    // UPDATE MATERIAL IMAGE
+    @Transactional
+    public Material updateMaterialImage(Long businessId, Long materialId, String imageBase64) {
+        Material m = materialRepository
+                .findByBusinessIdAndId(businessId, materialId)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        m.setImageBase64(imageBase64);
         m.setUpdatedAt(LocalDateTime.now());
         return materialRepository.save(m);
     }

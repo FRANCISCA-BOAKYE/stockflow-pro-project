@@ -52,6 +52,10 @@ public class Material {
     @Column(name = "units_per_package", precision = 12, scale = 4)
     private BigDecimal unitsPerPackage;
 
+    /** A photo of the material, stored as a data URI (e.g. "data:image/jpeg;base64,..."). */
+    @Column(name = "image_base64", columnDefinition = "TEXT")
+    private String imageBase64;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 }

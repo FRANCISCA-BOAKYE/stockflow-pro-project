@@ -11,4 +11,5 @@ public class AddMaterialRequest {
     private BigDecimal costPerUnit;
     private String packageUnit; // optional, e.g. "box"
     private BigDecimal unitsPerPackage; // optional, e.g. 12 (for "1 box = 12 pieces")
+    private String imageBase64;
 }
