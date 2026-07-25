@@ -84,6 +84,11 @@ public class ManufacturerService {
         m.setQuantity(req.getQuantity());
         m.setMinThreshold(req.getMinThreshold());
         m.setCostPerUnit(req.getCostPerUnit());
+        if (req.getPackageUnit() != null && !req.getPackageUnit().isBlank()
+                && req.getUnitsPerPackage() != null && req.getUnitsPerPackage().compareTo(BigDecimal.ZERO) > 0) {
+            m.setPackageUnit(req.getPackageUnit().trim());
+            m.setUnitsPerPackage(req.getUnitsPerPackage());
+        }
         m.setUpdatedAt(LocalDateTime.now());
         return materialRepository.save(m);
     }
@@ -106,13 +111,31 @@ public class ManufacturerService {
     // STOCK IN MATERIAL
     @Transactional
     public Material stockInMaterial(MaterialStockInRequest req, Long businessId) {
-        if (req.getQuantity() == null || req.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Quantity must be greater than zero");
-        }
         Material m = materialRepository
                 .findByBusinessIdAndId(businessId, req.getMaterialId())
                 .orElseThrow(() -> new RuntimeException("Material not found"));
-        m.setQuantity(m.getQuantity().add(req.getQuantity()));
+
+        BigDecimal addedQuantity;
+        if (req.getPackageCount() != null) {
+            if (req.getPackageCount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Package count must be greater than zero");
+            }
+            if (m.getUnitsPerPackage() == null) {
+                throw new RuntimeException("This material has no package definition set — stock it in "
+                        + m.getUnit() + " instead");
+            }
+            // The real conversion: package count in the material's bulk unit
+            // (e.g. boxes) becomes the correct amount in its base unit (e.g.
+            // pieces), which is what production math actually deducts against.
+            addedQuantity = req.getPackageCount().multiply(m.getUnitsPerPackage());
+        } else {
+            if (req.getQuantity() == null || req.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Quantity must be greater than zero");
+            }
+            addedQuantity = req.getQuantity();
+        }
+
+        m.setQuantity(m.getQuantity().add(addedQuantity));
         m.setUpdatedAt(LocalDateTime.now());
         return materialRepository.save(m);
     }

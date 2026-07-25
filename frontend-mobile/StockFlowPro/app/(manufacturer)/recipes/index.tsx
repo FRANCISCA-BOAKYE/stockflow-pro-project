@@ -74,6 +74,12 @@ export default function RecipesScreen() {
     return mat ? mat.unit : '';
   };
 
+  const getSelectedMaterialPackageHint = (materialId: string) => {
+    const mat = materials.find(m => String(m.id) === materialId);
+    if (!mat?.packageUnit || !mat?.unitsPerPackage) return null;
+    return `1 ${mat.packageUnit} = ${Number(mat.unitsPerPackage).toFixed(0)} ${mat.unit} — enter this quantity in ${mat.unit}, not ${mat.packageUnit}`;
+  };
+
   const handleAddRecipe = async () => {
     if (!form.productName || !form.unitLabel || !form.groupLabel || !form.unitsPerGroup) {
       Alert.alert('Missing info', 'Please fill in all required fields.');
@@ -249,27 +255,32 @@ export default function RecipesScreen() {
                 </View>
               ) : (
                 recipeMaterials.map((m, i) => (
-                  <View key={i} style={s.matLineCard}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.fieldLabel, { fontSize: 11 }]}>Material *</Text>
-                      <TouchableOpacity style={s.matPickerBtn} onPress={() => openMaterialPicker(i)}>
-                        <Text style={[s.matPickerText, !m.materialId && { color: '#9CA3AF' }]}>
-                          {m.materialId ? getSelectedMaterialName(m.materialId) : 'Choose material...'}
-                        </Text>
-                        <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+                  <View key={i} style={{ marginBottom: 10 }}>
+                    <View style={[s.matLineCard, { marginBottom: 0 }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.fieldLabel, { fontSize: 11 }]}>Material *</Text>
+                        <TouchableOpacity style={s.matPickerBtn} onPress={() => openMaterialPicker(i)}>
+                          <Text style={[s.matPickerText, !m.materialId && { color: '#9CA3AF' }]}>
+                            {m.materialId ? getSelectedMaterialName(m.materialId) : 'Choose material...'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={14} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ width: 100 }}>
+                        <Text style={[s.fieldLabel, { fontSize: 11 }]}>Qty per unit *</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <TextInput style={[s.fieldInput, { flex: 1 }]} placeholder="0" placeholderTextColor="#9CA3AF"
+                            value={m.quantityPerUnit} onChangeText={v => updateMaterialLine(i, 'quantityPerUnit', v)} keyboardType="decimal-pad" />
+                          {m.materialId ? <Text style={s.matUnitHint}>{getSelectedMaterialUnit(m.materialId)}</Text> : null}
+                        </View>
+                      </View>
+                      <TouchableOpacity onPress={() => removeMaterialLine(i)} style={s.matRemoveBtn}>
+                        <Ionicons name="trash-outline" size={18} color="#DC2626" />
                       </TouchableOpacity>
                     </View>
-                    <View style={{ width: 100 }}>
-                      <Text style={[s.fieldLabel, { fontSize: 11 }]}>Qty per unit *</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <TextInput style={[s.fieldInput, { flex: 1 }]} placeholder="0" placeholderTextColor="#9CA3AF"
-                          value={m.quantityPerUnit} onChangeText={v => updateMaterialLine(i, 'quantityPerUnit', v)} keyboardType="decimal-pad" />
-                        {m.materialId ? <Text style={s.matUnitHint}>{getSelectedMaterialUnit(m.materialId)}</Text> : null}
-                      </View>
-                    </View>
-                    <TouchableOpacity onPress={() => removeMaterialLine(i)} style={s.matRemoveBtn}>
-                      <Ionicons name="trash-outline" size={18} color="#DC2626" />
-                    </TouchableOpacity>
+                    {m.materialId && getSelectedMaterialPackageHint(m.materialId) && (
+                      <Text style={s.matPackageHint}>{getSelectedMaterialPackageHint(m.materialId)}</Text>
+                    )}
                   </View>
                 ))
               )}
@@ -356,6 +367,7 @@ const s = StyleSheet.create({
   matPickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, backgroundColor: '#fff' },
   matPickerText: { fontSize: 13, color: '#0F172A', flex: 1 },
   matUnitHint: { fontSize: 11, color: '#6B7280', marginLeft: 4 },
+  matPackageHint: { fontSize: 10.5, color: '#7C3AED', marginTop: 4, marginLeft: 4 },
   matRemoveBtn: { marginTop: 22, width: 32, height: 32, borderRadius: 10, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center' },
   matOptionCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.05)' },
   matOptionDot: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

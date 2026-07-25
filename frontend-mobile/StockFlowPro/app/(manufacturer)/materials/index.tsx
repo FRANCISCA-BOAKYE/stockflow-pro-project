@@ -17,8 +17,10 @@ export default function MaterialsScreen() {
   const [showStockInModal, setShowStockInModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [addLoading, setAddLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '' });
+  const [form, setForm] = useState({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '', packageUnit: '', unitsPerPackage: '' });
+  const [stockInMode, setStockInMode] = useState<'base' | 'package'>('base');
   const [stockInQty, setStockInQty] = useState('');
+  const [stockInPackages, setStockInPackages] = useState('');
   const [lastAdded, setLastAdded] = useState('');
 
   const fetchMaterials = useCallback(async () => {
@@ -42,15 +44,20 @@ export default function MaterialsScreen() {
     }
     setAddLoading(true);
     try {
-      await api.post('/manufacturer/materials', {
+      const body: any = {
         name: form.name,
         unit: form.unit,
         quantity: parseFloat(form.quantity),
         minThreshold: form.minThreshold ? parseFloat(form.minThreshold) : 100,
         costPerUnit: form.costPerUnit ? parseFloat(form.costPerUnit) : 0,
-      });
+      };
+      if (form.packageUnit.trim() && form.unitsPerPackage.trim()) {
+        body.packageUnit = form.packageUnit.trim();
+        body.unitsPerPackage = parseFloat(form.unitsPerPackage);
+      }
+      await api.post('/manufacturer/materials', body);
       setLastAdded(form.name);
-      setForm({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '' });
+      setForm({ name: '', unit: '', quantity: '', minThreshold: '', costPerUnit: '', packageUnit: '', unitsPerPackage: '' });
       fetchMaterials();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add material');
@@ -60,15 +67,22 @@ export default function MaterialsScreen() {
   };
 
   const handleStockIn = async () => {
-    if (!stockInQty || !selectedMaterial) return;
+    if (!selectedMaterial) return;
+    const body: any = { materialId: selectedMaterial.id };
+    if (stockInMode === 'package') {
+      if (!stockInPackages) return;
+      body.packageCount = parseFloat(stockInPackages);
+    } else {
+      if (!stockInQty) return;
+      body.quantity = parseFloat(stockInQty);
+    }
     setAddLoading(true);
     try {
-      await api.post('/manufacturer/materials/stock-in', {
-        materialId: selectedMaterial.id,
-        quantity: parseFloat(stockInQty),
-      });
+      await api.post('/manufacturer/materials/stock-in', body);
       setShowStockInModal(false);
       setStockInQty('');
+      setStockInPackages('');
+      setStockInMode('base');
       setSelectedMaterial(null);
       fetchMaterials();
       Alert.alert('Success', 'Stock added successfully!');
@@ -143,6 +157,7 @@ export default function MaterialsScreen() {
             return (
               <TouchableOpacity style={s.card} onLongPress={() => {
                 setSelectedMaterial(item);
+                setStockInMode('base'); setStockInQty(''); setStockInPackages('');
                 setShowStockInModal(true);
               }}>
                 <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#ECFDF5' }]}>
@@ -158,6 +173,9 @@ export default function MaterialsScreen() {
                     <Text style={s.metaDot}>·</Text>
                     <Text style={s.unit}>${Number(item.costPerUnit).toFixed(2)}/{item.unit}</Text>
                   </View>
+                  {item.packageUnit && item.unitsPerPackage && (
+                    <Text style={s.packageCaption}>1 {item.packageUnit} = {Number(item.unitsPerPackage).toFixed(0)} {item.unit}</Text>
+                  )}
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
                   <View style={[s.badge, isLow ? s.badgeRed : s.badgeGreen]}>
@@ -235,6 +253,29 @@ export default function MaterialsScreen() {
                 </View>
               </View>
             ))}
+
+            <View style={s.explainerBox}>
+              <Text style={s.explainerTitle}>Package definition (optional)</Text>
+              <Text style={s.explainerText}>If you buy this in bulk packs — e.g. boxes of pieces, or crates of bottles — define it here. You'll then be able to stock in by package count, and it'll convert correctly to {form.unit || 'the base unit'} for you.</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.fieldLabel}>Package unit</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. box" placeholderTextColor="#9CA3AF"
+                  value={form.packageUnit} onChangeText={v => setForm(f => ({ ...f, packageUnit: v }))} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.fieldLabel}>{form.unit || 'Units'} per package</Text>
+                <TextInput style={s.fieldInput} placeholder="e.g. 12" placeholderTextColor="#9CA3AF"
+                  value={form.unitsPerPackage} onChangeText={v => setForm(f => ({ ...f, unitsPerPackage: v }))} keyboardType="decimal-pad" />
+              </View>
+            </View>
+            {form.packageUnit.trim() && form.unitsPerPackage.trim() && (
+              <View style={s.previewBox}>
+                <Text style={s.previewText}>1 {form.packageUnit} = {form.unitsPerPackage} {form.unit || 'unit'}(s)</Text>
+              </View>
+            )}
+
             <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddMaterial} disabled={addLoading}>
               {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>{lastAdded ? 'Add Another' : 'Add Material'}</Text>}
             </TouchableOpacity>
@@ -252,15 +293,46 @@ export default function MaterialsScreen() {
             </TouchableOpacity>
           </View>
           <View style={s.modalBody}>
-            <Text style={s.fieldLabel}>Quantity to add ({selectedMaterial?.unit})</Text>
-            <TextInput
-              style={s.fieldInput}
-              placeholder="e.g. 500"
-              placeholderTextColor="#9CA3AF"
-              value={stockInQty}
-              onChangeText={setStockInQty}
-              keyboardType="decimal-pad"
-            />
+            {selectedMaterial?.packageUnit && selectedMaterial?.unitsPerPackage && (
+              <View style={s.payRow}>
+                {[{ key: 'base', label: `By ${selectedMaterial.unit}` }, { key: 'package', label: `By ${selectedMaterial.packageUnit}` }].map(mode => (
+                  <TouchableOpacity key={mode.key} style={[s.payBtn, stockInMode === mode.key && s.payBtnActive]}
+                    onPress={() => setStockInMode(mode.key as any)}>
+                    <Text style={[s.payBtnText, stockInMode === mode.key && s.payBtnTextActive]}>{mode.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {stockInMode === 'package' && selectedMaterial?.packageUnit ? (
+              <>
+                <Text style={s.fieldLabel}>Packages to add ({selectedMaterial.packageUnit})</Text>
+                <TextInput
+                  style={s.fieldInput}
+                  placeholder="e.g. 5"
+                  placeholderTextColor="#9CA3AF"
+                  value={stockInPackages}
+                  onChangeText={setStockInPackages}
+                  keyboardType="decimal-pad"
+                />
+                {stockInPackages.trim() && (
+                  <Text style={s.previewText}>
+                    = {(parseFloat(stockInPackages) * Number(selectedMaterial.unitsPerPackage)).toFixed(0)} {selectedMaterial.unit} added
+                  </Text>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={s.fieldLabel}>Quantity to add ({selectedMaterial?.unit})</Text>
+                <TextInput
+                  style={s.fieldInput}
+                  placeholder="e.g. 500"
+                  placeholderTextColor="#9CA3AF"
+                  value={stockInQty}
+                  onChangeText={setStockInQty}
+                  keyboardType="decimal-pad"
+                />
+              </>
+            )}
             <TouchableOpacity style={[s.confirmBtn, { marginTop: 16 }, addLoading && { opacity: 0.7 }]} onPress={handleStockIn} disabled={addLoading}>
               {addLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmText}>Add Stock</Text>}
             </TouchableOpacity>
@@ -273,6 +345,17 @@ export default function MaterialsScreen() {
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#F0F4F8' },
+  packageCaption: { fontSize: 10.5, color: '#7C3AED', fontWeight: '500', marginTop: 1 },
+  explainerBox: { backgroundColor: '#F5F3FF', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 0.5, borderColor: 'rgba(124,58,237,0.15)' },
+  explainerTitle: { fontSize: 12.5, fontWeight: '700', color: '#5B21B6', marginBottom: 4 },
+  explainerText: { fontSize: 11.5, color: '#6D28D9', lineHeight: 16 },
+  previewBox: { backgroundColor: '#ECFDF5', borderRadius: 10, padding: 10, marginBottom: 16, alignItems: 'center' },
+  previewText: { fontSize: 12.5, color: '#065F46', fontWeight: '600', marginTop: 6 },
+  payRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  payBtn: { flex: 1, paddingVertical: 9, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  payBtnActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
+  payBtnText: { fontSize: 12.5, color: '#374151', fontWeight: '600' },
+  payBtnTextActive: { color: '#fff' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
