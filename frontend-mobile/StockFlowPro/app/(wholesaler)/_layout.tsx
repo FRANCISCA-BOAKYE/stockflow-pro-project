@@ -1,17 +1,20 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 export default function WholesalerLayout() {
+  const { colors } = useThemeColors();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#1A56DB',
-        tabBarInactiveTintColor: '#9CA3AF',
+        sceneStyle: { backgroundColor: colors.bg },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textPlaceholder,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: colors.surface,
           borderTopWidth: 0.5,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: colors.borderStrong,
           paddingBottom: 6,
           paddingTop: 6,
           height: 60,
