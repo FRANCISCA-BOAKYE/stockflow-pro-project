@@ -1,17 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl, Share, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
 
-const STATUS_MAP: Record<string, { bg: string; text: string; label: string }> = {
-  PAID: { bg: '#D1FAE5', text: '#065F46', label: 'Paid' },
-  UNPAID: { bg: '#F3F4F6', text: '#374151', label: 'Unpaid' },
-  OVERDUE: { bg: '#FEE2E2', text: '#991B1B', label: 'Overdue' },
-};
+const STATUS_MAP = (colors: ThemeColors): Record<string, { bg: string; text: string; label: string }> => ({
+  PAID: { bg: colors.successSurface, text: colors.successText, label: 'Paid' },
+  UNPAID: { bg: colors.border, text: colors.textSecondary, label: 'Unpaid' },
+  OVERDUE: { bg: colors.dangerSurface, text: colors.dangerText, label: 'Overdue' },
+});
 
 export default function InvoicesScreen() {
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+  const STATUS = useMemo(() => STATUS_MAP(colors), [colors]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [filter, setFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
@@ -51,13 +56,13 @@ export default function InvoicesScreen() {
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View>
           <Text style={s.title}>Invoices</Text>
@@ -70,7 +75,7 @@ export default function InvoicesScreen() {
           {['ALL', 'PAID', 'UNPAID', 'OVERDUE'].map(f => (
             <TouchableOpacity key={f} style={[s.chip, filter === f && s.chipActive]} onPress={() => setFilter(f)}>
               <Text style={[s.chipText, filter === f && s.chipTextActive]}>
-                {f === 'ALL' ? 'All' : STATUS_MAP[f]?.label || f}
+                {f === 'ALL' ? 'All' : STATUS[f]?.label || f}
               </Text>
             </TouchableOpacity>
           ))}
@@ -81,17 +86,17 @@ export default function InvoicesScreen() {
           keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchInvoices(); }} tintColor="#1A56DB" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchInvoices(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="receipt-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="receipt-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No invoices yet</Text>
               <Text style={s.emptySub}>Invoices are generated automatically from POS sales</Text>
             </View>
           }
           renderItem={({ item }) => {
             const status = item.status || (item.paymentMode === 'CREDIT' ? 'UNPAID' : 'PAID');
-            const st = STATUS_MAP[status] || STATUS_MAP.UNPAID;
+            const st = STATUS[status] || STATUS.UNPAID;
             return (
               <View style={s.card}>
                 <View style={[s.cardIcon, { backgroundColor: st.bg }]}>
@@ -100,7 +105,7 @@ export default function InvoicesScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.party}>{item.buyerName || item.buyerBusinessName || 'Sale'}</Text>
                   <View style={s.row}>
-                    <Ionicons name="calendar-outline" size={11} color="#9CA3AF" />
+                    <Ionicons name="calendar-outline" size={11} color={colors.textPlaceholder} />
                     <Text style={s.date}> {new Date(item.createdAt).toLocaleDateString()}</Text>
                   </View>
                   <Text style={s.invoiceId}>{item.invoiceNumber}</Text>
@@ -112,7 +117,7 @@ export default function InvoicesScreen() {
                   </View>
                 </View>
                 <TouchableOpacity style={s.shareBtn} onPress={() => shareInvoice(item)}>
-                  <Ionicons name="share-outline" size={16} color="#6B7280" />
+                  <Ionicons name="share-outline" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             );
@@ -123,30 +128,30 @@ export default function InvoicesScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { flex: 1, padding: 12 },
   chips: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
-  chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  chipActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  chipText: { fontSize: 12, color: '#374151' },
-  chipTextActive: { color: '#fff', fontWeight: '500' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  chip: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 12, color: colors.textSecondary },
+  chipTextActive: { color: colors.onPrimary, fontWeight: '500' },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
   cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  party: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
+  party: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  date: { fontSize: 11, color: '#9CA3AF' },
-  invoiceId: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
-  amount: { fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
+  date: { fontSize: 11, color: colors.textPlaceholder },
+  invoiceId: { fontSize: 10, color: colors.textPlaceholder, marginTop: 2 },
+  amount: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   badge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
   badgeText: { fontSize: 10, fontWeight: '500' },
-  shareBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  shareBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
 });

@@ -28,6 +28,7 @@ export default function ManufacturerLayout() {
       <Tabs.Screen name="dispatch/index" options={{ href: null }} />
       <Tabs.Screen name="recipes/index" options={{ href: null }} />
       <Tabs.Screen name="linked-partners/index" options={{ href: null }} />
+      <Tabs.Screen name="activity/index" options={{ href: null }} />
     </Tabs>
   );
 }

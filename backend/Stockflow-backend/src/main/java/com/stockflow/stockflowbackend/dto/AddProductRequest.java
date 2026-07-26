@@ -13,4 +13,5 @@ public class AddProductRequest {
     private BigDecimal quantity;
     private BigDecimal minThreshold;
     private String unit;
+    private String imageBase64;
 }

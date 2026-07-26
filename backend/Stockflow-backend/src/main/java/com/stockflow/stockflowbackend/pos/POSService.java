@@ -1,6 +1,8 @@
 package com.stockflow.stockflowbackend.pos;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.LineItemSummary;
 import com.stockflow.stockflowbackend.dto.POSItemRequest;
@@ -10,6 +12,7 @@ import com.stockflow.stockflowbackend.email.InvoiceEmailService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
 import com.stockflow.stockflowbackend.reservation.ReservationRepository;
+import com.stockflow.stockflowbackend.retailer.CustomerRepository;
 import com.stockflow.stockflowbackend.retailer.ProductRepository;
 import com.stockflow.stockflowbackend.subscription.SubscriptionFeature;
 import com.stockflow.stockflowbackend.subscription.SubscriptionService;
@@ -34,6 +37,9 @@ public class POSService {
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
     private final PaystackTransactionVerifier paystackTransactionVerifier;
+    private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -45,7 +51,10 @@ public class POSService {
                       InvoiceRepository invoiceRepository,
                       InvoiceEmailService invoiceEmailService,
                       SubscriptionService subscriptionService,
-                      PaystackTransactionVerifier paystackTransactionVerifier) {
+                      PaystackTransactionVerifier paystackTransactionVerifier,
+                      CustomerRepository customerRepository,
+                      UserRepository userRepository,
+                      ActivityLogService activityLogService) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.creditRepository = creditRepository;
@@ -54,6 +63,9 @@ public class POSService {
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
         this.paystackTransactionVerifier = paystackTransactionVerifier;
+        this.customerRepository = customerRepository;
+        this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -139,6 +151,33 @@ public class POSService {
         AppUser user = new AppUser();
         user.setId(userId);
 
+        // 4b. Match or create a persistent customer record for a walk-in buyer,
+        // keyed by phone, so repeat visits accumulate under one customer ID
+        // instead of starting a fresh, disconnected name every time.
+        Customer customer = null;
+        if (request.getBuyerBusinessId() == null
+                && request.getBuyerContact() != null && !request.getBuyerContact().isBlank()) {
+            customer = customerRepository.findByBusinessIdAndPhone(businessId, request.getBuyerContact().trim())
+                    .orElseGet(() -> {
+                        Customer c = new Customer();
+                        c.setBusiness(business);
+                        c.setPhone(request.getBuyerContact().trim());
+                        c.setName(request.getBuyerName() != null && !request.getBuyerName().isBlank()
+                                ? request.getBuyerName().trim() : "Walk-in customer");
+                        return c;
+                    });
+            if (request.getBuyerName() != null && !request.getBuyerName().isBlank()) {
+                customer.setName(request.getBuyerName().trim());
+            }
+            if (request.getBuyerAddress() != null && !request.getBuyerAddress().isBlank()) {
+                customer.setAddress(request.getBuyerAddress().trim());
+            }
+            if (request.getBuyerEmail() != null && !request.getBuyerEmail().isBlank()) {
+                customer.setEmail(request.getBuyerEmail().trim());
+            }
+            customer = customerRepository.save(customer);
+        }
+
         // 5. Handle credit — the buyer may be a registered business (B2B credit)
         // or a walk-in customer with no account (tracked by name only).
         Long creditRecordId = null;
@@ -182,6 +221,7 @@ public class POSService {
             tx.setPaymentMode(request.getPaymentMode());
             tx.setMobileMoneyNumber(request.getMobileMoneyNumber());
             tx.setBuyerName(request.getBuyerName());
+            tx.setCustomer(customer);
             tx.setRecordedBy(user);
             if (request.getBuyerBusinessId() != null) {
                 Business buyer = businessRepository.findById(request.getBuyerBusinessId()).orElse(null);
@@ -264,6 +304,12 @@ public class POSService {
             ));
         }
 
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        String itemsLabel = summaries.size() == 1 ? summaries.get(0).getProductName()
+                : summaries.size() + " items";
+        activityLogService.log(business, actor, "SALE",
+                "Sold " + itemsLabel + " via " + request.getPaymentMode(), total);
+
         return new POSResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries,
@@ -272,7 +318,8 @@ public class POSService {
                 "CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID",
                 transactions.get(0).getRecordedAt(),
                 creditRecordId,
-                savedInvoice != null ? savedInvoice.getPickupCode() : null
+                savedInvoice != null ? savedInvoice.getPickupCode() : null,
+                customer != null ? customer.getId() : null
         );
     }
 }

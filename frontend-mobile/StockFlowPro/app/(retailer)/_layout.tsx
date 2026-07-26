@@ -74,6 +74,10 @@ export default function RetailerLayout() {
 
       <Tabs.Screen name="reservations" options={{ href: null }} />
 
+      <Tabs.Screen name="customers/index" options={{ href: null }} />
+
+      <Tabs.Screen name="activity/index" options={{ href: null }} />
+
     </Tabs>
   );
 }

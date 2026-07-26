@@ -48,6 +48,15 @@ public class ManufacturerController {
         return ResponseEntity.ok(manufacturerService.stockInMaterial(req, getBusinessId(auth)));
     }
 
+    @PutMapping("/materials/{id}/image")
+    public ResponseEntity<Material> updateMaterialImage(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body,
+            Authentication auth) {
+        return ResponseEntity.ok(manufacturerService.updateMaterialImage(
+                getBusinessId(auth), id, body.get("imageBase64")));
+    }
+
     @GetMapping("/recipes")
     public ResponseEntity<List<Recipe>> getRecipes(Authentication auth) {
         return ResponseEntity.ok(manufacturerService.getRecipes(getBusinessId(auth)));

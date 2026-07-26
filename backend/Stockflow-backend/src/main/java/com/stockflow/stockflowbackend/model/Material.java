@@ -39,6 +39,23 @@ public class Material {
     @Column(name = "cost_per_unit", precision = 10, scale = 4)
     private BigDecimal costPerUnit;
 
+    /**
+     * Optional bulk/purchase unit definition, e.g. "box" — with unitsPerPackage
+     * telling you how many of the base `unit` (above) are in one package, e.g.
+     * "1 box = 12 pieces". Stock (quantity, above) always stays in the base
+     * unit — this is purely a convenience for entering stock in package terms
+     * and for showing the definition wherever the material is used in a recipe.
+     */
+    @Column(name = "package_unit", length = 50)
+    private String packageUnit;
+
+    @Column(name = "units_per_package", precision = 12, scale = 4)
+    private BigDecimal unitsPerPackage;
+
+    /** A photo of the material, stored as a data URI (e.g. "data:image/jpeg;base64,..."). */
+    @Column(name = "image_base64", columnDefinition = "TEXT")
+    private String imageBase64;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 }

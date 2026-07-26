@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, ScrollView, Alert,
@@ -9,6 +9,8 @@ import { useAuthStore } from '../../../store/authStore';
 import { api } from '../../../services/api';
 import PaystackPayment from '../../../components/PaystackPayment';
 import { USD_TO_GHS } from '../../../constants/subscriptionPlans';
+import { useThemeColors } from '../../../hooks/useThemeColors';
+import { ThemeColors } from '../../../theme/colors';
 
 const MIN_QTY = 10;
 
@@ -24,6 +26,8 @@ type CartLine = { productId: number; name: string; unit: string; priceUsd: numbe
 
 export default function WholesalerPOSScreen() {
   const { user } = useAuthStore()
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [stock, setStock] = useState<any[]>([])
   const [partners, setPartners] = useState<any[]>([])
   const [search, setSearch] = useState('')
@@ -142,7 +146,7 @@ export default function WholesalerPOSScreen() {
     await recordSale('CARD', reference)
   }
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>
 
   return (
     <SafeAreaView style={s.page}>
@@ -163,32 +167,32 @@ export default function WholesalerPOSScreen() {
 
         {/* Partner selector */}
         <TouchableOpacity style={s.partnerBtn} onPress={() => setShowPartnerModal(true)}>
-          <Ionicons name="business-outline" size={16} color="#1A56DB" />
-          <Text style={[s.partnerBtnText, selectedPartner && { color: '#0F172A' }]}>
+          <Ionicons name="business-outline" size={16} color={colors.primary} />
+          <Text style={[s.partnerBtnText, selectedPartner && { color: colors.textPrimary }]}>
             {selectedPartner ? selectedPartner.name : 'Select linked retailer (optional)'}
           </Text>
-          <Ionicons name="chevron-down-outline" size={14} color="#9CA3AF" />
+          <Ionicons name="chevron-down-outline" size={14} color={colors.textPlaceholder} />
         </TouchableOpacity>
 
         {!selectedPartner && (
           <View style={s.card}>
             <Text style={s.fieldLabel}>Buyer name (walk-in / not-yet-linked business)</Text>
             <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="e.g. Kojo's Store" placeholderTextColor="#9CA3AF"
+              <TextInput style={s.fieldInput} placeholder="e.g. Kojo's Store" placeholderTextColor={colors.textPlaceholder}
                 value={buyerName} onChangeText={setBuyerName} />
             </View>
-            <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Selling to someone with no StockFlow Pro account yet? Enter their business name here instead of picking a linked retailer.</Text>
+            <Text style={{ fontSize: 11, color: colors.textPlaceholder }}>Selling to someone with no StockFlow Pro account yet? Enter their business name here instead of picking a linked retailer.</Text>
           </View>
         )}
 
         {/* Stock search */}
         <View style={s.searchBox}>
-          <Ionicons name="search-outline" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput style={s.searchInput} placeholder="Search warehouse stock to add..." placeholderTextColor="#9CA3AF"
+          <Ionicons name="search-outline" size={16} color={colors.textPlaceholder} style={{ marginRight: 8 }} />
+          <TextInput style={s.searchInput} placeholder="Search warehouse stock to add..." placeholderTextColor={colors.textPlaceholder}
             value={search} onChangeText={setSearch} />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={18} color={colors.textPlaceholder} />
             </TouchableOpacity>
           )}
         </View>
@@ -198,11 +202,11 @@ export default function WholesalerPOSScreen() {
             {results.map(p => (
               <TouchableOpacity key={p.id} style={s.result} onPress={() => addToCart(p)}>
                 <View style={s.resultIcon}>
-                  <Ionicons name="archive-outline" size={16} color="#1A56DB" />
+                  <Ionicons name="archive-outline" size={16} color={colors.primary} />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
                 <Text style={s.resultStock}>${Number(p.priceUsd || 0).toFixed(2)} · {p.quantity} {p.unit}</Text>
-                <Ionicons name="add-circle" size={20} color="#059669" style={{ marginLeft: 6 }} />
+                <Ionicons name="add-circle" size={20} color={colors.success} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ))}
           </View>
@@ -220,18 +224,18 @@ export default function WholesalerPOSScreen() {
                       <Text style={s.prodPrice}>${line.priceUsd.toFixed(2)} per {line.unit} · {line.available} available</Text>
                     </View>
                     <TouchableOpacity onPress={() => removeLine(line.productId)}>
-                      <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                      <Ionicons name="trash-outline" size={17} color={colors.danger} />
                     </TouchableOpacity>
                   </View>
                   <View style={s.stepperRow}>
                     <Text style={s.stepLabel}>Quantity (min {MIN_QTY})</Text>
                     <View style={s.stepper}>
                       <TouchableOpacity style={s.stepBtn} onPress={() => updateQty(line.productId, -MIN_QTY)}>
-                        <Ionicons name="remove" size={18} color="#374151" />
+                        <Ionicons name="remove" size={18} color={colors.textSecondary} />
                       </TouchableOpacity>
                       <Text style={s.stepNum}>{line.qty}</Text>
                       <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => updateQty(line.productId, MIN_QTY)}>
-                        <Ionicons name="add" size={18} color="#fff" />
+                        <Ionicons name="add" size={18} color={colors.onPrimary} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -246,7 +250,7 @@ export default function WholesalerPOSScreen() {
           <View style={s.paymentRow}>
             {PAYMENT_MODES.map(mode => (
               <TouchableOpacity key={mode.key} style={[s.payBtn, payment === mode.key && s.payBtnActive]} onPress={() => setPayment(mode.key)}>
-                <Ionicons name={mode.icon as any} size={13} color={payment === mode.key ? '#fff' : '#374151'} style={{ marginRight: 4 }} />
+                <Ionicons name={mode.icon as any} size={13} color={payment === mode.key ? colors.onPrimary : colors.textSecondary} style={{ marginRight: 4 }} />
                 <Text style={[s.payBtnText, payment === mode.key && s.payBtnTextActive]}>{mode.label}</Text>
               </TouchableOpacity>
             ))}
@@ -257,10 +261,10 @@ export default function WholesalerPOSScreen() {
           <View style={s.card}>
             <Text style={s.fieldLabel}>Due date</Text>
             <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
+              <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor={colors.textPlaceholder}
                 value={dueDate} onChangeText={setDueDate} />
             </View>
-            <Text style={{ fontSize: 11, color: '#9CA3AF' }}>A credit record will be created for this retailer</Text>
+            <Text style={{ fontSize: 11, color: colors.textPlaceholder }}>A credit record will be created for this retailer</Text>
           </View>
         )}
 
@@ -268,7 +272,7 @@ export default function WholesalerPOSScreen() {
           <View style={s.card}>
             <Text style={s.fieldLabel}>Mobile money number</Text>
             <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
+              <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor={colors.textPlaceholder}
                 value={mobileNumber} onChangeText={setMobileNumber} keyboardType="phone-pad" />
             </View>
           </View>
@@ -277,15 +281,15 @@ export default function WholesalerPOSScreen() {
         {payment === 'CARD' && (
           <View style={s.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
-              <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>Secure card payment via Paystack</Text>
+              <Ionicons name="shield-checkmark-outline" size={16} color={colors.success} />
+              <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>Secure card payment via Paystack</Text>
             </View>
           </View>
         )}
 
         {isPremium && cart.length > 0 && (
           <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setWantsInvoice(v => !v)}>
-            <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
+            <Ionicons name={wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={wantsInvoice ? colors.primary : colors.textPlaceholder} />
             <Text style={s.invoiceToggleText}>Buyer wants an invoice</Text>
           </TouchableOpacity>
         )}
@@ -293,14 +297,14 @@ export default function WholesalerPOSScreen() {
         {cart.length > 0 && (
           <View>
             <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setIsPickup(v => !v)}>
-              <Ionicons name={isPickup ? 'checkbox' : 'square-outline'} size={20} color={isPickup ? '#1A56DB' : '#9CA3AF'} />
+              <Ionicons name={isPickup ? 'checkbox' : 'square-outline'} size={20} color={isPickup ? colors.primary : colors.textPlaceholder} />
               <Text style={s.invoiceToggleText}>Buyer is collecting later (send pickup code)</Text>
             </TouchableOpacity>
             {isPickup && (
               <View style={[s.card, { marginTop: 8 }]}>
                 <Text style={s.fieldLabel}>Buyer email</Text>
                 <View style={s.fieldInputRow}>
-                  <TextInput style={s.fieldInput} placeholder="buyer@email.com" placeholderTextColor="#9CA3AF"
+                  <TextInput style={s.fieldInput} placeholder="buyer@email.com" placeholderTextColor={colors.textPlaceholder}
                     value={buyerEmail} onChangeText={setBuyerEmail} keyboardType="email-address" autoCapitalize="none" />
                 </View>
               </View>
@@ -328,9 +332,9 @@ export default function WholesalerPOSScreen() {
 
       <View style={s.footer}>
         <TouchableOpacity style={[s.confirmBtn, (cart.length === 0 || submitting) && { opacity: 0.4 }]} onPress={confirmOrder} disabled={cart.length === 0 || submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : (
+          {submitting ? <ActivityIndicator color={colors.onPrimary} /> : (
             <>
-              <Ionicons name="checkmark-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimary} style={{ marginRight: 8 }} />
               <Text style={s.confirmText}>Confirm Order · ${total.toFixed(2)}</Text>
             </>
           )}
@@ -339,16 +343,16 @@ export default function WholesalerPOSScreen() {
 
       {/* Partner modal */}
       <Modal visible={showPartnerModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPartnerModal(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Select Retailer</Text>
             <TouchableOpacity onPress={() => setShowPartnerModal(false)}>
-              <Ionicons name="close" size={24} color="#374151" />
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           {partners.length === 0 ? (
             <View style={s.empty}>
-              <Ionicons name="people-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="people-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No linked retailers</Text>
               <Text style={s.emptySub}>Retailers must send you a link request first</Text>
             </View>
@@ -360,10 +364,10 @@ export default function WholesalerPOSScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity style={s.partnerItem} onPress={() => { setSelectedPartner(item); setShowPartnerModal(false) }}>
                   <View style={s.partnerIcon}>
-                    <Ionicons name="storefront-outline" size={18} color="#059669" />
+                    <Ionicons name="storefront-outline" size={18} color={colors.success} />
                   </View>
                   <Text style={s.partnerName}>{item.name}</Text>
-                  <Ionicons name="checkmark-circle" size={18} color={selectedPartner?.id === item.id ? '#059669' : '#E5E7EB'} />
+                  <Ionicons name="checkmark-circle" size={18} color={selectedPartner?.id === item.id ? colors.success : colors.borderStrong} />
                 </TouchableOpacity>
               )}
             />
@@ -374,57 +378,57 @@ export default function WholesalerPOSScreen() {
   )
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
-  title: { fontSize: 20, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { flex: 1, padding: 12 },
-  partnerBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  partnerBtnText: { flex: 1, fontSize: 13, color: '#9CA3AF' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
-  searchInput: { flex: 1, paddingVertical: 8, fontSize: 13, color: '#374151' },
-  resultsBox: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', overflow: 'hidden' },
-  result: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
-  resultIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  resultName: { flex: 1, fontSize: 13, color: '#0F172A' },
-  resultStock: { fontSize: 12, color: '#6B7280' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', gap: 8 },
-  prodName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  prodPrice: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  partnerBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 12, padding: 14, borderWidth: 0.5, borderColor: colors.border },
+  partnerBtnText: { flex: 1, fontSize: 13, color: colors.textPlaceholder },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
+  searchInput: { flex: 1, paddingVertical: 8, fontSize: 13, color: colors.textSecondary },
+  resultsBox: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.border, overflow: 'hidden' },
+  result: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  resultIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  resultName: { flex: 1, fontSize: 13, color: colors.textPrimary },
+  resultStock: { fontSize: 12, color: colors.textMuted },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: colors.border, gap: 8 },
+  prodName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  prodPrice: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  stepLabel: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  stepLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.12)', alignItems: 'center', justifyContent: 'center' },
-  stepBtnBlue: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  stepNum: { fontSize: 17, fontWeight: '700', color: '#0F172A', minWidth: 28, textAlign: 'center' },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
+  stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 0.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  stepBtnBlue: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepNum: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, minWidth: 28, textAlign: 'center' },
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   paymentRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8 },
-  payBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#fff', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  payBtnActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  payBtnText: { fontSize: 12, color: '#374151' },
-  payBtnTextActive: { color: '#fff', fontWeight: '500' },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: '#374151' },
-  fieldInputRow: { borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.1)', borderRadius: 10, overflow: 'hidden' },
-  fieldInput: { padding: 10, fontSize: 13, color: '#0F172A' },
-  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  invoiceToggleText: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  payBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border },
+  payBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  payBtnText: { fontSize: 12, color: colors.textSecondary },
+  payBtnTextActive: { color: colors.onPrimary, fontWeight: '500' },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: colors.textSecondary },
+  fieldInputRow: { borderWidth: 0.5, borderColor: colors.borderStrong, borderRadius: 10, overflow: 'hidden' },
+  fieldInput: { padding: 10, fontSize: 13, color: colors.textPrimary },
+  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.border },
+  invoiceToggleText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryItem: { fontSize: 12, color: '#6B7280' },
-  summaryAmt: { fontSize: 12, fontWeight: '500', color: '#0F172A' },
-  dividerLine: { height: 0.5, backgroundColor: '#F3F4F6' },
-  totalLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  totalAmt: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  footer: { padding: 12, backgroundColor: '#fff', borderTopWidth: 0.5, borderTopColor: '#E5E7EB' },
-  confirmBtn: { backgroundColor: '#059669', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  confirmText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  partnerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  partnerIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
-  partnerName: { flex: 1, fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  summaryItem: { fontSize: 12, color: colors.textMuted },
+  summaryAmt: { fontSize: 12, fontWeight: '500', color: colors.textPrimary },
+  dividerLine: { height: 0.5, backgroundColor: colors.border },
+  totalLabel: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  totalAmt: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  footer: { padding: 12, backgroundColor: colors.surface, borderTopWidth: 0.5, borderTopColor: colors.borderStrong },
+  confirmBtn: { backgroundColor: colors.success, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  confirmText: { color: colors.onPrimary, fontSize: 14, fontWeight: '600' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  partnerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: colors.border },
+  partnerIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.successSurface, alignItems: 'center', justifyContent: 'center' },
+  partnerName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
 })

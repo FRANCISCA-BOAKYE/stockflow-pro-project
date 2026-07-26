@@ -44,6 +44,10 @@ public class Product {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    /** A photo of the product, stored as a data URI (e.g. "data:image/jpeg;base64,..."). */
+    @Column(name = "image_base64", columnDefinition = "TEXT")
+    private String imageBase64;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 }

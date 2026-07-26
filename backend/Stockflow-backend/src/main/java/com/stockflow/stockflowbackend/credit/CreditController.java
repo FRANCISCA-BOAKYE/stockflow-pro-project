@@ -39,7 +39,7 @@ public class CreditController {
             @RequestBody CreditPaymentRequest request,
             Authentication authentication) {
         return ResponseEntity.ok(
-                creditService.recordPayment(request, getBusinessId(authentication)));
+                creditService.recordPayment(request, getBusinessId(authentication), getUserId(authentication)));
     }
 
     @PostMapping("/hold")

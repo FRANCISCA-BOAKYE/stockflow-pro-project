@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, SafeAreaView,
@@ -10,6 +10,8 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { TIER_DASHBOARD_ROUTES } from '../../constants/routes';
 import Svg, { Rect, Polygon, Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { ThemeColors } from '../../theme/colors';
 
 const Logo = () => (
   <Svg width="80" height="80" viewBox="0 0 90 90">
@@ -44,6 +46,8 @@ export default function Login() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
 
   const handleLogin = async () => {
     if (!email || !password) { setError('Please enter your email and password'); return; }
@@ -90,11 +94,11 @@ export default function Login() {
             <View style={s.field}>
               <Text style={s.label}>Email address</Text>
               <View style={[s.inputRow, emailFocused && s.inputFocused]}>
-                <Ionicons name="mail-outline" size={17} color={emailFocused ? '#1A56DB' : '#9CA3AF'} style={{ marginRight: 10 }} />
+                <Ionicons name="mail-outline" size={17} color={emailFocused ? colors.primary : colors.textPlaceholder} style={{ marginRight: 10 }} />
                 <TextInput
                   style={s.input}
                   placeholder="you@business.com"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textPlaceholder}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -108,11 +112,11 @@ export default function Login() {
             <View style={s.field}>
               <Text style={s.label}>Password</Text>
               <View style={[s.inputRow, passwordFocused && s.inputFocused]}>
-                <Ionicons name="lock-closed-outline" size={17} color={passwordFocused ? '#1A56DB' : '#9CA3AF'} style={{ marginRight: 10 }} />
+                <Ionicons name="lock-closed-outline" size={17} color={passwordFocused ? colors.primary : colors.textPlaceholder} style={{ marginRight: 10 }} />
                 <TextInput
                   style={[s.input, { flex: 1 }]}
                   placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.textPlaceholder}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -120,7 +124,7 @@ export default function Login() {
                   onBlur={() => setPasswordFocused(false)}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={17} color="#9CA3AF" />
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={17} color={colors.textPlaceholder} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -134,18 +138,18 @@ export default function Login() {
 
             {error ? (
               <View style={s.errorBox}>
-                <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+                <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
                 <Text style={s.errorText}>{error}</Text>
               </View>
             ) : null}
 
             <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading} activeOpacity={0.85}>
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={s.btnText}>Sign in</Text>
-                  <Ionicons name="arrow-forward-outline" size={18} color="#fff" />
+                  <Ionicons name="arrow-forward-outline" size={18} color={colors.onPrimary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -156,7 +160,7 @@ export default function Login() {
               <View style={s.dividerLine} />
             </View>
 <TouchableOpacity style={s.signupHint} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/signup')}>
-  <Ionicons name="globe-outline" size={14} color="#1A56DB" />
+  <Ionicons name="globe-outline" size={14} color={colors.primary} />
   <Text style={s.signupText}>Sign up at <Text style={s.signupLink}>phenomenal-blini-7b80dd.netlify.app</Text></Text>
 </TouchableOpacity>
           </View>
@@ -164,9 +168,9 @@ export default function Login() {
           {/* Features */}
           <View style={s.features}>
             {[
-              { icon: 'shield-checkmark-outline', text: '14-day free trial', color: '#059669' },
-              { icon: 'lock-closed-outline', text: 'Data always safe', color: '#1A56DB' },
-              { icon: 'flash-outline', text: 'Real-time sync', color: '#C27803' },
+              { icon: 'shield-checkmark-outline', text: '14-day free trial', color: colors.success },
+              { icon: 'lock-closed-outline', text: 'Data always safe', color: colors.primary },
+              { icon: 'flash-outline', text: 'Real-time sync', color: colors.warning },
             ].map(f => (
               <View key={f.text} style={s.feature}>
                 <Ionicons name={f.icon as any} size={14} color={f.color} />
@@ -181,8 +185,8 @@ export default function Login() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1 },
 
   hero: {
@@ -212,7 +216,7 @@ const s = StyleSheet.create({
   tagline: { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 5 },
 
   formCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surface,
     marginHorizontal: 16,
     marginTop: -24,
     borderRadius: 24,
@@ -224,55 +228,55 @@ const s = StyleSheet.create({
     elevation: 8,
     marginBottom: 16,
   },
-  formTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
-  formSub: { fontSize: 13, color: '#6B7280', marginBottom: 24 },
+  formTitle: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
+  formSub: { fontSize: 13, color: colors.textMuted, marginBottom: 24 },
 
   field: { marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 7, textTransform: 'uppercase', letterSpacing: 0.4 },
+  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 7, textTransform: 'uppercase', letterSpacing: 0.4 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E5E7EB',
+    borderWidth: 1.5, borderColor: colors.borderStrong,
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.surfaceAlt,
   },
-  inputFocused: { borderColor: '#1A56DB', backgroundColor: '#ffffff' },
-  input: { fontSize: 14, color: '#0F172A', flex: 1 },
+  inputFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
+  input: { fontSize: 14, color: colors.textPrimary, flex: 1 },
 
   forgotLink: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 14 },
-  forgotLinkText: { fontSize: 12.5, color: '#1A56DB', fontWeight: '600' },
+  forgotLinkText: { fontSize: 12.5, color: colors.primary, fontWeight: '600' },
 
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#FEF2F2', borderRadius: 10,
+    backgroundColor: colors.dangerSurface, borderRadius: 10,
     padding: 12, marginBottom: 14,
-    borderWidth: 0.5, borderColor: '#FECACA',
+    borderWidth: 0.5, borderColor: colors.danger + '40',
   },
-  errorText: { fontSize: 12, color: '#DC2626', flex: 1 },
+  errorText: { fontSize: 12, color: colors.danger, flex: 1 },
 
   btn: {
-    backgroundColor: '#1A56DB',
+    backgroundColor: colors.primary,
     borderRadius: 14, padding: 16,
     alignItems: 'center', marginTop: 4,
-    shadowColor: '#1A56DB',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnText: { color: colors.onPrimary, fontSize: 16, fontWeight: '700' },
 
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, marginBottom: 14 },
-  dividerLine: { flex: 1, height: 0.5, backgroundColor: '#E5E7EB' },
-  dividerText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.borderStrong },
+  dividerText: { fontSize: 11, color: colors.textPlaceholder, fontWeight: '500' },
 
   signupHint: { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' },
-  signupText: { fontSize: 12, color: '#6B7280' },
-  signupLink: { color: '#1A56DB', fontWeight: '600' },
+  signupText: { fontSize: 12, color: colors.textMuted },
+  signupLink: { color: colors.primary, fontWeight: '600' },
 
   features: {
     flexDirection: 'row', justifyContent: 'center',
     gap: 20, paddingHorizontal: 20, paddingBottom: 32, flexWrap: 'wrap',
   },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  featureText: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+  featureText: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
 });
