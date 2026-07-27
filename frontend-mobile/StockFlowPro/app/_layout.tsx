@@ -9,6 +9,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { TIER_DASHBOARD_ROUTES, TIER_GROUP_SEGMENTS } from '../constants/routes';
 import AnimatedSplash from '../components/AnimatedSplash';
+import ToastHost from '../components/ToastHost';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -81,6 +82,7 @@ export default function RootLayout() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, animation: 'default', contentStyle: { backgroundColor: colors.bg } }} />
+      <ToastHost />
       {showIntro && <AnimatedSplash onFinish={handleIntroFinish} />}
     </View>
   );

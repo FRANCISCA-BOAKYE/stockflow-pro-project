@@ -6,6 +6,9 @@ import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { ThemeColors } from '../theme/colors';
+import { StatusIndicator } from '../components/StatusIndicator';
+import { SkeletonRow } from '../components/Skeleton';
+import { showToast } from '../components/toast';
 
 // Mirrors backend PlanCatalog.ALLOWED_LINK_PAIRS
 const ALLOWED_LINK_PAIRS: Record<string, string[]> = {
@@ -81,7 +84,7 @@ export default function MarketplaceScreen() {
     setRequestingId(item.id);
     try {
       await api.post('/links/request', { partnerBusinessId: parseInt(item.id, 10) });
-      Alert.alert('Request sent', `Link request sent to ${item.name}.`);
+      showToast(`Link request sent to ${item.name}.`);
       fetchListings();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to send link request');
@@ -96,7 +99,21 @@ export default function MarketplaceScreen() {
     return matchSearch && matchFilter;
   });
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Marketplace</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
@@ -137,6 +154,12 @@ export default function MarketplaceScreen() {
             <View style={s.empty}>
               <Ionicons name="storefront-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No listings found</Text>
+              {(search.length > 0 || filter !== 'ALL') && (
+                <TouchableOpacity style={s.emptyBtn} onPress={() => { setSearch(''); setFilter('ALL'); }}>
+                  <Ionicons name="refresh-outline" size={16} color={colors.onPrimary} style={{ marginRight: 6 }} />
+                  <Text style={s.emptyBtnText}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
           renderItem={({ item }) => {
@@ -170,14 +193,9 @@ export default function MarketplaceScreen() {
                   </View>
                   {canLink && (
                     status === 'ACTIVE' ? (
-                      <View style={s.linkedBadge}>
-                        <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                        <Text style={s.linkedBadgeText}>Linked</Text>
-                      </View>
+                      <StatusIndicator status="ok" label="Linked" />
                     ) : status === 'PENDING' ? (
-                      <View style={s.pendingBadge}>
-                        <Text style={s.pendingBadgeText}>Request pending</Text>
-                      </View>
+                      <StatusIndicator status="warning" label="Request pending" />
                     ) : (
                       <TouchableOpacity
                         style={s.linkBtn}
@@ -227,10 +245,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   terms: { fontSize: 11, color: colors.textMuted },
   linkBtn: { backgroundColor: colors.primarySurface, borderRadius: 8, paddingVertical: 5, paddingHorizontal: 12 },
   linkBtnText: { fontSize: 11, color: colors.primary, fontWeight: '600' },
-  linkedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successSurface, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
-  linkedBadgeText: { fontSize: 11, color: colors.success, fontWeight: '500' },
-  pendingBadge: { backgroundColor: colors.warningSurface, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
-  pendingBadgeText: { fontSize: 11, color: colors.warning, fontWeight: '500' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 18, marginTop: 8 },
+  emptyBtnText: { color: colors.onPrimary, fontSize: 13, fontWeight: '600' },
 });

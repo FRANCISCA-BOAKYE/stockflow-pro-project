@@ -6,6 +6,8 @@ import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
+import com.stockflow.stockflowbackend.geo.CountryCatalog;
+import com.stockflow.stockflowbackend.idempotency.IdempotencyService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.notification.NotificationService;
 import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
@@ -19,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +42,7 @@ public class ManufacturerService {
     private final PaystackTransactionVerifier paystackTransactionVerifier;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final IdempotencyService idempotencyService;
 
     public ManufacturerService(MaterialRepository materialRepository,
                                RecipeRepository recipeRepository,
@@ -54,7 +58,8 @@ public class ManufacturerService {
                                SubscriptionService subscriptionService,
                                PaystackTransactionVerifier paystackTransactionVerifier,
                                UserRepository userRepository,
-                               ActivityLogService activityLogService) {
+                               ActivityLogService activityLogService,
+                               IdempotencyService idempotencyService) {
         this.materialRepository = materialRepository;
         this.recipeRepository = recipeRepository;
         this.productionRunRepository = productionRunRepository;
@@ -70,6 +75,7 @@ public class ManufacturerService {
         this.subscriptionService = subscriptionService;
         this.userRepository = userRepository;
         this.activityLogService = activityLogService;
+        this.idempotencyService = idempotencyService;
     }
 
     // ADD MATERIAL
@@ -260,6 +266,12 @@ public class ManufacturerService {
     // DISPATCH TO WHOLESALER
     @Transactional
     public DispatchResponse dispatch(DispatchRequest req, Long businessId, Long userId) {
+        Optional<DispatchResponse> replay = idempotencyService.find(
+                businessId, req.getIdempotencyKey(), "manufacturer.dispatch", DispatchResponse.class);
+        if (replay.isPresent()) {
+            return replay.get();
+        }
+
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
@@ -305,6 +317,9 @@ public class ManufacturerService {
         BigDecimal totalAmount = itemsTotal.add(deliveryFee);
 
         if ("CARD".equals(req.getPaymentMode())) {
+            if (!CountryCatalog.isPaystackLive(goods.get(0).getBusiness().getCountry())) {
+                throw new RuntimeException("Card payments are not yet available in your country");
+            }
             paystackTransactionVerifier.verifyPaid(req.getPaystackReference(), totalAmount);
         }
 
@@ -459,13 +474,15 @@ public class ManufacturerService {
                 "Dispatched " + productList + " to " + dispatchBuyerLabel + " via " + req.getPaymentMode(),
                 totalAmount);
 
-        return new DispatchResponse(
+        DispatchResponse response = new DispatchResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries, deliveryFee, totalAmount, req.getPaymentMode(),
                 "CREDIT".equals(req.getPaymentMode()) ? "UNPAID" : "PAID",
                 dispatches.get(0).getDispatchedAt(), creditRecordId,
                 savedInvoice != null ? savedInvoice.getPickupCode() : null
         );
+        idempotencyService.save(businessId, req.getIdempotencyKey(), "manufacturer.dispatch", response);
+        return response;
     }
 
     @Transactional(readOnly = true)

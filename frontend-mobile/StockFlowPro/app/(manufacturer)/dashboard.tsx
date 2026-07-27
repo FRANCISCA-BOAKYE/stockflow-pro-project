@@ -8,12 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useCurrency } from '../../hooks/useCurrency';
 import { ThemeColors } from '../../theme/colors';
+import { SkeletonRow } from '../../components/Skeleton';
 
 export default function ManufacturerDashboard() {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
   const { colors } = useThemeColors();
+  const { format } = useCurrency();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +67,7 @@ export default function ManufacturerDashboard() {
     { label: 'RAW MATERIALS', value: data?.totalMaterials ?? '—', sub: 'in stock', icon: 'flask-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
     { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
     { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth ?? '—', sub: 'this month', icon: 'construct-outline', iconBg: colors.successSurface, iconColor: colors.success },
-    { label: 'CREDIT OWED', value: data?.totalCreditOwedByWholesalers != null ? `$${data.totalCreditOwedByWholesalers.toFixed(2)}` : '$0.00', sub: 'by wholesalers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
+    { label: 'CREDIT OWED', value: format(Number(data?.totalCreditOwedByWholesalers ?? 0)), sub: 'by wholesalers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
   ];
 
   const quickActions = [
@@ -76,10 +79,14 @@ export default function ManufacturerDashboard() {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={s.loadingText}>Loading dashboard...</Text>
-      </View>
+      <SafeAreaView style={s.page}>
+        <View style={s.header}>
+          <Text style={s.title}>Dashboard</Text>
+        </View>
+        <View style={{ padding: 12, gap: 8 }}>
+          {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -119,9 +126,7 @@ export default function ManufacturerDashboard() {
           <View style={{ marginTop: 8 }}>
             <Text style={s.heroLabel}>Credit outstanding</Text>
             <Text style={s.heroAmount}>
-              {data?.totalCreditOwedByWholesalers != null
-                ? `$${data.totalCreditOwedByWholesalers.toFixed(2)}`
-                : '$0.00'}
+              {format(Number(data?.totalCreditOwedByWholesalers ?? 0))}
             </Text>
           </View>
         </View>
@@ -150,7 +155,7 @@ export default function ManufacturerDashboard() {
                   <Ionicons name={k.icon as any} size={17} color={k.iconColor} />
                 </View>
                 <Text style={s.kpiLabel}>{k.label}</Text>
-                <Text style={s.kpiValue}>{k.value}</Text>
+                <Text style={[s.kpiValue, i === 3 && { fontVariant: ['tabular-nums'] }]}>{k.value}</Text>
                 <Text style={s.kpiSub}>{k.sub}</Text>
               </View>
             ))}
@@ -216,8 +221,8 @@ export default function ManufacturerDashboard() {
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
-  loadingText: { marginTop: 12, fontSize: 14, color: colors.textMuted },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   hero: { backgroundColor: colors.primary, padding: 20, paddingTop: 24, paddingBottom: 40 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greeting: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 3 },
@@ -228,7 +233,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9 },
   trialText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
   heroLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   body: { padding: 14, marginTop: -20 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.dangerSurface, borderRadius: 10, padding: 10, marginBottom: 12 },
   errorText: { fontSize: 12, color: colors.danger, flex: 1 },

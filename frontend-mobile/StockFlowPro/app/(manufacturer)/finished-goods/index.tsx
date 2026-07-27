@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { ThemeColors } from '../../../theme/colors';
+import { SkeletonRow } from '../../../components/Skeleton';
 
 export default function FinishedGoodsScreen() {
   const router = useRouter();
@@ -34,9 +35,19 @@ export default function FinishedGoodsScreen() {
   );
 
   if (loading) return (
-    <View style={s.center}>
-      <ActivityIndicator size="large" color={colors.primary} />
-    </View>
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View>
+          <Text style={s.title}>Finished Goods</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
   );
 
   return (
@@ -69,6 +80,10 @@ export default function FinishedGoodsScreen() {
               <Ionicons name="cube-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No finished goods yet</Text>
               <Text style={s.emptySub}>Run a production batch to create finished goods</Text>
+              <TouchableOpacity style={s.emptyActionBtn} onPress={() => router.push('/(manufacturer)/production' as any)}>
+                <Ionicons name="construct-outline" size={16} color={colors.onPrimary} />
+                <Text style={s.emptyActionText}>Go to Production</Text>
+              </TouchableOpacity>
             </View>
           }
           renderItem={({ item }) => (
@@ -116,4 +131,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
+  emptyActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 18, marginTop: 8 },
+  emptyActionText: { fontSize: 13, fontWeight: '600', color: colors.onPrimary },
 });

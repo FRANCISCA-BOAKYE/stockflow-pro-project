@@ -20,4 +20,5 @@ public class LoginResponse {
     private String adminEmail;
     private String subAccountRole;
     private LocalDateTime trialStartedAt;
+    private String country;
 }

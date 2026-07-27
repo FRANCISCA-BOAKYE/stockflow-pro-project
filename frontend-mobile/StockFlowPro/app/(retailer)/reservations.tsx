@@ -2,13 +2,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, SafeAreaView, ActivityIndicator,
-  Alert, Modal, ScrollView, RefreshControl
+  Alert, Modal, ScrollView, RefreshControl, Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { ThemeColors } from '../../theme/colors';
+import { SkeletonRow } from '../../components/Skeleton';
+import { useConfirmSheet } from '../../components/ConfirmSheet';
+import { showToast } from '../../components/toast';
 
 function formatCountdown(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
@@ -22,6 +25,7 @@ export default function ReservationsScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const s = useMemo(() => makeStyles(colors), [colors]);
+  const { confirm, element: confirmSheet } = useConfirmSheet();
   const [reservations, setReservations] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +76,7 @@ export default function ReservationsScreen() {
       setSelectedProduct(null);
       setQuantity('');
       fetchData();
-      Alert.alert('Reserved', `${quantity} ${selectedProduct.unit} of ${selectedProduct.name} held for 10 minutes.`);
+      showToast(`${quantity} ${selectedProduct.unit} of ${selectedProduct.name} held for 10 minutes.`);
     } catch (e: any) {
       const message = e?.response?.data?.message || e?.response?.data?.error || 'Failed to create reservation';
       Alert.alert(message.includes('Premium') ? 'Premium feature' : 'Error', message);
@@ -81,23 +85,38 @@ export default function ReservationsScreen() {
     }
   };
 
-  const handleRelease = (reservation: any) => {
-    Alert.alert('Release reservation', `Release the hold on ${productName(reservation.productId)}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Release', style: 'destructive', onPress: async () => {
-          try {
-            await api.delete(`/reserve/${reservation.id}`);
-            fetchData();
-          } catch (e: any) {
-            Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to release reservation');
-          }
-        }
-      }
-    ]);
+  const handleRelease = async (reservation: any) => {
+    const ok = await confirm({
+      title: 'Release reservation',
+      message: `Release the hold on ${productName(reservation.productId)}?`,
+      destructive: true,
+      confirmLabel: 'Release',
+      icon: 'time-outline',
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/reserve/${reservation.id}`);
+      fetchData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to release reservation');
+    }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Reservations</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
@@ -195,6 +214,8 @@ export default function ReservationsScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {confirmSheet}
     </SafeAreaView>
   );
 }
@@ -214,7 +235,12 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   countdown: { fontSize: 11, color: colors.warning, fontWeight: '600', marginTop: 2 },
   releaseBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, backgroundColor: colors.dangerSurface },
   releaseBtnText: { fontSize: 12, fontWeight: '600', color: colors.danger },
-  fab: { position: 'absolute', bottom: 24, right: 16, width: 50, height: 50, backgroundColor: colors.primary, borderRadius: 25, alignItems: 'center', justifyContent: 'center', shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  fab: {
+    position: 'absolute', bottom: 24, right: 16, width: 50, height: 50, backgroundColor: colors.primary, borderRadius: 25, alignItems: 'center', justifyContent: 'center',
+    ...(Platform.OS === 'ios'
+      ? { shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
+      : { elevation: 6 }),
+  },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },

@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { api } from '../services/api';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { ThemeColors } from '../theme/colors';
+import { showToast } from '../components/toast';
 
 export default function MyListingScreen() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function MyListingScreen() {
     headline: '', description: '', deliveryTerms: '', creditTerms: '',
     location: '', contactEmail: user?.email || '', contactPhone: '',
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     api.get('/marketplace/my-listing')
@@ -41,15 +43,20 @@ export default function MyListingScreen() {
   }, []);
 
   const handleSave = async () => {
-    if (!form.headline.trim() || !form.location.trim() || !form.contactEmail.trim()) {
-      Alert.alert('Missing info', 'Headline, location and contact email are required.');
+    const errors: Record<string, string> = {};
+    if (!form.headline.trim()) errors.headline = 'Headline is required';
+    if (!form.location.trim()) errors.location = 'Location is required';
+    if (!form.contactEmail.trim()) errors.contactEmail = 'Contact email is required';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setSaving(true);
     try {
       await api.post('/marketplace/listing', form);
       setIsPremium(true);
-      Alert.alert('Success', 'Your business is now listed on the marketplace.');
+      showToast('Your business is now listed on the marketplace.');
       router.back();
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.response?.data?.message || '';
@@ -100,14 +107,15 @@ export default function MyListingScreen() {
             <View key={field.key} style={{ marginBottom: 16 }}>
               <Text style={s.fieldLabel}>{field.label}</Text>
               <TextInput
-                style={[s.fieldInput, field.multiline && { height: 90, textAlignVertical: 'top' }]}
+                style={[s.fieldInput, field.multiline && { height: 90, textAlignVertical: 'top' }, fieldErrors[field.key] && { borderColor: colors.danger }]}
                 placeholder={field.placeholder}
                 placeholderTextColor={colors.textPlaceholder}
                 value={(form as any)[field.key]}
-                onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                onChangeText={v => { setForm(f => ({ ...f, [field.key]: v })); setFieldErrors(fe => ({ ...fe, [field.key]: '' })); }}
                 keyboardType={(field.keyboard as any) || 'default'}
                 multiline={field.multiline}
               />
+              {!!fieldErrors[field.key] && <Text style={s.errorText}>{fieldErrors[field.key]}</Text>}
             </View>
           ))}
           <TouchableOpacity style={[s.confirmBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
@@ -129,6 +137,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   body: { padding: 16, paddingBottom: 60 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surface },
+  errorText: { fontSize: 11, color: colors.danger, marginTop: 4 },
   confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
   confirmBtnText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
   upgradeBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 },

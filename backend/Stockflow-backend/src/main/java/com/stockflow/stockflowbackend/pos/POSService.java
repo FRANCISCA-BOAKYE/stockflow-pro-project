@@ -9,6 +9,8 @@ import com.stockflow.stockflowbackend.dto.POSItemRequest;
 import com.stockflow.stockflowbackend.dto.POSRequest;
 import com.stockflow.stockflowbackend.dto.POSResponse;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
+import com.stockflow.stockflowbackend.geo.CountryCatalog;
+import com.stockflow.stockflowbackend.idempotency.IdempotencyService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
 import com.stockflow.stockflowbackend.reservation.ReservationRepository;
@@ -25,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class POSService {
@@ -40,6 +43,7 @@ public class POSService {
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final IdempotencyService idempotencyService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -54,7 +58,8 @@ public class POSService {
                       PaystackTransactionVerifier paystackTransactionVerifier,
                       CustomerRepository customerRepository,
                       UserRepository userRepository,
-                      ActivityLogService activityLogService) {
+                      ActivityLogService activityLogService,
+                      IdempotencyService idempotencyService) {
         this.productRepository = productRepository;
         this.reservationRepository = reservationRepository;
         this.creditRepository = creditRepository;
@@ -66,11 +71,18 @@ public class POSService {
         this.customerRepository = customerRepository;
         this.userRepository = userRepository;
         this.activityLogService = activityLogService;
+        this.idempotencyService = idempotencyService;
     }
 
     @Transactional
     public POSResponse processRetailSale(POSRequest request,
                                          Long businessId, Long userId) {
+        Optional<POSResponse> replay = idempotencyService.find(
+                businessId, request.getIdempotencyKey(), "pos.retail", POSResponse.class);
+        if (replay.isPresent()) {
+            return replay.get();
+        }
+
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
@@ -134,6 +146,9 @@ public class POSService {
 
         // 3. Confirm a CARD sale was actually paid before touching stock
         if ("CARD".equals(request.getPaymentMode())) {
+            if (!CountryCatalog.isPaystackLive(products.get(0).getBusiness().getCountry())) {
+                throw new RuntimeException("Card payments are not yet available in your country");
+            }
             paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), total);
         }
 
@@ -310,7 +325,7 @@ public class POSService {
         activityLogService.log(business, actor, "SALE",
                 "Sold " + itemsLabel + " via " + request.getPaymentMode(), total);
 
-        return new POSResponse(
+        POSResponse response = new POSResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries,
                 total,
@@ -321,5 +336,7 @@ public class POSService {
                 savedInvoice != null ? savedInvoice.getPickupCode() : null,
                 customer != null ? customer.getId() : null
         );
+        idempotencyService.save(businessId, request.getIdempotencyKey(), "pos.retail", response);
+        return response;
     }
 }

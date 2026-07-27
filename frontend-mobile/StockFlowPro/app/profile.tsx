@@ -7,6 +7,8 @@ import { useThemeStore, ThemeMode } from '../store/themeStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { ThemeColors } from '../theme/colors';
 import { api } from '../services/api';
+import CountryPicker from '../components/CountryPicker';
+import { showToast } from '../components/toast';
 
 const TIER_ICON: Record<string, string> = {
   MANUFACTURER: 'construct-outline',
@@ -149,6 +151,16 @@ export default function ProfileScreen() {
     }
   };
 
+  const saveCountry = async (code: string) => {
+    try {
+      await api.put('/auth/country', { country: code });
+      await updateUser({ country: code });
+      showToast('Country updated');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || 'Could not update your country.');
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -241,6 +253,12 @@ export default function ProfileScreen() {
               <Text style={s.infoValue}>{item.value || '—'}</Text>
             </View>
           ))}
+          <View style={{ marginTop: 10 }}>
+            <Text style={s.infoLabel}>Country & currency</Text>
+            <View style={{ marginTop: 6 }}>
+              <CountryPicker value={user?.country} onChange={saveCountry} />
+            </View>
+          </View>
         </View>
 
         {/* Sub-accounts */}

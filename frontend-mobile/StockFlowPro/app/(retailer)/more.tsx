@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView, Alert, Linking
+  StyleSheet, SafeAreaView, ScrollView, Linking
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,21 +9,32 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { ThemeColors } from '../../theme/colors';
+import { StatusIndicator } from '../../components/StatusIndicator';
+import { useConfirmSheet } from '../../components/ConfirmSheet';
+import { type } from '../../theme/typography';
 
 const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
+type MenuGroup = 'BUSINESS' | 'DISCOVERY' | 'ACCOUNT';
+
+const SECTIONS: { key: MenuGroup; label: string }[] = [
+  { key: 'BUSINESS', label: 'Business' },
+  { key: 'DISCOVERY', label: 'Discovery' },
+  { key: 'ACCOUNT', label: 'Account' },
+];
+
 const getMenuItems = (colors: ThemeColors) => [
-  { label: 'Notifications', icon: 'notifications-outline', color: colors.primary, bg: colors.primarySurface, route: '/notifications' },
-  { label: 'Customers', icon: 'people-outline', color: colors.success, bg: colors.successSurface, route: '/(retailer)/customers' },
-  { label: 'Team Activity', icon: 'shield-checkmark-outline', color: colors.purpleDark, bg: colors.purpleSurface, route: '/(retailer)/activity', ownerOnly: true },
-  { label: 'Stock In', icon: 'arrow-down-circle-outline', color: colors.success, bg: colors.successSurface, route: '/stock-in' },
-  { label: 'Reservations', icon: 'time-outline', color: colors.primary, bg: colors.primarySurface, route: '/(retailer)/reservations' },
-  { label: 'Invoices', icon: 'receipt-outline', color: colors.warning, bg: colors.warningSurface, route: '/invoices' },
-  { label: 'Marketplace', icon: 'storefront-outline', color: colors.purple, bg: colors.purpleSurface, route: '/marketplace' },
-  { label: 'My Listing', icon: 'megaphone-outline', color: colors.pink, bg: colors.pinkSurface, route: '/my-listing' },
-  { label: 'Linked Wholesalers', icon: 'link-outline', color: colors.primary, bg: colors.primarySurface, route: '/(retailer)/linked-wholesalers' },
-  { label: 'Subscription', icon: 'card-outline', color: colors.textMuted, bg: colors.border, route: '/subscription' },
-  { label: 'Help', icon: 'help-circle-outline', color: colors.cyan, bg: colors.cyanSurface, route: HELP_URL, external: true },
+  { label: 'Stock In', icon: 'arrow-down-circle-outline', color: colors.success, bg: colors.successSurface, route: '/stock-in', group: 'BUSINESS' as MenuGroup },
+  { label: 'Reservations', icon: 'time-outline', color: colors.primary, bg: colors.primarySurface, route: '/(retailer)/reservations', group: 'BUSINESS' as MenuGroup },
+  { label: 'Customers', icon: 'people-outline', color: colors.success, bg: colors.successSurface, route: '/(retailer)/customers', group: 'BUSINESS' as MenuGroup },
+  { label: 'Team Activity', icon: 'shield-checkmark-outline', color: colors.purpleDark, bg: colors.purpleSurface, route: '/(retailer)/activity', ownerOnly: true, group: 'BUSINESS' as MenuGroup },
+  { label: 'Marketplace', icon: 'storefront-outline', color: colors.purple, bg: colors.purpleSurface, route: '/marketplace', group: 'DISCOVERY' as MenuGroup },
+  { label: 'My Listing', icon: 'megaphone-outline', color: colors.pink, bg: colors.pinkSurface, route: '/my-listing', group: 'DISCOVERY' as MenuGroup },
+  { label: 'Linked Wholesalers', icon: 'link-outline', color: colors.primary, bg: colors.primarySurface, route: '/(retailer)/linked-wholesalers', group: 'DISCOVERY' as MenuGroup },
+  { label: 'Notifications', icon: 'notifications-outline', color: colors.primary, bg: colors.primarySurface, route: '/notifications', group: 'ACCOUNT' as MenuGroup },
+  { label: 'Invoices', icon: 'receipt-outline', color: colors.warning, bg: colors.warningSurface, route: '/invoices', group: 'ACCOUNT' as MenuGroup },
+  { label: 'Subscription', icon: 'card-outline', color: colors.textMuted, bg: colors.border, route: '/subscription', group: 'ACCOUNT' as MenuGroup },
+  { label: 'Help', icon: 'help-circle-outline', color: colors.cyan, bg: colors.cyanSurface, route: HELP_URL, external: true, group: 'ACCOUNT' as MenuGroup },
 ];
 
 export default function RetailerMoreScreen() {
@@ -33,6 +44,7 @@ export default function RetailerMoreScreen() {
   const s = useMemo(() => makeStyles(colors), [colors]);
   const MENU_ITEMS = useMemo(() => getMenuItems(colors), [colors]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { confirm, element: confirmSheet } = useConfirmSheet();
 
   useFocusEffect(
     useCallback(() => {
@@ -46,22 +58,24 @@ export default function RetailerMoreScreen() {
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const statusColor = user?.subscriptionStatus === 'ACTIVE' ? colors.success
-    : user?.subscriptionStatus === 'TRIAL' ? colors.warning : colors.danger;
+  const subscriptionStatus: 'ok' | 'warning' | 'danger' = user?.subscriptionStatus === 'ACTIVE' ? 'ok'
+    : user?.subscriptionStatus === 'TRIAL' ? 'warning' : 'danger';
 
   const statusLabel = user?.subscriptionStatus === 'ACTIVE' ? 'Active'
     : user?.subscriptionStatus === 'TRIAL' ? 'Trial active' : 'Expired';
 
-  const handleLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out', style: 'destructive', onPress: async () => {
-          await clearAuth();
-          router.replace('/(auth)/login');
-        }
-      },
-    ]);
+  const handleLogout = async () => {
+    const ok = await confirm({
+      title: 'Log out',
+      message: 'Are you sure you want to log out?',
+      destructive: true,
+      confirmLabel: 'Log out',
+      icon: 'log-out-outline',
+    });
+    if (ok) {
+      await clearAuth();
+      router.replace('/(auth)/login');
+    }
   };
 
   return (
@@ -77,40 +91,49 @@ export default function RetailerMoreScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.userName}>{user?.name || 'User'}</Text>
             <Text style={s.userRole}>{user?.role} · {user?.tierType}</Text>
-            <View style={s.statusRow}>
-              <View style={[s.statusDot, { backgroundColor: statusColor }]} />
-              <Text style={[s.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+            <View style={{ marginTop: 4 }}>
+              <StatusIndicator status={subscriptionStatus} label={statusLabel} />
             </View>
           </View>
          <TouchableOpacity style={s.editBtn} onPress={() => router.push('/profile')}>
   <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
 </TouchableOpacity>
         </View>
-        <View style={s.menuCard}>
-          {MENU_ITEMS.filter(item => !item.ownerOnly || !user?.isSubAccount).map((item, index, arr) => (
-            <TouchableOpacity
-              key={item.label}
-              style={[s.menuItem, index < arr.length - 1 && s.menuBorder]}
-              onPress={() => item.external ? Linking.openURL(item.route) : router.push(item.route as any)}
-            >
-              <View style={[s.menuIcon, { backgroundColor: item.bg }]}>
-                <Ionicons name={item.icon as any} size={18} color={item.color} />
+        {SECTIONS.map(section => {
+          const items = MENU_ITEMS.filter(item => item.group === section.key && (!item.ownerOnly || !user?.isSubAccount));
+          if (items.length === 0) return null;
+          return (
+            <View key={section.key}>
+              <Text style={s.sectionCaption}>{section.label}</Text>
+              <View style={s.menuCard}>
+                {items.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[s.menuItem, index < items.length - 1 && s.menuBorder]}
+                    onPress={() => item.external ? Linking.openURL(item.route) : router.push(item.route as any)}
+                  >
+                    <View style={[s.menuIcon, { backgroundColor: item.bg }]}>
+                      <Ionicons name={item.icon as any} size={18} color={item.color} />
+                    </View>
+                    <Text style={s.menuLabel}>{item.label}</Text>
+                    {item.label === 'Notifications' && unreadCount > 0 && (
+                      <View style={s.badge}>
+                        <Text style={s.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                      </View>
+                    )}
+                    <Ionicons name="chevron-forward-outline" size={16} color={colors.borderStrong} />
+                  </TouchableOpacity>
+                ))}
               </View>
-              <Text style={s.menuLabel}>{item.label}</Text>
-              {item.label === 'Notifications' && unreadCount > 0 && (
-                <View style={s.badge}>
-                  <Text style={s.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                </View>
-              )}
-              <Ionicons name="chevron-forward-outline" size={16} color={colors.borderStrong} />
-            </TouchableOpacity>
-          ))}
-        </View>
+            </View>
+          );
+        })}
         <TouchableOpacity style={s.logoutCard} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
           <Text style={s.logoutText}>Log out</Text>
         </TouchableOpacity>
       </ScrollView>
+      {confirmSheet}
     </SafeAreaView>
   );
 }
@@ -125,10 +148,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   avatarText: { color: colors.onPrimary, fontSize: 18, fontWeight: '700' },
   userName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   userRole: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusLabel: { fontSize: 11, fontWeight: '500' },
   editBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  sectionCaption: { ...type.caption, textTransform: 'uppercase', letterSpacing: 0.6, color: colors.textMuted, marginBottom: 6, marginLeft: 4 },
   menuCard: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.border },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   menuBorder: { borderBottomWidth: 0.5, borderBottomColor: colors.border },

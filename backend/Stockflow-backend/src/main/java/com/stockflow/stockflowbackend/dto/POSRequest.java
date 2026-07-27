@@ -21,4 +21,5 @@ public class POSRequest {
     private String buyerEmail; // required when isPickup is true
     private Boolean wantsInvoice;
     private String paystackReference; // required when paymentMode is CARD
+    private String idempotencyKey; // client-generated, reused on retry — safe to resend after a dropped connection
 }

@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView,
-  ActivityIndicator, RefreshControl, Modal
+  RefreshControl, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useThemeColors } from '../../../hooks/useThemeColors';
+import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
+import { SkeletonRow } from '../../../components/Skeleton';
 
 export default function CustomersScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
+  const { format } = useCurrency();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +51,21 @@ export default function CustomersScreen() {
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Customers</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
@@ -84,7 +101,7 @@ export default function CustomersScreen() {
               <Text style={s.name}>{item.name}</Text>
               <Text style={s.meta}>ID #{item.id} · {item.phone || 'no phone'} · {item.purchaseCount} purchase{item.purchaseCount !== 1 ? 's' : ''}</Text>
             </View>
-            <Text style={s.spent}>${Number(item.totalSpentUsd || 0).toFixed(2)}</Text>
+            <Text style={s.spent}>{format(Number(item.totalSpentUsd || 0))}</Text>
             <Ionicons name="chevron-forward-outline" size={16} color={colors.borderStrong} />
           </TouchableOpacity>
         )}
@@ -102,7 +119,9 @@ export default function CustomersScreen() {
             </TouchableOpacity>
           </View>
           {historyLoading ? (
-            <ActivityIndicator color={colors.primary} style={{ marginTop: 30 }} />
+            <View style={{ padding: 16, gap: 8 }}>
+              {[1, 2, 3].map(i => <SkeletonRow key={i} />)}
+            </View>
           ) : (
             <FlatList
               data={history}
@@ -115,7 +134,7 @@ export default function CustomersScreen() {
                     <Text style={s.historyProduct}>{item.productName} x{item.quantity}</Text>
                     <Text style={s.historyMeta}>{item.paymentMode} · {new Date(item.recordedAt).toLocaleDateString()}</Text>
                   </View>
-                  <Text style={s.historyAmt}>${Number(item.amountUsd).toFixed(2)}</Text>
+                  <Text style={s.historyAmt}>{format(Number(item.amountUsd))}</Text>
                 </View>
               )}
             />
@@ -138,7 +157,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   avatarText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
   name: { fontSize: 13.5, fontWeight: '600', color: colors.textPrimary },
   meta: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
-  spent: { fontSize: 13, fontWeight: '700', color: colors.success, marginRight: 4 },
+  spent: { fontSize: 13, fontWeight: '700', color: colors.success, marginRight: 4, fontVariant: ['tabular-nums'] },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8, paddingHorizontal: 40 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
@@ -148,5 +167,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   historyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.border },
   historyProduct: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   historyMeta: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
-  historyAmt: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  historyAmt: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, fontVariant: ['tabular-nums'] },
 });
