@@ -6,6 +6,9 @@ import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { ThemeColors } from '../../../theme/colors';
+import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndicator';
+import { SkeletonRow } from '../../../components/Skeleton';
+import { showToast } from '../../../components/toast';
 
 export default function LinkedPartnersScreen() {
   const router = useRouter();
@@ -38,7 +41,7 @@ export default function LinkedPartnersScreen() {
     setSubmitting(true);
     try {
       await api.post('/links/request', { partnerBusinessId: parseInt(businessId) });
-      Alert.alert('Success', 'Link request sent!');
+      showToast('Link request sent!');
       setShowRequestModal(false);
       setBusinessId('');
       fetchPartners();
@@ -52,14 +55,25 @@ export default function LinkedPartnersScreen() {
   const handleAccept = async (linkId: number) => {
     try {
       await api.post('/links/accept', { linkId });
-      Alert.alert('Success', 'Link accepted!');
+      showToast('Link accepted!');
       fetchPartners();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to accept');
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Linked Partners</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
@@ -98,7 +112,7 @@ export default function LinkedPartnersScreen() {
           const tierColor = business?.tierType === 'MANUFACTURER' ? colors.primary : colors.success;
           const tierBg = business?.tierType === 'MANUFACTURER' ? colors.primarySurface : colors.successSurface;
           return (
-            <View style={s.card}>
+            <View style={[s.card, urgencyBorder(isPending ? 'warning' : 'ok', colors), isPending && { paddingLeft: 11 }]}>
               <View style={[s.cardIcon, { backgroundColor: tierBg }]}>
                 <Ionicons name={business?.tierType === 'MANUFACTURER' ? 'construct-outline' : 'storefront-outline'} size={18} color={tierColor} />
               </View>
@@ -107,23 +121,16 @@ export default function LinkedPartnersScreen() {
                 <Text style={s.type}>{business?.tierType} · ID: {business?.id}</Text>
               </View>
               {isPending && isIncoming ? (
-                <View style={{ gap: 6 }}>
+                <View style={{ gap: 6, alignItems: 'flex-end' }}>
                   <TouchableOpacity style={s.acceptBtn} onPress={() => handleAccept(item.id)}>
                     <Text style={s.acceptBtnText}>Accept</Text>
                   </TouchableOpacity>
-                  <View style={s.pendingBadge}>
-                    <Text style={s.pendingText}>Pending</Text>
-                  </View>
+                  <StatusIndicator status="warning" label="Pending" />
                 </View>
               ) : isPending ? (
-                <View style={s.pendingBadge}>
-                  <Text style={s.pendingText}>Request sent</Text>
-                </View>
+                <StatusIndicator status="warning" label="Request sent" />
               ) : (
-                <View style={s.activeBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                  <Text style={s.activeText}>Active</Text>
-                </View>
+                <StatusIndicator status="ok" label="Active" />
               )}
             </View>
           );
@@ -170,10 +177,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   type: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
   acceptBtn: { backgroundColor: colors.success, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
   acceptBtnText: { fontSize: 11, color: colors.onPrimary, fontWeight: '600' },
-  pendingBadge: { backgroundColor: colors.warningSurface, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center' },
-  pendingText: { fontSize: 10, color: colors.warning, fontWeight: '500' },
-  activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successSurface, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
-  activeText: { fontSize: 11, color: colors.success, fontWeight: '500' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },

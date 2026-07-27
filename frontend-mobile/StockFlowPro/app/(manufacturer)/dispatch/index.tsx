@@ -2,27 +2,30 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, SafeAreaView, Alert,
-  ActivityIndicator, RefreshControl, Modal, ScrollView
+  ActivityIndicator, RefreshControl, Modal, ScrollView, AppState
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 import PaystackPayment from '../../../components/PaystackPayment';
-import { USD_TO_GHS } from '../../../constants/subscriptionPlans';
 import { useThemeColors } from '../../../hooks/useThemeColors';
+import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
-
-const PAYMENT_MODES = ['CASH', 'CARD', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CREDIT'];
+import { SkeletonRow } from '../../../components/Skeleton';
+import { generateIdempotencyKey, enqueueSale, isNetworkFailure, flushQueue, getPendingSales } from '../../../services/offlineQueue';
+import { showToast } from '../../../components/toast';
 
 type CartLine = { finishedGoodId: number; name: string; available: number; qty: number; amountUsd: string };
 
 export default function DispatchScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
+  const { country, convert, format } = useCurrency();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuthStore();
   const isPremium = user?.subscriptionPlan === 'PREMIUM';
+  const PAYMENT_MODES = ['CASH', ...(country.paystackLive ? ['CARD'] : []), 'BANK_TRANSFER', 'MOBILE_MONEY', 'CREDIT'];
   const [goods, setGoods] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +38,8 @@ export default function DispatchScreen() {
   const [buyerName, setBuyerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [returningToReview, setReturningToReview] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState({
     paymentMode: 'CASH', dueDate: '', mobileMoneyNumber: '',
     deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
@@ -65,6 +70,25 @@ export default function DispatchScreen() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const syncPending = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const result = await flushQueue();
+      if (result.synced > 0) showToast(`${result.synced} offline dispatch${result.synced > 1 ? 'es' : ''} synced`);
+      if (result.droppedErrors.length > 0) Alert.alert('Some offline dispatches failed to sync', result.droppedErrors.join('\n'));
+      setPendingCount(result.failed);
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    getPendingSales().then(p => setPendingCount(p.length));
+    syncPending();
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') syncPending(); });
+    return () => sub.remove();
+  }, []);
 
   const itemsTotal = cart.reduce((sum, l) => sum + (parseFloat(l.amountUsd) || 0), 0);
   const deliveryFee = form.deliveryMode === 'DELIVERY' ? (parseFloat(form.deliveryFeeUsd) || 0) : 0;
@@ -130,38 +154,49 @@ export default function DispatchScreen() {
 
   const submitDispatch = async (paystackReference?: string) => {
     setSubmitting(true);
-    try {
-      const body: any = {
-        items: cart.map(l => ({ finishedGoodId: l.finishedGoodId, quantity: l.qty, amountUsd: parseFloat(l.amountUsd) })),
-        paymentMode: form.paymentMode,
-        deliveryMode: form.deliveryMode,
-      };
-      if (selectedPartner) body.wholesalerBusinessId = selectedPartner.id;
-      else body.buyerName = buyerName.trim();
-      if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
-      if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
-      if (form.paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = form.mobileMoneyNumber.trim();
-      const wantsPickupCode = form.deliveryMode === 'PICKUP' && form.buyerEmail.trim();
-      if (isPremium) body.wantsInvoice = wantsPickupCode ? true : form.wantsInvoice;
-      if (wantsPickupCode) body.buyerEmail = form.buyerEmail.trim();
-      if (form.deliveryMode === 'DELIVERY') {
-        if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
-        if (form.driverName) body.driverName = form.driverName;
-        if (form.vehicleNumber) body.vehicleNumber = form.vehicleNumber;
-        if (form.driverContact) body.driverContact = form.driverContact;
-        if (form.driverIdNumber) body.driverIdNumber = form.driverIdNumber;
-      }
+    const body: any = {
+      items: cart.map(l => ({ finishedGoodId: l.finishedGoodId, quantity: l.qty, amountUsd: parseFloat(l.amountUsd) })),
+      paymentMode: form.paymentMode,
+      deliveryMode: form.deliveryMode,
+      idempotencyKey: generateIdempotencyKey(),
+    };
+    if (selectedPartner) body.wholesalerBusinessId = selectedPartner.id;
+    else body.buyerName = buyerName.trim();
+    if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
+    if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
+    if (form.paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = form.mobileMoneyNumber.trim();
+    const wantsPickupCode = form.deliveryMode === 'PICKUP' && form.buyerEmail.trim();
+    if (isPremium) body.wantsInvoice = wantsPickupCode ? true : form.wantsInvoice;
+    if (wantsPickupCode) body.buyerEmail = form.buyerEmail.trim();
+    if (form.deliveryMode === 'DELIVERY') {
+      if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
+      if (form.driverName) body.driverName = form.driverName;
+      if (form.vehicleNumber) body.vehicleNumber = form.vehicleNumber;
+      if (form.driverContact) body.driverContact = form.driverContact;
+      if (form.driverIdNumber) body.driverIdNumber = form.driverIdNumber;
+    }
 
+    try {
       const res = await api.post('/manufacturer/dispatch', body);
       const dispatch = res.data;
       const itemLines = (dispatch.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
       const pickupLine = dispatch.pickupCode ? `\nPickup code: ${dispatch.pickupCode} (emailed to buyer)` : '';
-      Alert.alert('Success', `${itemLines}\nTotal: $${Number(dispatch.totalUsd).toFixed(2)}${pickupLine}`);
+      Alert.alert('Success', `${itemLines}\nTotal: ${format(Number(dispatch.totalUsd))}${pickupLine}`);
       setShowModal(false);
       resetForm();
       fetchData();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Dispatch failed');
+      if (isNetworkFailure(e)) {
+        await enqueueSale('/manufacturer/dispatch', body, `Dispatch · ${format(grandTotal)}`);
+        const pending = await getPendingSales();
+        setPendingCount(pending.length);
+        setShowModal(false);
+        Alert.alert('Saved offline', 'No connection right now — this dispatch is saved on the device and will sync automatically once you\'re back online.', [
+          { text: 'OK', onPress: () => resetForm() }
+        ]);
+      } else {
+        Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Dispatch failed');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -172,14 +207,28 @@ export default function DispatchScreen() {
     await submitDispatch(reference);
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Dispatch</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
       <PaystackPayment
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
-        amount={grandTotal * USD_TO_GHS}
+        amount={convert(grandTotal)}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
       />
@@ -200,6 +249,13 @@ export default function DispatchScreen() {
       </View>
 
       <View style={s.body}>
+        {pendingCount > 0 && (
+          <TouchableOpacity style={s.pendingBanner} onPress={syncPending} disabled={syncing}>
+            <Ionicons name="cloud-offline-outline" size={16} color={colors.warning} />
+            <Text style={s.pendingBannerText}>{pendingCount} dispatch{pendingCount > 1 ? 'es' : ''} saved offline, not yet synced</Text>
+            {syncing ? <ActivityIndicator size="small" color={colors.warning} /> : <Text style={s.pendingBannerRetry}>Retry</Text>}
+          </TouchableOpacity>
+        )}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <Text style={s.sectionLabel}>Available finished goods</Text>
           {cart.length > 0 && (
@@ -312,6 +368,9 @@ export default function DispatchScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+              {!country.paystackLive && (
+                <Text style={s.cardComingSoon}>Card payments are coming soon to {country.name} — other payment modes work now.</Text>
+              )}
             </View>
             {form.paymentMode === 'CREDIT' && (
               <View>
@@ -389,23 +448,23 @@ export default function DispatchScreen() {
             <View style={s.card}>
               <View style={s.summaryRow}>
                 <Text style={s.summaryItem}>Items subtotal</Text>
-                <Text style={s.summaryAmt}>${itemsTotal.toFixed(2)}</Text>
+                <Text style={s.summaryAmt}>{format(itemsTotal)}</Text>
               </View>
               {deliveryFee > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryItem}>Delivery fee</Text>
-                  <Text style={s.summaryAmt}>${deliveryFee.toFixed(2)}</Text>
+                  <Text style={s.summaryAmt}>{format(deliveryFee)}</Text>
                 </View>
               )}
               <View style={s.divider} />
               <View style={s.summaryRow}>
                 <Text style={s.totalLabel}>Total</Text>
-                <Text style={s.totalAmt}>${grandTotal.toFixed(2)}</Text>
+                <Text style={s.totalAmt}>{format(grandTotal)}</Text>
               </View>
             </View>
 
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleDispatch} disabled={submitting}>
-              {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Confirm Dispatch · ${grandTotal.toFixed(2)}</Text>}
+              {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Confirm Dispatch · {format(grandTotal)}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -459,6 +518,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   cartBadgeText: { fontSize: 12, fontWeight: '700', color: colors.primary },
   body: { flex: 1, padding: 12 },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  cardComingSoon: { fontSize: 11, color: colors.textPlaceholder, marginTop: 8, lineHeight: 15 },
+  pendingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.warning + '33', marginBottom: 10 },
+  pendingBannerText: { flex: 1, fontSize: 12, color: colors.warning, fontWeight: '500' },
+  pendingBannerRetry: { fontSize: 12, color: colors.warning, fontWeight: '700' },
   reviewBtn: { backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
   reviewBtnText: { fontSize: 12, fontWeight: '600', color: colors.onPrimary },
   card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },

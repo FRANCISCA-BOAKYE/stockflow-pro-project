@@ -2,18 +2,22 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, SafeAreaView, Alert,
-  ActivityIndicator, RefreshControl, Modal, ScrollView
+  ActivityIndicator, RefreshControl, Modal, ScrollView, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { ThemeColors } from '../../../theme/colors';
+import { SkeletonRow } from '../../../components/Skeleton';
+import { useConfirmSheet } from '../../../components/ConfirmSheet';
+import { showToast } from '../../../components/toast';
 
 export default function RecipesScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const s = useMemo(() => makeStyles(colors), [colors]);
+  const { confirm, element: confirmSheet } = useConfirmSheet();
   const [recipes, setRecipes] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +25,7 @@ export default function RecipesScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ productName: '', unitLabel: '', groupLabel: '', unitsPerGroup: '' });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [recipeMaterials, setRecipeMaterials] = useState<{ materialId: string; quantityPerUnit: string }[]>([]);
   const [showMaterialPicker, setShowMaterialPicker] = useState(false);
   const [pickingForIndex, setPickingForIndex] = useState<number | null>(null);
@@ -85,10 +90,16 @@ export default function RecipesScreen() {
   };
 
   const handleAddRecipe = async () => {
-    if (!form.productName || !form.unitLabel || !form.groupLabel || !form.unitsPerGroup) {
-      Alert.alert('Missing info', 'Please fill in all required fields.');
+    const errors: Record<string, string> = {};
+    if (!form.productName.trim()) errors.productName = 'Product name is required.';
+    if (!form.unitLabel.trim()) errors.unitLabel = 'Unit label is required.';
+    if (!form.groupLabel.trim()) errors.groupLabel = 'Group label is required.';
+    if (!form.unitsPerGroup) errors.unitsPerGroup = 'Units per group is required.';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     if (recipeMaterials.length === 0) {
       Alert.alert('Missing info', 'Please add at least one material.');
       return;
@@ -114,7 +125,7 @@ export default function RecipesScreen() {
       setForm({ productName: '', unitLabel: '', groupLabel: '', unitsPerGroup: '' });
       setRecipeMaterials([]);
       fetchData();
-      Alert.alert('Success', 'Recipe added successfully!');
+      showToast('Recipe added successfully');
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to add recipe');
     } finally {
@@ -122,7 +133,21 @@ export default function RecipesScreen() {
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View>
+          <Text style={s.title}>Recipes</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
@@ -148,6 +173,10 @@ export default function RecipesScreen() {
               <Ionicons name="git-branch-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No recipes yet</Text>
               <Text style={s.emptySub}>Add a recipe to start production planning</Text>
+              <TouchableOpacity style={s.emptyActionBtn} onPress={() => setShowAddModal(true)}>
+                <Ionicons name="add" size={16} color={colors.onPrimary} />
+                <Text style={s.emptyActionText}>Add Recipe</Text>
+              </TouchableOpacity>
             </View>
           }
           renderItem={({ item }) => (
@@ -160,18 +189,21 @@ export default function RecipesScreen() {
         <Text style={s.name}>{item.productName || item.name}</Text>
         <Text style={s.output}>Output: {item.unitsPerGroup || item.outputQuantity} {item.unitLabel || item.outputUnit} per {item.groupLabel || 'group'}</Text>
       </View>
-      <TouchableOpacity onPress={() => {
-        Alert.alert('Delete recipe', `Delete "${item.productName || item.name}"?`, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: async () => {
-            try {
-              await api.delete(`/manufacturer/recipes/${item.id}`);
-              fetchData();
-            } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Delete failed');
-            }
-          }}
-        ]);
+      <TouchableOpacity onPress={async () => {
+        const ok = await confirm({
+          title: 'Delete recipe',
+          message: `Delete "${item.productName || item.name}"? This cannot be undone.`,
+          destructive: true,
+          confirmLabel: 'Delete',
+          icon: 'trash-outline',
+        });
+        if (!ok) return;
+        try {
+          await api.delete(`/manufacturer/recipes/${item.id}`);
+          fetchData();
+        } catch (e: any) {
+          Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Delete failed');
+        }
       }} style={{ padding: 4 }}>
         <Ionicons name="trash-outline" size={18} color={colors.danger} />
       </TouchableOpacity>
@@ -209,7 +241,8 @@ export default function RecipesScreen() {
             <View>
               <Text style={s.fieldLabel}>Product name *</Text>
               <TextInput style={s.fieldInput} placeholder="e.g. Golden Butter Biscuits" placeholderTextColor={colors.textPlaceholder}
-                value={form.productName} onChangeText={v => setForm(f => ({ ...f, productName: v }))} />
+                value={form.productName} onChangeText={v => { setForm(f => ({ ...f, productName: v })); if (fieldErrors.productName) setFieldErrors(e => ({ ...e, productName: '' })); }} />
+              {fieldErrors.productName ? <Text style={s.fieldError}>{fieldErrors.productName}</Text> : null}
             </View>
             <View style={s.explainerBox}>
               <Text style={s.explainerTitle}>How production is measured for this recipe</Text>
@@ -223,18 +256,21 @@ export default function RecipesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={s.fieldLabel}>Unit label *</Text>
                 <TextInput style={s.fieldInput} placeholder="e.g. bottle" placeholderTextColor={colors.textPlaceholder}
-                  value={form.unitLabel} onChangeText={v => setForm(f => ({ ...f, unitLabel: v }))} />
+                  value={form.unitLabel} onChangeText={v => { setForm(f => ({ ...f, unitLabel: v })); if (fieldErrors.unitLabel) setFieldErrors(e => ({ ...e, unitLabel: '' })); }} />
+                {fieldErrors.unitLabel ? <Text style={s.fieldError}>{fieldErrors.unitLabel}</Text> : null}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.fieldLabel}>Group label *</Text>
                 <TextInput style={s.fieldInput} placeholder="e.g. batch" placeholderTextColor={colors.textPlaceholder}
-                  value={form.groupLabel} onChangeText={v => setForm(f => ({ ...f, groupLabel: v }))} />
+                  value={form.groupLabel} onChangeText={v => { setForm(f => ({ ...f, groupLabel: v })); if (fieldErrors.groupLabel) setFieldErrors(e => ({ ...e, groupLabel: '' })); }} />
+                {fieldErrors.groupLabel ? <Text style={s.fieldError}>{fieldErrors.groupLabel}</Text> : null}
               </View>
             </View>
             <View>
               <Text style={s.fieldLabel}>Units per group *</Text>
               <TextInput style={s.fieldInput} placeholder="e.g. 24" placeholderTextColor={colors.textPlaceholder}
-                value={form.unitsPerGroup} onChangeText={v => setForm(f => ({ ...f, unitsPerGroup: v }))} keyboardType="numeric" />
+                value={form.unitsPerGroup} onChangeText={v => { setForm(f => ({ ...f, unitsPerGroup: v })); if (fieldErrors.unitsPerGroup) setFieldErrors(e => ({ ...e, unitsPerGroup: '' })); }} keyboardType="numeric" />
+              {fieldErrors.unitsPerGroup ? <Text style={s.fieldError}>{fieldErrors.unitsPerGroup}</Text> : null}
             </View>
             {!!(form.unitLabel && form.groupLabel && form.unitsPerGroup) && (
               <View style={s.previewBox}>
@@ -331,6 +367,7 @@ export default function RecipesScreen() {
           </Modal>
         </SafeAreaView>
       </Modal>
+      {confirmSheet}
     </SafeAreaView>
   );
 }
@@ -352,14 +389,22 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   materialsTitle: { fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 },
   materialRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   materialText: { fontSize: 11, color: colors.textMuted },
-  fab: { position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: colors.purple, borderRadius: 25, alignItems: 'center', justifyContent: 'center', shadowColor: colors.purple, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  fab: {
+    position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: colors.purple, borderRadius: 25, alignItems: 'center', justifyContent: 'center',
+    ...(Platform.OS === 'ios'
+      ? { shadowColor: colors.purple, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
+      : { elevation: 6 }),
+  },
   empty: { alignItems: 'center', paddingTop: 40, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
+  emptyActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 18, marginTop: 8 },
+  emptyActionText: { fontSize: 13, fontWeight: '600', color: colors.onPrimary },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
+  fieldError: { fontSize: 11, color: colors.danger, marginTop: 4 },
   explainerBox: { backgroundColor: colors.purpleSurface, borderRadius: 12, padding: 12, gap: 4 },
   explainerTitle: { fontSize: 12, fontWeight: '700', color: colors.purpleDark },
   explainerText: { fontSize: 12, color: colors.purple, lineHeight: 18 },

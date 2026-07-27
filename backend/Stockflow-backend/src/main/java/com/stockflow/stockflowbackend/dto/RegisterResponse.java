@@ -17,4 +17,5 @@ public class RegisterResponse {
     private String subscriptionStatus;
     private String subscriptionPlan;
     private List<SubAccountResponse> subAccounts;
+    private String country;
 }

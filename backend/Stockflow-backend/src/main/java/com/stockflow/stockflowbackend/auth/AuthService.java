@@ -5,6 +5,7 @@ import com.stockflow.stockflowbackend.email.EmailSenderService;
 import com.stockflow.stockflowbackend.email.EmailTemplateUtil;
 import com.stockflow.stockflowbackend.model.AppUser;
 import com.stockflow.stockflowbackend.model.Business;
+import com.stockflow.stockflowbackend.geo.CountryCatalog;
 import com.stockflow.stockflowbackend.security.JwtUtil;
 import com.stockflow.stockflowbackend.subscription.PlanCatalog;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +57,8 @@ public class AuthService {
         business.setSubscriptionPlan(req.getSubscriptionPlan());
         business.setSubscriptionStatus("TRIAL");
         business.setTrialStartedAt(LocalDateTime.now());
+        business.setCountry(CountryCatalog.isSupported(req.getCountry())
+                ? req.getCountry() : CountryCatalog.DEFAULT_COUNTRY);
         Business savedBusiness = businessRepository.save(business);
 
         AppUser admin = new AppUser();
@@ -90,6 +93,7 @@ public class AuthService {
         response.setSubscriptionStatus("TRIAL");
         response.setSubscriptionPlan(req.getSubscriptionPlan());
         response.setSubAccounts(new ArrayList<>());
+        response.setCountry(savedBusiness.getCountry());
 
         return response;
     }
@@ -184,6 +188,8 @@ public class AuthService {
         response.setIsSubAccount(Boolean.TRUE.equals(user.getIsSubAccount()));
         response.setSubAccountRole(user.getSubAccountRole());
         response.setTrialStartedAt(business.getTrialStartedAt());
+        response.setCountry(CountryCatalog.isSupported(business.getCountry())
+                ? business.getCountry() : CountryCatalog.DEFAULT_COUNTRY);
 
         if (Boolean.TRUE.equals(user.getIsSubAccount()) && user.getParentUserId() != null) {
             userRepository.findById(user.getParentUserId())
@@ -203,6 +209,18 @@ public class AuthService {
         user.setName(name.trim());
         userRepository.save(user);
         return Map.of("name", user.getName());
+    }
+
+    @Transactional
+    public Map<String, Object> updateCountry(Long businessId, String country) {
+        if (!CountryCatalog.isSupported(country)) {
+            throw new RuntimeException("Unsupported country");
+        }
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+        business.setCountry(country);
+        businessRepository.save(business);
+        return Map.of("country", business.getCountry());
     }
 
     @Transactional

@@ -1,21 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator
+  StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, AppState
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import PaystackPayment from '../../components/PaystackPayment';
-import { USD_TO_GHS } from '../../constants/subscriptionPlans';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useCurrency } from '../../hooks/useCurrency';
 import { ThemeColors } from '../../theme/colors';
+import { generateIdempotencyKey, enqueueSale, isNetworkFailure, flushQueue, getPendingSales } from '../../services/offlineQueue';
+import { showToast } from '../../components/toast';
 
 type CartLine = { productId: number; name: string; unit: string; priceUsd: number; available: number; qty: number };
 
 export default function POSScreen() {
   const { user } = useAuthStore();
   const { colors } = useThemeColors();
+  const { country, convert, format } = useCurrency();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -32,11 +35,41 @@ export default function POSScreen() {
   const [showPaystack, setShowPaystack] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const isPremium = user?.subscriptionPlan === 'PREMIUM';
+
+  const refreshPendingCount = useCallback(async () => {
+    const pending = await getPendingSales();
+    setPendingCount(pending.length);
+  }, []);
+
+  const syncPending = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const result = await flushQueue();
+      if (result.synced > 0) showToast(`${result.synced} offline sale${result.synced > 1 ? 's' : ''} synced`);
+      if (result.droppedErrors.length > 0) {
+        Alert.alert('Some offline sales failed to sync', result.droppedErrors.join('\n'));
+      }
+      setPendingCount(result.failed);
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPendingCount();
+    syncPending();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncPending();
+    });
+    return () => sub.remove();
+  }, []);
 
   const PAYMENT_MODES = [
     { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
-    { key: 'CARD', label: 'Card', icon: 'card-outline' },
+    ...(country.paystackLive ? [{ key: 'CARD', label: 'Card', icon: 'card-outline' }] : []),
     { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
     { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
   ];
@@ -97,12 +130,13 @@ export default function POSScreen() {
 
   const recordSale = async (paymentMode: string, paystackReference?: string) => {
     setSubmitting(true);
+    const body: any = {
+      items: cart.map(l => ({ productId: l.productId, quantity: l.qty, unitPriceUsd: l.priceUsd })),
+      paymentMode,
+      buyerName: creditBuyer || user?.name || 'Walk-in customer',
+      idempotencyKey: generateIdempotencyKey(),
+    };
     try {
-      const body: any = {
-        items: cart.map(l => ({ productId: l.productId, quantity: l.qty, unitPriceUsd: l.priceUsd })),
-        paymentMode,
-        buyerName: creditBuyer || user?.name || 'Walk-in customer',
-      };
       if (paymentMode === 'CARD') {
         body.paystackReference = paystackReference;
       }
@@ -132,11 +166,21 @@ export default function POSScreen() {
       const customerLine = inv.customerId ? `\nCustomer ID: ${inv.customerId}` : '';
       Alert.alert(
         'Sale confirmed ✓',
-        `${itemLines}\nTotal: $${Number(inv.totalUsd).toFixed(2)}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}${customerLine}`,
+        `${itemLines}\nTotal: ${format(Number(inv.totalUsd))}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}${customerLine}`,
         [{ text: 'OK', onPress: () => { resetForm(); fetchProducts(); } }]
       );
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.');
+      if (isNetworkFailure(e)) {
+        await enqueueSale('/pos/retail', body, `Sale · ${format(total)}`);
+        await refreshPendingCount();
+        Alert.alert(
+          'Saved offline',
+          'No connection right now — this sale is saved on the device and will sync automatically once you\'re back online.',
+          [{ text: 'OK', onPress: () => { resetForm(); } }]
+        );
+      } else {
+        Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +196,7 @@ export default function POSScreen() {
       <PaystackPayment
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
-        amount={total * USD_TO_GHS}
+        amount={convert(total)}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
       />
@@ -161,6 +205,17 @@ export default function POSScreen() {
         <Text style={s.sub}>New sale</Text>
       </View>
       <ScrollView style={s.body} contentContainerStyle={{ gap: 12, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        {pendingCount > 0 && (
+          <TouchableOpacity style={s.pendingBanner} onPress={syncPending} disabled={syncing}>
+            <Ionicons name="cloud-offline-outline" size={16} color={colors.warning} />
+            <Text style={s.pendingBannerText}>
+              {pendingCount} sale{pendingCount > 1 ? 's' : ''} saved offline, not yet synced
+            </Text>
+            {syncing ? <ActivityIndicator size="small" color={colors.warning} /> : (
+              <Text style={s.pendingBannerRetry}>Retry</Text>
+            )}
+          </TouchableOpacity>
+        )}
         <View style={s.searchBox}>
           <Ionicons name="search-outline" size={16} color={colors.textPlaceholder} style={{ marginRight: 8 }} />
           <TextInput style={s.searchInput} placeholder="Search products to add..." placeholderTextColor={colors.textPlaceholder}
@@ -182,7 +237,7 @@ export default function POSScreen() {
                   <Ionicons name="cube-outline" size={16} color={colors.primary} />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
-                <Text style={s.resultPrice}>${Number(p.priceUsd).toFixed(2)}</Text>
+                <Text style={s.resultPrice}>{format(Number(p.priceUsd))}</Text>
                 <Ionicons name="add-circle" size={20} color={colors.success} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ))}
@@ -198,7 +253,7 @@ export default function POSScreen() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.prodName}>{line.name}</Text>
-                      <Text style={s.prodPrice}>${line.priceUsd.toFixed(2)} per {line.unit} · {line.available} available</Text>
+                      <Text style={s.prodPrice}>{format(line.priceUsd)} per {line.unit} · {line.available} available</Text>
                     </View>
                     <TouchableOpacity onPress={() => removeLine(line.productId)}>
                       <Ionicons name="trash-outline" size={17} color={colors.danger} />
@@ -232,6 +287,9 @@ export default function POSScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          {!country.paystackLive && (
+            <Text style={s.cardComingSoon}>Card payments are coming soon to {country.name} — cash, mobile money, and credit work now.</Text>
+          )}
         </View>
 
         {cart.length > 0 && (
@@ -318,13 +376,13 @@ export default function POSScreen() {
             {cart.map(line => (
               <View key={line.productId} style={s.summaryRow}>
                 <Text style={s.summaryItem}>{line.name} x{line.qty}</Text>
-                <Text style={s.summaryAmt}>${(line.priceUsd * line.qty).toFixed(2)}</Text>
+                <Text style={s.summaryAmt}>{format(line.priceUsd * line.qty)}</Text>
               </View>
             ))}
             <View style={s.divider} />
             <View style={s.summaryRow}>
               <Text style={s.totalLabel}>Total</Text>
-              <Text style={s.totalAmt}>${total.toFixed(2)}</Text>
+              <Text style={s.totalAmt}>{format(total)}</Text>
             </View>
           </View>
         )}
@@ -335,7 +393,7 @@ export default function POSScreen() {
           {submitting ? <ActivityIndicator color={colors.onPrimary} /> : (
             <>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimary} style={{ marginRight: 8 }} />
-              <Text style={s.confirmText}>Confirm Sale · ${total.toFixed(2)}</Text>
+              <Text style={s.confirmText}>Confirm Sale · {format(total)}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -367,6 +425,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   stepBtnBlue: { backgroundColor: colors.primary, borderColor: colors.primary },
   stepNum: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, minWidth: 28, textAlign: 'center' },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  cardComingSoon: { fontSize: 11, color: colors.textPlaceholder, marginTop: 8, lineHeight: 15 },
+  pendingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.warning + '33' },
+  pendingBannerText: { flex: 1, fontSize: 12, color: colors.warning, fontWeight: '500' },
+  pendingBannerRetry: { fontSize: 12, color: colors.warning, fontWeight: '700' },
   paymentRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8 },
   payBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border },
   payBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },

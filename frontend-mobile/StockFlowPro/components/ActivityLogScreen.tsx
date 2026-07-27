@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { api } from '../services/api';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { ThemeColors } from '../theme/colors';
+import { SkeletonRow } from './Skeleton';
 
 const ACTION_ICONS_MAP = (colors: ThemeColors): Record<string, { icon: string; color: string; bg: string }> => ({
   SALE: { icon: 'cash-outline', color: colors.success, bg: colors.successSurface },
@@ -37,7 +38,21 @@ export function ActivityLogScreen() {
 
   useEffect(() => { fetchLog(); }, [fetchLog]);
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Team Activity</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>

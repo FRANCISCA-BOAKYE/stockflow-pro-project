@@ -1,5 +1,6 @@
 package com.stockflow.stockflowbackend.payment;
 
+import com.stockflow.stockflowbackend.geo.CurrencyRateService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -15,10 +16,14 @@ import java.util.Map;
 @Service
 public class PaystackTransactionVerifier {
 
-    private static final int USD_TO_GHS = 15;
+    private final CurrencyRateService currencyRateService;
 
     @Value("${paystack.secret.key}")
     private String paystackSecret;
+
+    public PaystackTransactionVerifier(CurrencyRateService currencyRateService) {
+        this.currencyRateService = currencyRateService;
+    }
 
     /** Throws if the reference is missing, unverifiable, not successful, or short-paid. */
     public void verifyPaid(String reference, BigDecimal expectedAmountUsd) {
@@ -53,8 +58,11 @@ public class PaystackTransactionVerifier {
             throw new RuntimeException("This card payment was not successful");
         }
 
+        // CARD payments are gated to Ghana only today (see CountryCatalog), so this
+        // always verifies against the GHS rate; revisit if another country goes live.
+        double usdToGhs = currencyRateService.getRate("GH");
         int paidPesewas = data.get("amount") instanceof Number n ? n.intValue() : 0;
-        int expectedPesewas = expectedAmountUsd.multiply(BigDecimal.valueOf(USD_TO_GHS))
+        int expectedPesewas = expectedAmountUsd.multiply(BigDecimal.valueOf(usdToGhs))
                 .multiply(BigDecimal.valueOf(100)).intValue();
 
         // Small tolerance for rounding between the client's USD->GHS conversion and this check

@@ -31,6 +31,9 @@ public class Business {
     @Column(name = "subscription_status", length = 20)
     private String subscriptionStatus;
 
+    @Column(name = "country", length = 2)
+    private String country;
+
     @Column(name = "trial_started_at")
     private LocalDateTime trialStartedAt;
 

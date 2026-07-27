@@ -6,6 +6,8 @@ import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
+import com.stockflow.stockflowbackend.geo.CountryCatalog;
+import com.stockflow.stockflowbackend.idempotency.IdempotencyService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
 import com.stockflow.stockflowbackend.pos.InvoiceNumberUtil;
@@ -19,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +38,7 @@ public class WholesalerService {
     private final PaystackTransactionVerifier paystackTransactionVerifier;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final IdempotencyService idempotencyService;
 
     public WholesalerService(
             WarehouseProductRepository warehouseProductRepository,
@@ -47,7 +51,8 @@ public class WholesalerService {
             SubscriptionService subscriptionService,
             PaystackTransactionVerifier paystackTransactionVerifier,
             UserRepository userRepository,
-            ActivityLogService activityLogService) {
+            ActivityLogService activityLogService,
+            IdempotencyService idempotencyService) {
         this.warehouseProductRepository = warehouseProductRepository;
         this.receiptRepository = receiptRepository;
         this.wholesaleSaleRepository = wholesaleSaleRepository;
@@ -57,6 +62,7 @@ public class WholesalerService {
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
         this.paystackTransactionVerifier = paystackTransactionVerifier;
+        this.idempotencyService = idempotencyService;
         this.userRepository = userRepository;
         this.activityLogService = activityLogService;
     }
@@ -158,6 +164,12 @@ public class WholesalerService {
     @Transactional
     public WholesaleSaleResponse sellToRetailer(WholesaleSaleRequest request,
                                         Long businessId, Long userId) {
+        Optional<WholesaleSaleResponse> replay = idempotencyService.find(
+                businessId, request.getIdempotencyKey(), "wholesaler.sell", WholesaleSaleResponse.class);
+        if (replay.isPresent()) {
+            return replay.get();
+        }
+
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
@@ -193,6 +205,9 @@ public class WholesalerService {
         }
 
         if ("CARD".equals(request.getPaymentMode())) {
+            if (!CountryCatalog.isPaystackLive(products.get(0).getBusiness().getCountry())) {
+                throw new RuntimeException("Card payments are not yet available in your country");
+            }
             paystackTransactionVerifier.verifyPaid(request.getPaystackReference(), total);
         }
 
@@ -331,12 +346,14 @@ public class WholesalerService {
         activityLogService.log(business, actor, "SALE",
                 "Sold " + itemsLabel + " to " + buyerLabel + " via " + request.getPaymentMode(), total);
 
-        return new WholesaleSaleResponse(
+        WholesaleSaleResponse response = new WholesaleSaleResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries, total, request.getPaymentMode(),
                 "CREDIT".equals(request.getPaymentMode()) ? "UNPAID" : "PAID",
                 sales.get(0).getSoldAt(), creditRecordId,
                 savedInvoice != null ? savedInvoice.getPickupCode() : null
         );
+        idempotencyService.save(businessId, request.getIdempotencyKey(), "wholesaler.sell", response);
+        return response;
     }
 }

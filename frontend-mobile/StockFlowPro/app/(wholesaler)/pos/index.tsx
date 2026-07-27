@@ -2,32 +2,35 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, ScrollView, Alert,
-  ActivityIndicator, Modal, FlatList
+  ActivityIndicator, Modal, FlatList, AppState
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
 import { api } from '../../../services/api';
 import PaystackPayment from '../../../components/PaystackPayment';
-import { USD_TO_GHS } from '../../../constants/subscriptionPlans';
 import { useThemeColors } from '../../../hooks/useThemeColors';
+import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
+import { SkeletonRow } from '../../../components/Skeleton';
+import { generateIdempotencyKey, enqueueSale, isNetworkFailure, flushQueue, getPendingSales } from '../../../services/offlineQueue';
+import { showToast } from '../../../components/toast';
 
 const MIN_QTY = 10;
-
-const PAYMENT_MODES = [
-  { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
-  { key: 'CARD', label: 'Card', icon: 'card-outline' },
-  { key: 'BANK_TRANSFER', label: 'Bank Transfer', icon: 'swap-horizontal-outline' },
-  { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
-  { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
-]
 
 type CartLine = { productId: number; name: string; unit: string; priceUsd: number; available: number; qty: number };
 
 export default function WholesalerPOSScreen() {
   const { user } = useAuthStore()
   const { colors } = useThemeColors();
+  const { country, convert, format } = useCurrency();
   const s = useMemo(() => makeStyles(colors), [colors]);
+  const PAYMENT_MODES = [
+    { key: 'CASH', label: 'Cash', icon: 'cash-outline' },
+    ...(country.paystackLive ? [{ key: 'CARD', label: 'Card', icon: 'card-outline' }] : []),
+    { key: 'BANK_TRANSFER', label: 'Bank Transfer', icon: 'swap-horizontal-outline' },
+    { key: 'MOBILE_MONEY', label: 'Mobile Money', icon: 'phone-portrait-outline' },
+    { key: 'CREDIT', label: 'Credit', icon: 'time-outline' },
+  ];
   const [stock, setStock] = useState<any[]>([])
   const [partners, setPartners] = useState<any[]>([])
   const [search, setSearch] = useState('')
@@ -44,7 +47,28 @@ export default function WholesalerPOSScreen() {
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [syncing, setSyncing] = useState(false)
   const isPremium = user?.subscriptionPlan === 'PREMIUM'
+
+  const syncPending = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const result = await flushQueue();
+      if (result.synced > 0) showToast(`${result.synced} offline order${result.synced > 1 ? 's' : ''} synced`);
+      if (result.droppedErrors.length > 0) Alert.alert('Some offline orders failed to sync', result.droppedErrors.join('\n'));
+      setPendingCount(result.failed);
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    getPendingSales().then(p => setPendingCount(p.length));
+    syncPending();
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') syncPending(); });
+    return () => sub.remove();
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -114,28 +138,38 @@ export default function WholesalerPOSScreen() {
 
   const recordSale = async (paymentMode: string, paystackReference?: string) => {
     setSubmitting(true)
-    try {
-      const body: any = {
-        items: cart.map(l => ({ productId: l.productId, quantity: l.qty, amountUsd: Number((l.priceUsd * l.qty).toFixed(2)) })),
-        paymentMode,
-      }
-      if (selectedPartner) body.retailerBusinessId = selectedPartner.id
-      else body.buyerName = buyerName.trim()
-      if (paymentMode === 'CREDIT') body.dueDate = dueDate
-      if (paymentMode === 'CARD') body.paystackReference = paystackReference
-      if (paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = mobileNumber.trim()
-      if (isPremium) body.wantsInvoice = isPickup ? true : wantsInvoice
-      if (isPickup) { body.isPickup = true; body.buyerEmail = buyerEmail.trim() }
+    const body: any = {
+      items: cart.map(l => ({ productId: l.productId, quantity: l.qty, amountUsd: Number((l.priceUsd * l.qty).toFixed(2)) })),
+      paymentMode,
+      idempotencyKey: generateIdempotencyKey(),
+    }
+    if (selectedPartner) body.retailerBusinessId = selectedPartner.id
+    else body.buyerName = buyerName.trim()
+    if (paymentMode === 'CREDIT') body.dueDate = dueDate
+    if (paymentMode === 'CARD') body.paystackReference = paystackReference
+    if (paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = mobileNumber.trim()
+    if (isPremium) body.wantsInvoice = isPickup ? true : wantsInvoice
+    if (isPickup) { body.isPickup = true; body.buyerEmail = buyerEmail.trim() }
 
+    try {
       const res = await api.post('/wholesaler/sell', body)
       const sale = res.data
       const itemLines = (sale.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n')
       const pickupLine = sale.pickupCode ? `\nPickup code: ${sale.pickupCode} (emailed to buyer)` : ''
-      Alert.alert('Order confirmed ✓', `${itemLines}\nTotal: $${Number(sale.totalUsd).toFixed(2)} via ${paymentMode}${pickupLine}`, [
+      Alert.alert('Order confirmed ✓', `${itemLines}\nTotal: ${format(Number(sale.totalUsd))} via ${paymentMode}${pickupLine}`, [
         { text: 'OK', onPress: () => { resetForm(); fetchData() } }
       ])
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.')
+      if (isNetworkFailure(e)) {
+        await enqueueSale('/wholesaler/sell', body, `Order · ${format(total)}`);
+        const pending = await getPendingSales();
+        setPendingCount(pending.length);
+        Alert.alert('Saved offline', 'No connection right now — this order is saved on the device and will sync automatically once you\'re back online.', [
+          { text: 'OK', onPress: () => resetForm() }
+        ]);
+      } else {
+        Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Sale failed. Please try again.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -146,14 +180,24 @@ export default function WholesalerPOSScreen() {
     await recordSale('CARD', reference)
   }
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <Text style={s.title}>Bulk Orders</Text>
+        <Text style={s.sub}>Sell to retailers</Text>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  )
 
   return (
     <SafeAreaView style={s.page}>
       <PaystackPayment
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
-        amount={total * USD_TO_GHS}
+        amount={convert(total)}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
       />
@@ -164,6 +208,13 @@ export default function WholesalerPOSScreen() {
       </View>
 
       <ScrollView style={s.body} contentContainerStyle={{ gap: 12, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        {pendingCount > 0 && (
+          <TouchableOpacity style={s.pendingBanner} onPress={syncPending} disabled={syncing}>
+            <Ionicons name="cloud-offline-outline" size={16} color={colors.warning} />
+            <Text style={s.pendingBannerText}>{pendingCount} order{pendingCount > 1 ? 's' : ''} saved offline, not yet synced</Text>
+            {syncing ? <ActivityIndicator size="small" color={colors.warning} /> : <Text style={s.pendingBannerRetry}>Retry</Text>}
+          </TouchableOpacity>
+        )}
 
         {/* Partner selector */}
         <TouchableOpacity style={s.partnerBtn} onPress={() => setShowPartnerModal(true)}>
@@ -205,7 +256,7 @@ export default function WholesalerPOSScreen() {
                   <Ionicons name="archive-outline" size={16} color={colors.primary} />
                 </View>
                 <Text style={s.resultName}>{p.name}</Text>
-                <Text style={s.resultStock}>${Number(p.priceUsd || 0).toFixed(2)} · {p.quantity} {p.unit}</Text>
+                <Text style={s.resultStock}>{format(Number(p.priceUsd || 0))} · {p.quantity} {p.unit}</Text>
                 <Ionicons name="add-circle" size={20} color={colors.success} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ))}
@@ -221,7 +272,7 @@ export default function WholesalerPOSScreen() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.prodName}>{line.name}</Text>
-                      <Text style={s.prodPrice}>${line.priceUsd.toFixed(2)} per {line.unit} · {line.available} available</Text>
+                      <Text style={s.prodPrice}>{format(line.priceUsd)} per {line.unit} · {line.available} available</Text>
                     </View>
                     <TouchableOpacity onPress={() => removeLine(line.productId)}>
                       <Ionicons name="trash-outline" size={17} color={colors.danger} />
@@ -255,6 +306,9 @@ export default function WholesalerPOSScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          {!country.paystackLive && (
+            <Text style={s.cardComingSoon}>Card payments are coming soon to {country.name} — cash, bank transfer, mobile money, and credit work now.</Text>
+          )}
         </View>
 
         {payment === 'CREDIT' && (
@@ -318,13 +372,13 @@ export default function WholesalerPOSScreen() {
             {cart.map(line => (
               <View key={line.productId} style={s.summaryRow}>
                 <Text style={s.summaryItem}>{line.name} x{line.qty}</Text>
-                <Text style={s.summaryAmt}>${(line.priceUsd * line.qty).toFixed(2)}</Text>
+                <Text style={s.summaryAmt}>{format(line.priceUsd * line.qty)}</Text>
               </View>
             ))}
             <View style={s.dividerLine} />
             <View style={s.summaryRow}>
               <Text style={s.totalLabel}>Total</Text>
-              <Text style={s.totalAmt}>${total.toFixed(2)}</Text>
+              <Text style={s.totalAmt}>{format(total)}</Text>
             </View>
           </View>
         )}
@@ -335,7 +389,7 @@ export default function WholesalerPOSScreen() {
           {submitting ? <ActivityIndicator color={colors.onPrimary} /> : (
             <>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimary} style={{ marginRight: 8 }} />
-              <Text style={s.confirmText}>Confirm Order · ${total.toFixed(2)}</Text>
+              <Text style={s.confirmText}>Confirm Order · {format(total)}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -404,6 +458,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   stepBtnBlue: { backgroundColor: colors.primary, borderColor: colors.primary },
   stepNum: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, minWidth: 28, textAlign: 'center' },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  cardComingSoon: { fontSize: 11, color: colors.textPlaceholder, marginTop: 8, lineHeight: 15 },
+  pendingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.warning + '33' },
+  pendingBannerText: { flex: 1, fontSize: 12, color: colors.warning, fontWeight: '500' },
+  pendingBannerRetry: { fontSize: 12, color: colors.warning, fontWeight: '700' },
   paymentRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8 },
   payBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border },
   payBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },

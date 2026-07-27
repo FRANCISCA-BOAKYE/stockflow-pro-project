@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { api } from '../services/api';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { ThemeColors } from '../theme/colors';
+import { SkeletonRow } from '../components/Skeleton';
 
 const TYPE_MAP = (colors: ThemeColors): Record<string, { bg: string; color: string; icon: string }> => ({
   warning: { bg: colors.warningSurface, color: colors.warning, icon: 'warning-outline' },
@@ -67,7 +68,21 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Notifications</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>

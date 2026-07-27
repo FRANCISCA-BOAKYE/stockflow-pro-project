@@ -22,4 +22,5 @@ public class DispatchRequest {
     private String buyerEmail; // optional — if set and deliveryMode is PICKUP, a pickup code is emailed here
     private Boolean wantsInvoice;
     private String paystackReference; // required when paymentMode is CARD
+    private String idempotencyKey; // client-generated, reused on retry — safe to resend after a dropped connection
 }

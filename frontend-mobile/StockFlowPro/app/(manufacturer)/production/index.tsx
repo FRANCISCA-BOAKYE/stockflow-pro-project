@@ -7,15 +7,23 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../services/api';
 import { useThemeColors } from '../../../hooks/useThemeColors';
+import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
+import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndicator';
+import { SkeletonRow } from '../../../components/Skeleton';
+import { useConfirmSheet } from '../../../components/ConfirmSheet';
+import { showToast } from '../../../components/toast';
 
 export default function ProductionScreen() {
   const { colors } = useThemeColors();
+  const { format } = useCurrency();
   const s = useMemo(() => makeStyles(colors), [colors]);
+  const { confirm, element: confirmSheet } = useConfirmSheet();
   const [recipes, setRecipes] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [target, setTarget] = useState('');
+  const [targetError, setTargetError] = useState('');
   const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
@@ -41,10 +49,15 @@ export default function ProductionScreen() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const calculate = async () => {
-    if (!selectedRecipe || !target || isNaN(Number(target))) {
-      Alert.alert('Missing info', 'Please select a recipe and enter target groups.');
+    if (!selectedRecipe) {
+      Alert.alert('Missing info', 'Please select a recipe first.');
       return;
     }
+    if (!target || isNaN(Number(target))) {
+      setTargetError('Enter a valid number of target groups.');
+      return;
+    }
+    setTargetError('');
     setCalculating(true);
     try {
       const res = await api.post('/manufacturer/production/calculate', {
@@ -61,39 +74,41 @@ export default function ProductionScreen() {
 
   const confirmRun = async () => {
     if (!selectedRecipe || !target) return;
-    Alert.alert(
-      'Confirm production run',
-      `Start ${target} ${selectedRecipe.groupLabel}(s) of ${selectedRecipe.productName}? This will deduct materials from stock.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm', onPress: async () => {
-            setConfirming(true);
-            try {
-              await api.post('/manufacturer/production/confirm', {
-                recipeId: selectedRecipe.id,
-                targetGroups: parseInt(target),
-              });
-              Alert.alert('Success', `Production run confirmed! ${preview?.totalUnits || ''} units added to finished goods.`);
-              setSelectedRecipe(null);
-              setTarget('');
-              setPreview(null);
-              fetchData();
-            } catch (e: any) {
-              Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Production run failed');
-            } finally {
-              setConfirming(false);
-            }
-          }
-        },
-      ]
-    );
+    const ok = await confirm({
+      title: 'Confirm production run',
+      message: `Start ${target} ${selectedRecipe.groupLabel}(s) of ${selectedRecipe.productName}? This will deduct materials from stock.`,
+      destructive: true,
+      confirmLabel: 'Confirm',
+      icon: 'play-circle-outline',
+    });
+    if (!ok) return;
+    setConfirming(true);
+    try {
+      await api.post('/manufacturer/production/confirm', {
+        recipeId: selectedRecipe.id,
+        targetGroups: parseInt(target),
+      });
+      showToast(`Production run confirmed! ${preview?.totalUnits || ''} units added to finished goods.`);
+      setSelectedRecipe(null);
+      setTarget('');
+      setPreview(null);
+      fetchData();
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Production run failed');
+    } finally {
+      setConfirming(false);
+    }
   };
 
   if (loading) return (
-    <View style={s.center}>
-      <ActivityIndicator size="large" color={colors.primary} />
-    </View>
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <Text style={s.title}>Production</Text>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
   );
 
   return (
@@ -152,11 +167,12 @@ export default function ProductionScreen() {
                 placeholder="e.g. 10"
                 placeholderTextColor={colors.textPlaceholder}
                 value={target}
-                onChangeText={t => { setTarget(t); setPreview(null); }}
+                onChangeText={t => { setTarget(t); setPreview(null); if (targetError) setTargetError(''); }}
                 keyboardType="numeric"
               />
               <Text style={s.inputUnit}>groups</Text>
             </View>
+            {targetError ? <Text style={s.fieldError}>{targetError}</Text> : null}
             <TouchableOpacity style={s.calcBtn} onPress={calculate} disabled={calculating}>
               {calculating ? <ActivityIndicator color={colors.onPrimary} size="small" /> : (
                 <>
@@ -170,14 +186,10 @@ export default function ProductionScreen() {
 
         {/* Preview */}
         {preview && (
-          <View style={s.card}>
+          <View style={[s.card, urgencyBorder(preview.feasible ? 'ok' : 'danger', colors), !preview.feasible && { paddingLeft: 11 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <Text style={s.sectionLabel}>Materials needed</Text>
-              <View style={[s.feasibleBadge, { backgroundColor: preview.feasible ? colors.successSurface : colors.dangerSurface }]}>
-                <Text style={[s.feasibleText, { color: preview.feasible ? colors.successText : colors.dangerText }]}>
-                  {preview.feasible ? '✓ Feasible' : '✗ Not feasible'}
-                </Text>
-              </View>
+              <StatusIndicator status={preview.feasible ? 'ok' : 'danger'} label={preview.feasible ? 'Feasible' : 'Not feasible'} />
             </View>
             <Text style={s.hint}>Total output: {preview.totalUnits} units</Text>
             {preview.materials?.map((m: any, i: number) => (
@@ -223,12 +235,13 @@ export default function ProductionScreen() {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={s.runQty}>{run.totalUnits} units</Text>
-                <Text style={s.runCost}>${Number(run.totalCostUsd).toFixed(2)}</Text>
+                <Text style={s.runCost}>{format(Number(run.totalCostUsd))}</Text>
               </View>
             </View>
           ))
         )}
       </ScrollView>
+      {confirmSheet}
     </SafeAreaView>
   );
 }
@@ -252,10 +265,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 0.5, borderColor: colors.borderStrong, borderRadius: 10, overflow: 'hidden' },
   input: { flex: 1, padding: 10, fontSize: 14, color: colors.textPrimary },
   inputUnit: { paddingHorizontal: 12, fontSize: 13, color: colors.textMuted, backgroundColor: colors.surfaceAlt, borderLeftWidth: 0.5, borderLeftColor: colors.border, paddingVertical: 10 },
+  fieldError: { fontSize: 11, color: colors.danger, marginTop: -2 },
   calcBtn: { backgroundColor: colors.primary, borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   calcBtnText: { color: colors.onPrimary, fontSize: 13, fontWeight: '600' },
-  feasibleBadge: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20 },
-  feasibleText: { fontSize: 11, fontWeight: '600' },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   breakdownBorder: { borderBottomWidth: 0.5, borderBottomColor: colors.border },
   breakdownIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },

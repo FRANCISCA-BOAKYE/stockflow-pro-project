@@ -1,9 +1,12 @@
 package com.stockflow.stockflowbackend.auth;
 
 import com.stockflow.stockflowbackend.dto.*;
+import com.stockflow.stockflowbackend.geo.Country;
+import com.stockflow.stockflowbackend.geo.CurrencyRateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +15,16 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final CurrencyRateService currencyRateService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, CurrencyRateService currencyRateService) {
         this.authService = authService;
+        this.currencyRateService = currencyRateService;
+    }
+
+    @GetMapping("/countries")
+    public ResponseEntity<Collection<Country>> getCountries() {
+        return ResponseEntity.ok(currencyRateService.effectiveCatalog().values());
     }
 
     @PostMapping("/register")
@@ -52,6 +62,14 @@ public class AuthController {
             Authentication auth) {
         Long userId = (Long) auth.getCredentials();
         return ResponseEntity.ok(authService.updateProfileName(userId, req.get("name")));
+    }
+
+    @PutMapping("/country")
+    public ResponseEntity<Map<String, Object>> updateCountry(
+            @RequestBody Map<String, String> req,
+            Authentication auth) {
+        Long businessId = (Long) auth.getDetails();
+        return ResponseEntity.ok(authService.updateCountry(businessId, req.get("country")));
     }
 
     @PostMapping("/change-email")

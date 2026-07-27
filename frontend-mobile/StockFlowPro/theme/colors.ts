@@ -25,6 +25,9 @@ export interface ThemeColors {
   warning: string;
   warningText: string;
   warningSurface: string;
+  info: string;
+  infoText: string;
+  infoSurface: string;
   cyan: string;
   cyanSurface: string;
   pink: string;
@@ -62,6 +65,9 @@ export const lightColors: ThemeColors = {
   warning: '#C27803',
   warningText: '#92400E',
   warningSurface: '#FFFBEB',
+  info: '#4F46E5',
+  infoText: '#3730A3',
+  infoSurface: '#EEF2FF',
   cyan: '#0891B2',
   cyanSurface: '#ECFEFF',
   pink: '#DB2777',
@@ -101,6 +107,9 @@ export const darkColors: ThemeColors = {
   warning: '#FBBF24',
   warningText: '#FCD34D',
   warningSurface: 'rgba(251,191,36,0.14)',
+  info: '#818CF8',
+  infoText: '#A5B4FC',
+  infoSurface: 'rgba(129,140,248,0.14)',
   cyan: '#22D3EE',
   cyanSurface: 'rgba(34,211,238,0.14)',
   pink: '#F472B6',

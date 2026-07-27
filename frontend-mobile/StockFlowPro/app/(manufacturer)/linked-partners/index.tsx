@@ -6,6 +6,9 @@ import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { ThemeColors } from '../../../theme/colors';
+import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndicator';
+import { SkeletonRow } from '../../../components/Skeleton';
+import { showToast } from '../../../components/toast';
 
 export default function ManufacturerLinkedPartnersScreen() {
   const router = useRouter();
@@ -17,6 +20,7 @@ export default function ManufacturerLinkedPartnersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [businessId, setBusinessId] = useState('');
+  const [businessIdError, setBusinessIdError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchPartners = useCallback(async () => {
@@ -37,11 +41,12 @@ export default function ManufacturerLinkedPartnersScreen() {
   useEffect(() => { fetchPartners(); }, [fetchPartners]);
 
   const handleSendRequest = async () => {
-    if (!businessId.trim()) { Alert.alert('Missing info', 'Please enter a business ID'); return; }
+    if (!businessId.trim()) { setBusinessIdError('Please enter a business ID.'); return; }
+    setBusinessIdError('');
     setSubmitting(true);
     try {
       await api.post('/links/request', { partnerBusinessId: parseInt(businessId) });
-      Alert.alert('Success', 'Link request sent!');
+      showToast('Link request sent');
       setShowRequestModal(false);
       setBusinessId('');
       fetchPartners();
@@ -55,14 +60,28 @@ export default function ManufacturerLinkedPartnersScreen() {
   const handleAccept = async (linkId: number) => {
     try {
       await api.post('/links/accept', { linkId });
-      Alert.alert('Success', 'Link accepted!');
+      showToast('Link accepted');
       fetchPartners();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Failed to accept link');
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Linked Partners</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
@@ -91,6 +110,10 @@ export default function ManufacturerLinkedPartnersScreen() {
             <Ionicons name="people-outline" size={40} color={colors.borderStrong} />
             <Text style={s.emptyText}>No linked wholesalers</Text>
             <Text style={s.emptySub}>Tap Link to connect with a wholesaler</Text>
+            <TouchableOpacity style={s.emptyActionBtn} onPress={() => setShowRequestModal(true)}>
+              <Ionicons name="add" size={16} color={colors.onPrimary} />
+              <Text style={s.emptyActionText}>Link Wholesaler</Text>
+            </TouchableOpacity>
           </View>
         }
         renderItem={({ item }) => {
@@ -98,7 +121,7 @@ export default function ManufacturerLinkedPartnersScreen() {
           const isPending = item.status === 'PENDING';
           const isIncoming = item.partnerBusiness?.id === user?.businessId;
           return (
-            <View style={s.card}>
+            <View style={[s.card, urgencyBorder(isPending ? 'warning' : 'ok', colors), isPending && { paddingLeft: 11 }]}>
               <View style={s.cardIcon}>
                 <Ionicons name="business-outline" size={18} color={colors.warning} />
               </View>
@@ -107,23 +130,16 @@ export default function ManufacturerLinkedPartnersScreen() {
                 <Text style={s.type}>Wholesaler · ID: {business?.id}</Text>
               </View>
               {isPending && isIncoming ? (
-                <View style={{ gap: 6 }}>
+                <View style={{ gap: 6, alignItems: 'flex-end' }}>
                   <TouchableOpacity style={s.acceptBtn} onPress={() => handleAccept(item.id)}>
                     <Text style={s.acceptBtnText}>Accept</Text>
                   </TouchableOpacity>
-                  <View style={s.pendingBadge}>
-                    <Text style={s.pendingText}>Pending</Text>
-                  </View>
+                  <StatusIndicator status="warning" label="Pending" />
                 </View>
               ) : isPending ? (
-                <View style={s.pendingBadge}>
-                  <Text style={s.pendingText}>Request sent</Text>
-                </View>
+                <StatusIndicator status="warning" label="Request sent" />
               ) : (
-                <View style={s.activeBadge}>
-                  <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                  <Text style={s.activeText}>Active</Text>
-                </View>
+                <StatusIndicator status="ok" label="Active" />
               )}
             </View>
           );
@@ -141,7 +157,8 @@ export default function ManufacturerLinkedPartnersScreen() {
           <View style={{ padding: 16 }}>
             <Text style={s.fieldLabel}>Wholesaler Business ID</Text>
             <TextInput style={s.fieldInput} placeholder="e.g. 2" placeholderTextColor={colors.textPlaceholder}
-              value={businessId} onChangeText={setBusinessId} keyboardType="numeric" />
+              value={businessId} onChangeText={v => { setBusinessId(v); if (businessIdError) setBusinessIdError(''); }} keyboardType="numeric" />
+            {businessIdError ? <Text style={s.fieldError}>{businessIdError}</Text> : null}
             <Text style={{ fontSize: 11, color: colors.textPlaceholder, marginTop: 6, marginBottom: 24 }}>
               Find the business ID from the marketplace listing
             </Text>
@@ -170,17 +187,16 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   type: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
   acceptBtn: { backgroundColor: colors.success, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
   acceptBtnText: { fontSize: 11, color: colors.onPrimary, fontWeight: '600' },
-  pendingBadge: { backgroundColor: colors.warningSurface, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center' },
-  pendingText: { fontSize: 10, color: colors.warning, fontWeight: '500' },
-  activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successSurface, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8 },
-  activeText: { fontSize: 11, color: colors.success, fontWeight: '500' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
+  emptyActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 18, marginTop: 8 },
+  emptyActionText: { fontSize: 13, fontWeight: '600', color: colors.onPrimary },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
+  fieldError: { fontSize: 11, color: colors.danger, marginTop: 4 },
   confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' },
   confirmBtnText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
 });
