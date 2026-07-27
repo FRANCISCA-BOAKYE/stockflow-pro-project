@@ -355,7 +355,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   sku: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
   stock: { fontSize: 11, color: colors.success, fontWeight: '500', marginTop: 2 },
-  price: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  price: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4, fontVariant: ['tabular-nums'] },
   fab: {
     position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: colors.primary, borderRadius: 25, alignItems: 'center', justifyContent: 'center',
     ...(Platform.OS === 'ios'

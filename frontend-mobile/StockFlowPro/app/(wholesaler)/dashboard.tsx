@@ -63,10 +63,10 @@ export default function WholesalerDashboard() {
   })();
 
   const kpis = [
-    { label: 'WAREHOUSE STOCK', value: data?.totalStockItems ?? '—', sub: 'items', icon: 'archive-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
-    { label: 'CREDIT OWED', value: format(Number(data?.totalCreditOwedByRetailers ?? 0)), sub: 'by retailers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
-    { label: "TODAY'S SALES", value: format(Number(data?.todaySalesUsd ?? 0)), sub: 'revenue', icon: 'trending-up-outline', iconBg: colors.successSurface, iconColor: colors.success },
-    { label: 'ACTIVE RETAILERS', value: data?.activeRetailers ?? '—', sub: 'partners', icon: 'people-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
+    { label: 'WAREHOUSE STOCK', value: data?.totalStockItems ?? '—', sub: 'items', icon: 'archive-outline', iconBg: colors.primarySurface, iconColor: colors.primary, isMoney: false },
+    { label: 'CREDIT OWED', value: format(Number(data?.totalCreditOwedByRetailers ?? 0)), sub: 'by retailers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger, isMoney: true },
+    { label: "TODAY'S SALES", value: format(Number(data?.todaySalesUsd ?? 0)), sub: 'revenue', icon: 'trending-up-outline', iconBg: colors.successSurface, iconColor: colors.success, isMoney: true },
+    { label: 'ACTIVE RETAILERS', value: data?.activeRetailers ?? '—', sub: 'partners', icon: 'people-outline', iconBg: colors.warningSurface, iconColor: colors.warning, isMoney: false },
   ];
 
 const quickActions = [
@@ -141,7 +141,7 @@ const quickActions = [
                   <Ionicons name={k.icon as any} size={17} color={k.iconColor} />
                 </View>
                 <Text style={s.kpiLabel}>{k.label}</Text>
-                <Text style={s.kpiValue}>{k.value}</Text>
+                <Text style={[s.kpiValue, k.isMoney && { fontVariant: ['tabular-nums'] }]}>{k.value}</Text>
                 <Text style={s.kpiSub}>{k.sub}</Text>
               </View>
             ))}
@@ -203,7 +203,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9 },
   trialText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
   heroLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   body: { padding: 14, marginTop: -20 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.dangerSurface, borderRadius: 10, padding: 10, marginBottom: 12 },
   errorText: { fontSize: 12, color: colors.danger, flex: 1 },

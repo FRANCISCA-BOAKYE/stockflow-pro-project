@@ -157,7 +157,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   avatarText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
   name: { fontSize: 13.5, fontWeight: '600', color: colors.textPrimary },
   meta: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
-  spent: { fontSize: 13, fontWeight: '700', color: colors.success, marginRight: 4 },
+  spent: { fontSize: 13, fontWeight: '700', color: colors.success, marginRight: 4, fontVariant: ['tabular-nums'] },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8, paddingHorizontal: 40 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
@@ -167,5 +167,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   historyRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.border },
   historyProduct: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   historyMeta: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
-  historyAmt: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  historyAmt: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, fontVariant: ['tabular-nums'] },
 });

@@ -280,7 +280,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   runName: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
   runDate: { fontSize: 10, color: colors.textPlaceholder, marginTop: 1 },
   runQty: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  runCost: { fontSize: 10, color: colors.textPlaceholder },
+  runCost: { fontSize: 10, color: colors.textPlaceholder, fontVariant: ['tabular-nums'] },
   empty: { alignItems: 'center', paddingTop: 40, gap: 6 },
   emptyText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   emptySub: { fontSize: 12, color: colors.textPlaceholder, textAlign: 'center' },

@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { registerToastListener } from './toast';
+
+const HAPTIC_FOR_TYPE = {
+  success: Haptics.NotificationFeedbackType.Success,
+  error: Haptics.NotificationFeedbackType.Error,
+  info: Haptics.NotificationFeedbackType.Warning,
+} as const;
 
 const ICONS = { success: 'checkmark-circle', error: 'alert-circle', info: 'information-circle' } as const;
 
@@ -18,6 +25,7 @@ export default function ToastHost() {
     registerToastListener((message, type) => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setItem({ message, type });
+      Haptics.notificationAsync(HAPTIC_FOR_TYPE[type]).catch(() => {});
       Animated.parallel([
         Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 8, tension: 60 }),
         Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),

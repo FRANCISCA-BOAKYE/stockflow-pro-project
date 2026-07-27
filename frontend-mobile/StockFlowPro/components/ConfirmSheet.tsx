@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { ThemeColors } from '../theme/colors';
 
@@ -30,10 +31,16 @@ export function useConfirmSheet() {
     return new Promise<boolean>((resolve) => {
       resolver.current = resolve;
       setOpts(options);
+      Haptics.impactAsync(options.destructive ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     });
   }, []);
 
   const settle = (value: boolean) => {
+    if (value && opts?.destructive) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     resolver.current?.(value);
     resolver.current = null;
     setOpts(null);

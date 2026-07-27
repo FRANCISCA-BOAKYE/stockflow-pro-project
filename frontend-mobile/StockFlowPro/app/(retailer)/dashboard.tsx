@@ -156,7 +156,7 @@ export default function RetailerDashboard() {
                   <Ionicons name={k.icon as any} size={17} color={k.iconColor} />
                 </View>
                 <Text style={s.kpiLabel}>{k.label}</Text>
-                <Text style={s.kpiValue}>{k.value}</Text>
+                <Text style={[s.kpiValue, (i === 2 || i === 3) && { fontVariant: ['tabular-nums'] }]}>{k.value}</Text>
                 <Text style={s.kpiSub}>{k.sub}</Text>
               </View>
             ))}
@@ -242,7 +242,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9 },
   trialText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
   heroLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   body: { padding: 14, marginTop: -20 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.dangerSurface, borderRadius: 10, padding: 10, marginBottom: 12 },
   errorText: { fontSize: 12, color: colors.danger, flex: 1 },

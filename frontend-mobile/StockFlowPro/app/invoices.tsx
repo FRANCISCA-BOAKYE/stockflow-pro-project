@@ -179,7 +179,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   date: { fontSize: 11, color: colors.textPlaceholder },
   invoiceId: { fontSize: 10, color: colors.textPlaceholder, marginTop: 2 },
-  amount: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  amount: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4, fontVariant: ['tabular-nums'] },
   shareBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
