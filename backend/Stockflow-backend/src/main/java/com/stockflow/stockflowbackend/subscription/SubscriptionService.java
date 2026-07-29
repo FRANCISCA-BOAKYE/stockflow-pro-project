@@ -1,6 +1,7 @@
 package com.stockflow.stockflowbackend.subscription;
 
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.geo.CurrencyRateService;
 import com.stockflow.stockflowbackend.model.Business;
 import com.stockflow.stockflowbackend.notification.NotificationService;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,11 +22,14 @@ public class SubscriptionService {
 
     private final BusinessRepository businessRepository;
     private final NotificationService notificationService;
+    private final CurrencyRateService currencyRateService;
 
     public SubscriptionService(BusinessRepository businessRepository,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               CurrencyRateService currencyRateService) {
         this.businessRepository = businessRepository;
         this.notificationService = notificationService;
+        this.currencyRateService = currencyRateService;
     }
 
     @Transactional
@@ -111,7 +115,7 @@ public class SubscriptionService {
         catalog.put("trialDays", PlanCatalog.TRIAL_DAYS);
         catalog.put("currencyDisplay", "USD");
         catalog.put("paystackCurrency", "GHS");
-        catalog.put("usdToGhsRate", PlanCatalog.USD_TO_GHS);
+        catalog.put("usdToGhsRate", currencyRateService.getRate("GH"));
         catalog.put("subAccountLimits", PlanCatalog.SUB_ACCOUNT_LIMITS);
         catalog.put("monthlyPriceUsd", PlanCatalog.MONTHLY_PRICE_USD);
         catalog.put("premiumFeatures", PlanCatalog.PREMIUM_FEATURES);

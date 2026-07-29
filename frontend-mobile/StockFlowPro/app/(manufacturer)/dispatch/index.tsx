@@ -1,24 +1,31 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, SafeAreaView, Alert,
-  ActivityIndicator, RefreshControl, Modal, ScrollView
+  ActivityIndicator, RefreshControl, Modal, ScrollView, AppState
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 import PaystackPayment from '../../../components/PaystackPayment';
-import { USD_TO_GHS } from '../../../constants/subscriptionPlans';
-
-const PAYMENT_MODES = ['CASH', 'CARD', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CREDIT'];
+import { useThemeColors } from '../../../hooks/useThemeColors';
+import { useCurrency } from '../../../hooks/useCurrency';
+import { ThemeColors } from '../../../theme/colors';
+import { SkeletonRow } from '../../../components/Skeleton';
+import { generateIdempotencyKey, enqueueSale, isNetworkFailure, flushQueue, getPendingSales } from '../../../services/offlineQueue';
+import { showToast } from '../../../components/toast';
 
 type CartLine = { finishedGoodId: number; name: string; available: number; qty: number; amountUsd: string };
 
 export default function DispatchScreen() {
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const { country, convert, format } = useCurrency();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuthStore();
   const isPremium = user?.subscriptionPlan === 'PREMIUM';
+  const PAYMENT_MODES = ['CASH', ...(country.paystackLive ? ['CARD'] : []), 'BANK_TRANSFER', 'MOBILE_MONEY', 'CREDIT'];
   const [goods, setGoods] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +38,8 @@ export default function DispatchScreen() {
   const [buyerName, setBuyerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [returningToReview, setReturningToReview] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState({
     paymentMode: 'CASH', dueDate: '', mobileMoneyNumber: '',
     deliveryMode: 'DELIVERY', deliveryFeeUsd: '',
@@ -61,6 +70,25 @@ export default function DispatchScreen() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const syncPending = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const result = await flushQueue();
+      if (result.synced > 0) showToast(`${result.synced} offline dispatch${result.synced > 1 ? 'es' : ''} synced`);
+      if (result.droppedErrors.length > 0) Alert.alert('Some offline dispatches failed to sync', result.droppedErrors.join('\n'));
+      setPendingCount(result.failed);
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    getPendingSales().then(p => setPendingCount(p.length));
+    syncPending();
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') syncPending(); });
+    return () => sub.remove();
+  }, []);
 
   const itemsTotal = cart.reduce((sum, l) => sum + (parseFloat(l.amountUsd) || 0), 0);
   const deliveryFee = form.deliveryMode === 'DELIVERY' ? (parseFloat(form.deliveryFeeUsd) || 0) : 0;
@@ -126,38 +154,49 @@ export default function DispatchScreen() {
 
   const submitDispatch = async (paystackReference?: string) => {
     setSubmitting(true);
-    try {
-      const body: any = {
-        items: cart.map(l => ({ finishedGoodId: l.finishedGoodId, quantity: l.qty, amountUsd: parseFloat(l.amountUsd) })),
-        paymentMode: form.paymentMode,
-        deliveryMode: form.deliveryMode,
-      };
-      if (selectedPartner) body.wholesalerBusinessId = selectedPartner.id;
-      else body.buyerName = buyerName.trim();
-      if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
-      if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
-      if (form.paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = form.mobileMoneyNumber.trim();
-      const wantsPickupCode = form.deliveryMode === 'PICKUP' && form.buyerEmail.trim();
-      if (isPremium) body.wantsInvoice = wantsPickupCode ? true : form.wantsInvoice;
-      if (wantsPickupCode) body.buyerEmail = form.buyerEmail.trim();
-      if (form.deliveryMode === 'DELIVERY') {
-        if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
-        if (form.driverName) body.driverName = form.driverName;
-        if (form.vehicleNumber) body.vehicleNumber = form.vehicleNumber;
-        if (form.driverContact) body.driverContact = form.driverContact;
-        if (form.driverIdNumber) body.driverIdNumber = form.driverIdNumber;
-      }
+    const body: any = {
+      items: cart.map(l => ({ finishedGoodId: l.finishedGoodId, quantity: l.qty, amountUsd: parseFloat(l.amountUsd) })),
+      paymentMode: form.paymentMode,
+      deliveryMode: form.deliveryMode,
+      idempotencyKey: generateIdempotencyKey(),
+    };
+    if (selectedPartner) body.wholesalerBusinessId = selectedPartner.id;
+    else body.buyerName = buyerName.trim();
+    if (form.paymentMode === 'CREDIT') body.dueDate = form.dueDate;
+    if (form.paymentMode === 'CARD') body.paystackReference = paystackReference;
+    if (form.paymentMode === 'MOBILE_MONEY') body.mobileMoneyNumber = form.mobileMoneyNumber.trim();
+    const wantsPickupCode = form.deliveryMode === 'PICKUP' && form.buyerEmail.trim();
+    if (isPremium) body.wantsInvoice = wantsPickupCode ? true : form.wantsInvoice;
+    if (wantsPickupCode) body.buyerEmail = form.buyerEmail.trim();
+    if (form.deliveryMode === 'DELIVERY') {
+      if (form.deliveryFeeUsd) body.deliveryFeeUsd = parseFloat(form.deliveryFeeUsd);
+      if (form.driverName) body.driverName = form.driverName;
+      if (form.vehicleNumber) body.vehicleNumber = form.vehicleNumber;
+      if (form.driverContact) body.driverContact = form.driverContact;
+      if (form.driverIdNumber) body.driverIdNumber = form.driverIdNumber;
+    }
 
+    try {
       const res = await api.post('/manufacturer/dispatch', body);
       const dispatch = res.data;
       const itemLines = (dispatch.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
       const pickupLine = dispatch.pickupCode ? `\nPickup code: ${dispatch.pickupCode} (emailed to buyer)` : '';
-      Alert.alert('Success', `${itemLines}\nTotal: $${Number(dispatch.totalUsd).toFixed(2)}${pickupLine}`);
+      Alert.alert('Success', `${itemLines}\nTotal: ${format(Number(dispatch.totalUsd))}${pickupLine}`);
       setShowModal(false);
       resetForm();
       fetchData();
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Dispatch failed');
+      if (isNetworkFailure(e)) {
+        await enqueueSale('/manufacturer/dispatch', body, `Dispatch · ${format(grandTotal)}`);
+        const pending = await getPendingSales();
+        setPendingCount(pending.length);
+        setShowModal(false);
+        Alert.alert('Saved offline', 'No connection right now — this dispatch is saved on the device and will sync automatically once you\'re back online.', [
+          { text: 'OK', onPress: () => resetForm() }
+        ]);
+      } else {
+        Alert.alert('Error', e?.response?.data?.error || e?.response?.data?.message || 'Dispatch failed');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -168,20 +207,34 @@ export default function DispatchScreen() {
     await submitDispatch(reference);
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Dispatch</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
       <PaystackPayment
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
-        amount={grandTotal * USD_TO_GHS}
+        amount={convert(grandTotal)}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
       />
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Dispatch</Text>
@@ -189,13 +242,20 @@ export default function DispatchScreen() {
         </View>
         {cart.length > 0 && (
           <View style={s.cartBadge}>
-            <Ionicons name="cart-outline" size={14} color="#1A56DB" />
+            <Ionicons name="cart-outline" size={14} color={colors.primary} />
             <Text style={s.cartBadgeText}>{cart.length}</Text>
           </View>
         )}
       </View>
 
       <View style={s.body}>
+        {pendingCount > 0 && (
+          <TouchableOpacity style={s.pendingBanner} onPress={syncPending} disabled={syncing}>
+            <Ionicons name="cloud-offline-outline" size={16} color={colors.warning} />
+            <Text style={s.pendingBannerText}>{pendingCount} dispatch{pendingCount > 1 ? 'es' : ''} saved offline, not yet synced</Text>
+            {syncing ? <ActivityIndicator size="small" color={colors.warning} /> : <Text style={s.pendingBannerRetry}>Retry</Text>}
+          </TouchableOpacity>
+        )}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <Text style={s.sectionLabel}>Available finished goods</Text>
           {cart.length > 0 && (
@@ -209,10 +269,10 @@ export default function DispatchScreen() {
           keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#1A56DB" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="cube-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="cube-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No finished goods</Text>
               <Text style={s.emptySub}>Run a production batch to create finished goods</Text>
             </View>
@@ -222,15 +282,15 @@ export default function DispatchScreen() {
             return (
               <TouchableOpacity style={s.card} onPress={() => inCart ? setShowModal(true) : addToCart(item)}>
                 <View style={s.cardIcon}>
-                  <Ionicons name="cube-outline" size={18} color="#1A56DB" />
+                  <Ionicons name="cube-outline" size={18} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{item.recipe?.productName || `Product #${item.id}`}</Text>
                   <Text style={s.stock}>{item.quantityInStock} units available</Text>
                 </View>
-                <View style={[s.dispatchBtn, inCart && { backgroundColor: '#ECFDF5' }]}>
-                  <Ionicons name={inCart ? 'checkmark-circle' : 'add-circle-outline'} size={13} color={inCart ? '#059669' : '#1A56DB'} />
-                  <Text style={[s.dispatchBtnText, inCart && { color: '#059669' }]}>{inCart ? 'Added' : 'Add'}</Text>
+                <View style={[s.dispatchBtn, inCart && { backgroundColor: colors.successSurface }]}>
+                  <Ionicons name={inCart ? 'checkmark-circle' : 'add-circle-outline'} size={13} color={inCart ? colors.success : colors.primary} />
+                  <Text style={[s.dispatchBtnText, inCart && { color: colors.success }]}>{inCart ? 'Added' : 'Add'}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -240,28 +300,28 @@ export default function DispatchScreen() {
 
       {/* Dispatch Modal — review cart + checkout */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setReturningToReview(false); setShowModal(false); }}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Dispatch — {cart.length} item{cart.length !== 1 ? 's' : ''}</Text>
             <TouchableOpacity onPress={() => { setReturningToReview(false); setShowModal(false); }}>
-              <Ionicons name="close" size={24} color="#374151" />
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
             <TouchableOpacity style={s.partnerBtn} onPress={() => setShowPartnerModal(true)}>
-              <Ionicons name="business-outline" size={16} color="#1A56DB" />
-              <Text style={[s.partnerBtnText, selectedPartner && { color: '#0F172A' }]}>
+              <Ionicons name="business-outline" size={16} color={colors.primary} />
+              <Text style={[s.partnerBtnText, selectedPartner && { color: colors.textPrimary }]}>
                 {selectedPartner ? selectedPartner.name : 'Select linked wholesaler (optional)'}
               </Text>
-              <Ionicons name="chevron-down-outline" size={14} color="#9CA3AF" />
+              <Ionicons name="chevron-down-outline" size={14} color={colors.textPlaceholder} />
             </TouchableOpacity>
 
             {!selectedPartner && (
               <View style={s.lineCard}>
                 <Text style={s.fieldLabel}>Buyer name (walk-in / not-yet-linked business) *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. Adom Wholesale" placeholderTextColor="#9CA3AF"
+                <TextInput style={s.fieldInput} placeholder="e.g. Adom Wholesale" placeholderTextColor={colors.textPlaceholder}
                   value={buyerName} onChangeText={setBuyerName} />
-                <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Dispatching to someone with no StockFlow Pro account yet? Enter their business name here instead of picking a linked wholesaler.</Text>
+                <Text style={{ fontSize: 11, color: colors.textPlaceholder }}>Dispatching to someone with no StockFlow Pro account yet? Enter their business name here instead of picking a linked wholesaler.</Text>
               </View>
             )}
 
@@ -271,19 +331,19 @@ export default function DispatchScreen() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={s.lineName}>{line.name}</Text>
                     <TouchableOpacity onPress={() => removeLine(line.finishedGoodId)}>
-                      <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                      <Ionicons name="trash-outline" size={17} color={colors.danger} />
                     </TouchableOpacity>
                   </View>
                   <Text style={s.lineAvail}>{line.available} units available</Text>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.fieldLabel}>Quantity</Text>
-                      <TextInput style={s.fieldInput} placeholder="e.g. 100" placeholderTextColor="#9CA3AF"
+                      <TextInput style={s.fieldInput} placeholder="e.g. 100" placeholderTextColor={colors.textPlaceholder}
                         value={String(line.qty || '')} onChangeText={v => updateLine(line.finishedGoodId, { qty: parseInt(v) || 0 })} keyboardType="numeric" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={s.fieldLabel}>Amount (USD)</Text>
-                      <TextInput style={s.fieldInput} placeholder="e.g. 500.00" placeholderTextColor="#9CA3AF"
+                      <TextInput style={s.fieldInput} placeholder="e.g. 500.00" placeholderTextColor={colors.textPlaceholder}
                         value={line.amountUsd} onChangeText={v => updateLine(line.finishedGoodId, { amountUsd: v })} keyboardType="decimal-pad" />
                     </View>
                   </View>
@@ -293,7 +353,7 @@ export default function DispatchScreen() {
 
             {goods.filter(g => !cart.some(l => l.finishedGoodId === g.id)).length > 0 && (
               <TouchableOpacity style={s.addMoreBtn} onPress={() => { setReturningToReview(true); setShowModal(false); }}>
-                <Ionicons name="add" size={16} color="#1A56DB" />
+                <Ionicons name="add" size={16} color={colors.primary} />
                 <Text style={s.addMoreText}>Add another product</Text>
               </TouchableOpacity>
             )}
@@ -308,18 +368,21 @@ export default function DispatchScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+              {!country.paystackLive && (
+                <Text style={s.cardComingSoon}>Card payments are coming soon to {country.name} — other payment modes work now.</Text>
+              )}
             </View>
             {form.paymentMode === 'CREDIT' && (
               <View>
                 <Text style={s.fieldLabel}>Due date *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor="#9CA3AF"
+                <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor={colors.textPlaceholder}
                   value={form.dueDate} onChangeText={v => setForm(f => ({ ...f, dueDate: v }))} />
               </View>
             )}
             {form.paymentMode === 'MOBILE_MONEY' && (
               <View>
                 <Text style={s.fieldLabel}>Mobile money number *</Text>
-                <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor="#9CA3AF"
+                <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor={colors.textPlaceholder}
                   value={form.mobileMoneyNumber} onChangeText={v => setForm(f => ({ ...f, mobileMoneyNumber: v }))} keyboardType="phone-pad" />
               </View>
             )}
@@ -339,7 +402,7 @@ export default function DispatchScreen() {
             {form.deliveryMode === 'PICKUP' && (
               <View>
                 <Text style={s.fieldLabel}>Buyer email (optional — sends a pickup code)</Text>
-                <TextInput style={s.fieldInput} placeholder="buyer@email.com" placeholderTextColor="#9CA3AF"
+                <TextInput style={s.fieldInput} placeholder="buyer@email.com" placeholderTextColor={colors.textPlaceholder}
                   value={form.buyerEmail} onChangeText={v => setForm(f => ({ ...f, buyerEmail: v }))}
                   keyboardType="email-address" autoCapitalize="none" />
               </View>
@@ -349,27 +412,27 @@ export default function DispatchScreen() {
               <>
                 <View>
                   <Text style={s.fieldLabel}>Delivery fee (USD) — optional</Text>
-                  <TextInput style={s.fieldInput} placeholder="e.g. 50.00 (added to total)" placeholderTextColor="#9CA3AF"
+                  <TextInput style={s.fieldInput} placeholder="e.g. 50.00 (added to total)" placeholderTextColor={colors.textPlaceholder}
                     value={form.deliveryFeeUsd} onChangeText={v => setForm(f => ({ ...f, deliveryFeeUsd: v }))} keyboardType="decimal-pad" />
                 </View>
                 <View>
                   <Text style={s.fieldLabel}>Driver name</Text>
-                  <TextInput style={s.fieldInput} placeholder="Who's driving" placeholderTextColor="#9CA3AF"
+                  <TextInput style={s.fieldInput} placeholder="Who's driving" placeholderTextColor={colors.textPlaceholder}
                     value={form.driverName} onChangeText={v => setForm(f => ({ ...f, driverName: v }))} />
                 </View>
                 <View>
                   <Text style={s.fieldLabel}>Vehicle number</Text>
-                  <TextInput style={s.fieldInput} placeholder="e.g. GT 1234-20" placeholderTextColor="#9CA3AF"
+                  <TextInput style={s.fieldInput} placeholder="e.g. GT 1234-20" placeholderTextColor={colors.textPlaceholder}
                     value={form.vehicleNumber} onChangeText={v => setForm(f => ({ ...f, vehicleNumber: v }))} />
                 </View>
                 <View>
                   <Text style={s.fieldLabel}>Driver contact</Text>
-                  <TextInput style={s.fieldInput} placeholder="Phone number" placeholderTextColor="#9CA3AF"
+                  <TextInput style={s.fieldInput} placeholder="Phone number" placeholderTextColor={colors.textPlaceholder}
                     value={form.driverContact} onChangeText={v => setForm(f => ({ ...f, driverContact: v }))} keyboardType="phone-pad" />
                 </View>
                 <View>
                   <Text style={s.fieldLabel}>Driver ID number</Text>
-                  <TextInput style={s.fieldInput} placeholder="e.g. Ghana Card number, for the receiver's records" placeholderTextColor="#9CA3AF"
+                  <TextInput style={s.fieldInput} placeholder="e.g. Ghana Card number, for the receiver's records" placeholderTextColor={colors.textPlaceholder}
                     value={form.driverIdNumber} onChangeText={v => setForm(f => ({ ...f, driverIdNumber: v }))} />
                 </View>
               </>
@@ -377,7 +440,7 @@ export default function DispatchScreen() {
 
             {isPremium && (
               <TouchableOpacity style={s.invoiceToggleRow} onPress={() => setForm(f => ({ ...f, wantsInvoice: !f.wantsInvoice }))}>
-                <Ionicons name={form.wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={form.wantsInvoice ? '#1A56DB' : '#9CA3AF'} />
+                <Ionicons name={form.wantsInvoice ? 'checkbox' : 'square-outline'} size={20} color={form.wantsInvoice ? colors.primary : colors.textPlaceholder} />
                 <Text style={s.invoiceToggleText}>Buyer wants an invoice</Text>
               </TouchableOpacity>
             )}
@@ -385,23 +448,23 @@ export default function DispatchScreen() {
             <View style={s.card}>
               <View style={s.summaryRow}>
                 <Text style={s.summaryItem}>Items subtotal</Text>
-                <Text style={s.summaryAmt}>${itemsTotal.toFixed(2)}</Text>
+                <Text style={s.summaryAmt}>{format(itemsTotal)}</Text>
               </View>
               {deliveryFee > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryItem}>Delivery fee</Text>
-                  <Text style={s.summaryAmt}>${deliveryFee.toFixed(2)}</Text>
+                  <Text style={s.summaryAmt}>{format(deliveryFee)}</Text>
                 </View>
               )}
               <View style={s.divider} />
               <View style={s.summaryRow}>
                 <Text style={s.totalLabel}>Total</Text>
-                <Text style={s.totalAmt}>${grandTotal.toFixed(2)}</Text>
+                <Text style={s.totalAmt}>{format(grandTotal)}</Text>
               </View>
             </View>
 
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleDispatch} disabled={submitting}>
-              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Dispatch · ${grandTotal.toFixed(2)}</Text>}
+              {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Confirm Dispatch · {format(grandTotal)}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -409,16 +472,16 @@ export default function DispatchScreen() {
 
       {/* Partner Modal */}
       <Modal visible={showPartnerModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPartnerModal(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Select Wholesaler</Text>
             <TouchableOpacity onPress={() => setShowPartnerModal(false)}>
-              <Ionicons name="close" size={24} color="#374151" />
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           {partners.length === 0 ? (
             <View style={s.empty}>
-              <Ionicons name="people-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="people-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No linked wholesalers</Text>
               <Text style={s.emptySub}>Wholesalers must send you a link request first</Text>
             </View>
@@ -430,10 +493,10 @@ export default function DispatchScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity style={s.partnerItem} onPress={() => { setSelectedPartner(item); setShowPartnerModal(false); }}>
                   <View style={s.partnerIcon}>
-                    <Ionicons name="business-outline" size={18} color="#1A56DB" />
+                    <Ionicons name="business-outline" size={18} color={colors.primary} />
                   </View>
                   <Text style={s.partnerName}>{item.name}</Text>
-                  <Ionicons name="checkmark-circle" size={18} color={selectedPartner?.id === item.id ? '#059669' : '#E5E7EB'} />
+                  <Ionicons name="checkmark-circle" size={18} color={selectedPartner?.id === item.id ? colors.success : colors.borderStrong} />
                 </TouchableOpacity>
               )}
             />
@@ -444,55 +507,59 @@ export default function DispatchScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  cartBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
-  cartBadgeText: { fontSize: 12, fontWeight: '700', color: '#1A56DB' },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  cartBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primarySurface, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
+  cartBadgeText: { fontSize: 12, fontWeight: '700', color: colors.primary },
   body: { flex: 1, padding: 12 },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  reviewBtn: { backgroundColor: '#1A56DB', borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
-  reviewBtnText: { fontSize: 12, fontWeight: '600', color: '#fff' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  stock: { fontSize: 11, color: '#059669', fontWeight: '500', marginTop: 2 },
-  dispatchBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
-  dispatchBtnText: { fontSize: 11, color: '#1A56DB', fontWeight: '600' },
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  cardComingSoon: { fontSize: 11, color: colors.textPlaceholder, marginTop: 8, lineHeight: 15 },
+  pendingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.warning + '33', marginBottom: 10 },
+  pendingBannerText: { flex: 1, fontSize: 12, color: colors.warning, fontWeight: '500' },
+  pendingBannerRetry: { fontSize: 12, color: colors.warning, fontWeight: '700' },
+  reviewBtn: { backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12 },
+  reviewBtnText: { fontSize: 12, fontWeight: '600', color: colors.onPrimary },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
+  cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
+  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  stock: { fontSize: 11, color: colors.success, fontWeight: '500', marginTop: 2 },
+  dispatchBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primarySurface, borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
+  dispatchBtnText: { fontSize: 11, color: colors.primary, fontWeight: '600' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  partnerBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  partnerBtnText: { flex: 1, fontSize: 13, color: '#9CA3AF' },
-  lineCard: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, gap: 8, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  lineName: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  lineAvail: { fontSize: 11, color: '#6B7280' },
-  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderStyle: 'dashed', borderColor: '#93C5FD', borderRadius: 12, padding: 10 },
-  addMoreText: { fontSize: 13, color: '#1A56DB', fontWeight: '600' },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  partnerBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 14, borderWidth: 0.5, borderColor: colors.border },
+  partnerBtnText: { flex: 1, fontSize: 13, color: colors.textPlaceholder },
+  lineCard: { backgroundColor: colors.surfaceAlt, borderRadius: 14, padding: 12, gap: 8, borderWidth: 0.5, borderColor: colors.border },
+  lineName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  lineAvail: { fontSize: 11, color: colors.textMuted },
+  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primary + '60', borderRadius: 12, padding: 10 },
+  addMoreText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
   payRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  payBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  payBtnActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  payBtnText: { fontSize: 12, color: '#374151' },
-  payBtnTextActive: { color: '#fff', fontWeight: '500' },
-  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  invoiceToggleText: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  payBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: colors.border, borderWidth: 0.5, borderColor: colors.border },
+  payBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  payBtnText: { fontSize: 12, color: colors.textSecondary },
+  payBtnTextActive: { color: colors.onPrimary, fontWeight: '500' },
+  invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.border },
+  invoiceToggleText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryItem: { fontSize: 12, color: '#6B7280' },
-  summaryAmt: { fontSize: 12, fontWeight: '500', color: '#0F172A' },
-  divider: { height: 0.5, backgroundColor: '#F3F4F6' },
-  totalLabel: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  totalAmt: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
-  confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  partnerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  partnerIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
-  partnerName: { flex: 1, fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  summaryItem: { fontSize: 12, color: colors.textMuted },
+  summaryAmt: { fontSize: 12, fontWeight: '500', color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  divider: { height: 0.5, backgroundColor: colors.border },
+  totalLabel: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  totalAmt: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  confirmBtnText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
+  partnerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 14, padding: 14, borderWidth: 0.5, borderColor: colors.border },
+  partnerIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
+  partnerName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
 });

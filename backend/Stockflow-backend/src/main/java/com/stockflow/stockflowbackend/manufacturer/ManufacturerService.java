@@ -1,9 +1,13 @@
 package com.stockflow.stockflowbackend.manufacturer;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.auth.BusinessRepository;
+import com.stockflow.stockflowbackend.auth.UserRepository;
 import com.stockflow.stockflowbackend.credit.CreditRepository;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.InvoiceEmailService;
+import com.stockflow.stockflowbackend.geo.CountryCatalog;
+import com.stockflow.stockflowbackend.idempotency.IdempotencyService;
 import com.stockflow.stockflowbackend.model.*;
 import com.stockflow.stockflowbackend.notification.NotificationService;
 import com.stockflow.stockflowbackend.payment.PaystackTransactionVerifier;
@@ -17,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +40,9 @@ public class ManufacturerService {
     private final InvoiceEmailService invoiceEmailService;
     private final SubscriptionService subscriptionService;
     private final PaystackTransactionVerifier paystackTransactionVerifier;
+    private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
+    private final IdempotencyService idempotencyService;
 
     public ManufacturerService(MaterialRepository materialRepository,
                                RecipeRepository recipeRepository,
@@ -48,7 +56,10 @@ public class ManufacturerService {
                                InvoiceRepository invoiceRepository,
                                InvoiceEmailService invoiceEmailService,
                                SubscriptionService subscriptionService,
-                               PaystackTransactionVerifier paystackTransactionVerifier) {
+                               PaystackTransactionVerifier paystackTransactionVerifier,
+                               UserRepository userRepository,
+                               ActivityLogService activityLogService,
+                               IdempotencyService idempotencyService) {
         this.materialRepository = materialRepository;
         this.recipeRepository = recipeRepository;
         this.productionRunRepository = productionRunRepository;
@@ -62,6 +73,9 @@ public class ManufacturerService {
         this.invoiceRepository = invoiceRepository;
         this.invoiceEmailService = invoiceEmailService;
         this.subscriptionService = subscriptionService;
+        this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
+        this.idempotencyService = idempotencyService;
     }
 
     // ADD MATERIAL
@@ -76,6 +90,23 @@ public class ManufacturerService {
         m.setQuantity(req.getQuantity());
         m.setMinThreshold(req.getMinThreshold());
         m.setCostPerUnit(req.getCostPerUnit());
+        if (req.getPackageUnit() != null && !req.getPackageUnit().isBlank()
+                && req.getUnitsPerPackage() != null && req.getUnitsPerPackage().compareTo(BigDecimal.ZERO) > 0) {
+            m.setPackageUnit(req.getPackageUnit().trim());
+            m.setUnitsPerPackage(req.getUnitsPerPackage());
+        }
+        m.setImageBase64(req.getImageBase64());
+        m.setUpdatedAt(LocalDateTime.now());
+        return materialRepository.save(m);
+    }
+
+    // UPDATE MATERIAL IMAGE
+    @Transactional
+    public Material updateMaterialImage(Long businessId, Long materialId, String imageBase64) {
+        Material m = materialRepository
+                .findByBusinessIdAndId(businessId, materialId)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        m.setImageBase64(imageBase64);
         m.setUpdatedAt(LocalDateTime.now());
         return materialRepository.save(m);
     }
@@ -98,13 +129,31 @@ public class ManufacturerService {
     // STOCK IN MATERIAL
     @Transactional
     public Material stockInMaterial(MaterialStockInRequest req, Long businessId) {
-        if (req.getQuantity() == null || req.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Quantity must be greater than zero");
-        }
         Material m = materialRepository
                 .findByBusinessIdAndId(businessId, req.getMaterialId())
                 .orElseThrow(() -> new RuntimeException("Material not found"));
-        m.setQuantity(m.getQuantity().add(req.getQuantity()));
+
+        BigDecimal addedQuantity;
+        if (req.getPackageCount() != null) {
+            if (req.getPackageCount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Package count must be greater than zero");
+            }
+            if (m.getUnitsPerPackage() == null) {
+                throw new RuntimeException("This material has no package definition set — stock it in "
+                        + m.getUnit() + " instead");
+            }
+            // The real conversion: package count in the material's bulk unit
+            // (e.g. boxes) becomes the correct amount in its base unit (e.g.
+            // pieces), which is what production math actually deducts against.
+            addedQuantity = req.getPackageCount().multiply(m.getUnitsPerPackage());
+        } else {
+            if (req.getQuantity() == null || req.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Quantity must be greater than zero");
+            }
+            addedQuantity = req.getQuantity();
+        }
+
+        m.setQuantity(m.getQuantity().add(addedQuantity));
         m.setUpdatedAt(LocalDateTime.now());
         return materialRepository.save(m);
     }
@@ -198,6 +247,13 @@ public class ManufacturerService {
         fg.setQuantityInStock(fg.getQuantityInStock() + totalUnits);
         fg.setUpdatedAt(LocalDateTime.now());
         finishedGoodsRepository.save(fg);
+
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        activityLogService.log(business, actor, "PRODUCTION",
+                "Produced " + totalUnits + " units of " + recipe.getProductName()
+                        + " (consumed " + recipe.getMaterials().size() + " material" + (recipe.getMaterials().size() != 1 ? "s" : "") + ")",
+                totalCost);
+
         return savedRun;
     }
 
@@ -210,6 +266,12 @@ public class ManufacturerService {
     // DISPATCH TO WHOLESALER
     @Transactional
     public DispatchResponse dispatch(DispatchRequest req, Long businessId, Long userId) {
+        Optional<DispatchResponse> replay = idempotencyService.find(
+                businessId, req.getIdempotencyKey(), "manufacturer.dispatch", DispatchResponse.class);
+        if (replay.isPresent()) {
+            return replay.get();
+        }
+
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new RuntimeException("At least one item is required");
         }
@@ -255,6 +317,9 @@ public class ManufacturerService {
         BigDecimal totalAmount = itemsTotal.add(deliveryFee);
 
         if ("CARD".equals(req.getPaymentMode())) {
+            if (!CountryCatalog.isPaystackLive(goods.get(0).getBusiness().getCountry())) {
+                throw new RuntimeException("Card payments are not yet available in your country");
+            }
             paystackTransactionVerifier.verifyPaid(req.getPaystackReference(), totalAmount);
         }
 
@@ -403,13 +468,21 @@ public class ManufacturerService {
                     unitPrice, item.getAmountUsd()));
         }
 
-        return new DispatchResponse(
+        AppUser actor = userRepository.findById(userId).orElse(null);
+        String dispatchBuyerLabel = wholesaler != null ? wholesaler.getName() : req.getBuyerName();
+        activityLogService.log(business, actor, "DISPATCH",
+                "Dispatched " + productList + " to " + dispatchBuyerLabel + " via " + req.getPaymentMode(),
+                totalAmount);
+
+        DispatchResponse response = new DispatchResponse(
                 savedInvoice != null ? savedInvoice.getInvoiceNumber() : null,
                 summaries, deliveryFee, totalAmount, req.getPaymentMode(),
                 "CREDIT".equals(req.getPaymentMode()) ? "UNPAID" : "PAID",
                 dispatches.get(0).getDispatchedAt(), creditRecordId,
                 savedInvoice != null ? savedInvoice.getPickupCode() : null
         );
+        idempotencyService.save(businessId, req.getIdempotencyKey(), "manufacturer.dispatch", response);
+        return response;
     }
 
     @Transactional(readOnly = true)

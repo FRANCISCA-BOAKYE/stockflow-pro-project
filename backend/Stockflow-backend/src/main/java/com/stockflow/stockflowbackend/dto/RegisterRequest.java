@@ -12,4 +12,5 @@ public class RegisterRequest {
     private String adminName;
     private String adminEmail;
     private String adminPassword;
+    private String country;
 }

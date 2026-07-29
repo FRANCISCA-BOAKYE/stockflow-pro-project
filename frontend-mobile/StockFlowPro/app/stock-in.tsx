@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, SafeAreaView, Alert,
@@ -7,9 +7,18 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../services/api';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { useCurrency } from '../hooks/useCurrency';
+import { ThemeColors } from '../theme/colors';
+import { StatusIndicator, urgencyBorder } from '../components/StatusIndicator';
+import { SkeletonRow } from '../components/Skeleton';
+import { showToast } from '../components/toast';
 
 export default function StockInScreen() {
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const { country, format } = useCurrency();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [products, setProducts] = useState<any[]>([]);
   const [recentStockIn, setRecentStockIn] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +27,15 @@ export default function StockInScreen() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ quantity: '', amountUsd: '', paymentMode: 'CASH' });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const updateQuantity = (delta: number) => {
+    setForm(f => {
+      const current = parseInt(f.quantity || '0', 10) || 0;
+      return { ...f, quantity: String(Math.max(0, current + delta)) };
+    });
+    setFieldErrors(fe => ({ ...fe, quantity: '' }));
+  };
 
   const PAYMENT_MODES = ['CASH', 'CARD', 'MOBILE_MONEY', 'CREDIT'];
 
@@ -36,10 +54,15 @@ export default function StockInScreen() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleStockIn = async () => {
-    if (!selectedProduct || !form.quantity || !form.amountUsd) {
-      Alert.alert('Missing info', 'Please fill in all fields.');
+    const errors: Record<string, string> = {};
+    if (!selectedProduct) errors.product = 'Select a product first';
+    if (!form.quantity || parseInt(form.quantity, 10) <= 0) errors.quantity = 'Enter a quantity to add';
+    if (!form.amountUsd) errors.amountUsd = 'Enter the total cost';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await api.post('/retailer/stock-in', {
@@ -48,9 +71,10 @@ export default function StockInScreen() {
         amountUsd: parseFloat(form.amountUsd),
         paymentMode: form.paymentMode,
       });
-      Alert.alert('Success', `${form.quantity} units of ${selectedProduct.name} added to stock!`);
+      showToast(`${form.quantity} units of ${selectedProduct.name} added to stock!`);
       setShowModal(false);
       setForm({ quantity: '', amountUsd: '', paymentMode: 'CASH' });
+      setFieldErrors({});
       setSelectedProduct(null);
       fetchData();
     } catch (e: any) {
@@ -60,13 +84,27 @@ export default function StockInScreen() {
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return (
+    <SafeAreaView style={s.page}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View>
+          <Text style={s.title}>Stock In</Text>
+        </View>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View>
           <Text style={s.title}>Stock In</Text>
@@ -81,29 +119,39 @@ export default function StockInScreen() {
           keyExtractor={item => String(item.id)}
           contentContainerStyle={{ gap: 8, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#1A56DB" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="cube-outline" size={40} color="#D1D5DB" />
+              <Ionicons name="cube-outline" size={40} color={colors.borderStrong} />
               <Text style={s.emptyText}>No products yet</Text>
               <Text style={s.emptySub}>Add products first before restocking</Text>
+              <TouchableOpacity style={s.emptyBtn} onPress={() => router.push('/(retailer)/products' as any)}>
+                <Ionicons name="add-circle-outline" size={16} color={colors.onPrimary} style={{ marginRight: 6 }} />
+                <Text style={s.emptyBtnText}>Go to products</Text>
+              </TouchableOpacity>
             </View>
           }
           renderItem={({ item }) => {
             const isLow = item.isLowStock || item.quantity < (item.minThreshold || 10);
             return (
-              <TouchableOpacity style={s.card} onPress={() => { setSelectedProduct(item); setShowModal(true); }}>
-                <View style={[s.cardIcon, { backgroundColor: isLow ? '#FEF2F2' : '#EFF6FF' }]}>
-                  <Ionicons name="cube-outline" size={18} color={isLow ? '#DC2626' : '#1A56DB'} />
+              <TouchableOpacity
+                style={[s.card, urgencyBorder(isLow ? 'warning' : 'ok', colors), isLow && { paddingLeft: 11 }]}
+                onPress={() => { setSelectedProduct(item); setFieldErrors({}); setShowModal(true); }}
+              >
+                <View style={[s.cardIcon, { backgroundColor: isLow ? colors.dangerSurface : colors.primarySurface }]}>
+                  <Ionicons name="cube-outline" size={18} color={isLow ? colors.danger : colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{item.name}</Text>
-                  <Text style={s.unit}>{item.unit} · ${Number(item.priceUsd).toFixed(2)}</Text>
-                  <Text style={[s.stock, isLow && { color: '#DC2626' }]}>{item.quantity} in stock</Text>
+                  <Text style={s.unit}>{item.unit} · {format(Number(item.priceUsd))}</Text>
+                  <Text style={[s.stock, isLow && { color: colors.danger }]}>{item.quantity} in stock</Text>
                 </View>
-                <View style={s.stockInBtn}>
-                  <Ionicons name="add" size={14} color="#1A56DB" />
-                  <Text style={s.stockInBtnText}>Stock in</Text>
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'In stock'} />
+                  <View style={s.stockInBtn}>
+                    <Ionicons name="add" size={14} color={colors.primary} />
+                    <Text style={s.stockInBtnText}>Stock in</Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             );
@@ -113,23 +161,35 @@ export default function StockInScreen() {
 
       {/* Stock In Modal */}
       <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowModal(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Stock In — {selectedProduct?.name}</Text>
             <TouchableOpacity onPress={() => setShowModal(false)}>
-              <Ionicons name="close" size={24} color="#374151" />
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
             <View>
               <Text style={s.fieldLabel}>Quantity to add *</Text>
-              <TextInput style={s.fieldInput} placeholder="e.g. 100" placeholderTextColor="#9CA3AF"
-                value={form.quantity} onChangeText={v => setForm(f => ({ ...f, quantity: v }))} keyboardType="numeric" />
+              <View style={s.stepperRow}>
+                <TouchableOpacity style={s.stepBtn} onPress={() => updateQuantity(-1)}>
+                  <Ionicons name="remove" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <Text style={s.stepNum}>{form.quantity || '0'}</Text>
+                <TouchableOpacity style={[s.stepBtn, s.stepBtnBlue]} onPress={() => updateQuantity(1)}>
+                  <Ionicons name="add" size={18} color={colors.onPrimary} />
+                </TouchableOpacity>
+              </View>
+              {!!fieldErrors.quantity && <Text style={s.errorText}>{fieldErrors.quantity}</Text>}
             </View>
             <View>
-              <Text style={s.fieldLabel}>Total cost (USD) *</Text>
-              <TextInput style={s.fieldInput} placeholder="e.g. 150.00" placeholderTextColor="#9CA3AF"
-                value={form.amountUsd} onChangeText={v => setForm(f => ({ ...f, amountUsd: v }))} keyboardType="decimal-pad" />
+              <Text style={s.fieldLabel}>Total cost *</Text>
+              <View style={[s.fieldInputRow, fieldErrors.amountUsd && { borderColor: colors.danger }]}>
+                <Text style={s.currencyPrefix}>{country.currencySymbol}</Text>
+                <TextInput style={s.fieldInputInner} placeholder="e.g. 150.00" placeholderTextColor={colors.textPlaceholder}
+                  value={form.amountUsd} onChangeText={v => { setForm(f => ({ ...f, amountUsd: v })); setFieldErrors(fe => ({ ...fe, amountUsd: '' })); }} keyboardType="decimal-pad" />
+              </View>
+              {!!fieldErrors.amountUsd && <Text style={s.errorText}>{fieldErrors.amountUsd}</Text>}
             </View>
             <View>
               <Text style={s.fieldLabel}>Payment mode</Text>
@@ -143,7 +203,7 @@ export default function StockInScreen() {
               </View>
             </View>
             <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleStockIn} disabled={submitting}>
-              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Stock In</Text>}
+              {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Confirm Stock In</Text>}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -152,34 +212,44 @@ export default function StockInScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { flex: 1, padding: 12 },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: '#0F172A', marginBottom: 10 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 10 },
+  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
   cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  unit: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  stock: { fontSize: 11, color: '#059669', fontWeight: '500', marginTop: 2 },
-  stockInBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
-  stockInBtnText: { fontSize: 11, color: '#1A56DB', fontWeight: '600' },
+  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  unit: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
+  stock: { fontSize: 11, color: colors.success, fontWeight: '500', marginTop: 2 },
+  stockInBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primarySurface, borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
+  stockInBtnText: { fontSize: 11, color: colors.primary, fontWeight: '600' },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#F8FAFC' },
+  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 18, marginTop: 8 },
+  emptyBtnText: { color: colors.onPrimary, fontSize: 13, fontWeight: '600' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
+  fieldInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, backgroundColor: colors.surfaceAlt },
+  fieldInputInner: { flex: 1, padding: 12, fontSize: 14, color: colors.textPrimary },
+  currencyPrefix: { paddingLeft: 12, color: colors.textMuted, fontWeight: '600' },
+  errorText: { fontSize: 11, color: colors.danger, marginTop: 4 },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 0.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  stepBtnBlue: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepNum: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, minWidth: 40, textAlign: 'center' },
   payRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  payBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)' },
-  payBtnActive: { backgroundColor: '#1A56DB', borderColor: '#1A56DB' },
-  payBtnText: { fontSize: 12, color: '#374151' },
-  payBtnTextActive: { color: '#fff', fontWeight: '500' },
-  confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
-  confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  payBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: colors.border, borderWidth: 0.5, borderColor: colors.border },
+  payBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  payBtnText: { fontSize: 12, color: colors.textSecondary },
+  payBtnTextActive: { color: colors.onPrimary, fontWeight: '500' },
+  confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  confirmBtnText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
 });

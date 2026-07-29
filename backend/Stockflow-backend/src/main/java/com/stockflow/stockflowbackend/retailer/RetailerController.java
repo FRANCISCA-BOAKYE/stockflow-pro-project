@@ -78,4 +78,28 @@ public class RetailerController {
         return ResponseEntity.ok(retailerService.addCategory(
                 body.get("name"), getBusinessId(authentication)));
     }
+
+    @PutMapping("/products/{id}/image")
+    public ResponseEntity<ProductResponse> updateProductImage(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication authentication) {
+        return ResponseEntity.ok(retailerService.updateProductImage(
+                getBusinessId(authentication), id, body.get("imageBase64")));
+    }
+
+    @GetMapping("/customers")
+    public ResponseEntity<List<CustomerResponse>> getCustomers(
+            Authentication authentication) {
+        return ResponseEntity.ok(retailerService.getCustomers(
+                getBusinessId(authentication)));
+    }
+
+    @GetMapping("/customers/{id}")
+    public ResponseEntity<List<CustomerPurchaseResponse>> getCustomerHistory(
+            @PathVariable Long id,
+            Authentication authentication) {
+        return ResponseEntity.ok(retailerService.getCustomerHistory(
+                getBusinessId(authentication), id));
+    }
 }

@@ -3,9 +3,11 @@ import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { TIER_DASHBOARD_ROUTES } from '../constants/routes';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 export default function Index() {
   const { token, user, isLoading } = useAuthStore();
+  const { colors } = useThemeColors();
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -19,8 +21,8 @@ export default function Index() {
   // check somehow never resolves, fall back to login instead of hanging.
   if (isLoading && !timedOut) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0F4F8' }}>
-        <ActivityIndicator size="large" color="#1A56DB" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }

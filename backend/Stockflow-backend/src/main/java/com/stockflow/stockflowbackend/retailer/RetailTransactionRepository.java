@@ -21,6 +21,8 @@ public interface RetailTransactionRepository
     Page<RetailTransaction> findByBusinessIdAndProductIdOrderByRecordedAtDesc(
             Long businessId, Long productId, Pageable pageable);
 
+    java.util.List<RetailTransaction> findByCustomerIdOrderByRecordedAtDesc(Long customerId);
+
     @Query("SELECT COALESCE(SUM(t.amountUsd), 0) FROM RetailTransaction t "
             + "WHERE t.business.id = :businessId AND t.type = 'OUT' "
             + "AND t.recordedAt >= :start AND t.recordedAt < :end")

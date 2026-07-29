@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
   ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity
@@ -7,10 +7,17 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { useCurrency } from '../../hooks/useCurrency';
+import { ThemeColors } from '../../theme/colors';
+import { SkeletonRow } from '../../components/Skeleton';
 
 export default function ManufacturerDashboard() {
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
+  const { colors } = useThemeColors();
+  const { format } = useCurrency();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,25 +64,29 @@ export default function ManufacturerDashboard() {
   })();
 
   const kpis = [
-    { label: 'RAW MATERIALS', value: data?.totalMaterials ?? '—', sub: 'in stock', icon: 'flask-outline', iconBg: '#EFF6FF', iconColor: '#1A56DB' },
-    { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: '#FFFBEB', iconColor: '#C27803' },
-    { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth ?? '—', sub: 'this month', icon: 'construct-outline', iconBg: '#ECFDF5', iconColor: '#059669' },
-    { label: 'CREDIT OWED', value: data?.totalCreditOwedByWholesalers != null ? `$${data.totalCreditOwedByWholesalers.toFixed(2)}` : '$0.00', sub: 'by wholesalers', icon: 'wallet-outline', iconBg: '#FEF2F2', iconColor: '#DC2626' },
+    { label: 'RAW MATERIALS', value: data?.totalMaterials ?? '—', sub: 'in stock', icon: 'flask-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
+    { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
+    { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth ?? '—', sub: 'this month', icon: 'construct-outline', iconBg: colors.successSurface, iconColor: colors.success },
+    { label: 'CREDIT OWED', value: format(Number(data?.totalCreditOwedByWholesalers ?? 0)), sub: 'by wholesalers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
   ];
 
   const quickActions = [
-    { label: 'Production', icon: 'construct-outline', bg: '#EFF6FF', color: '#1A56DB', route: '/(manufacturer)/production' },
-    { label: 'Materials', icon: 'flask-outline', bg: '#ECFDF5', color: '#059669', route: '/(manufacturer)/materials' },
-    { label: 'Dispatch', icon: 'cube-outline', bg: '#FFFBEB', color: '#C27803', route: '/(manufacturer)/dispatch' },
-    { label: 'Credit', icon: 'wallet-outline', bg: '#FEF2F2', color: '#DC2626', route: '/(manufacturer)/credit' },
+    { label: 'Production', icon: 'construct-outline', bg: colors.primarySurface, color: colors.primary, route: '/(manufacturer)/production' },
+    { label: 'Materials', icon: 'flask-outline', bg: colors.successSurface, color: colors.success, route: '/(manufacturer)/materials' },
+    { label: 'Dispatch', icon: 'cube-outline', bg: colors.warningSurface, color: colors.warning, route: '/(manufacturer)/dispatch' },
+    { label: 'Credit', icon: 'wallet-outline', bg: colors.dangerSurface, color: colors.danger, route: '/(manufacturer)/credit' },
   ];
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator size="large" color="#1A56DB" />
-        <Text style={s.loadingText}>Loading dashboard...</Text>
-      </View>
+      <SafeAreaView style={s.page}>
+        <View style={s.header}>
+          <Text style={s.title}>Dashboard</Text>
+        </View>
+        <View style={{ padding: 12, gap: 8 }}>
+          {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -88,7 +99,7 @@ export default function ManufacturerDashboard() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchDashboard(); }}
-            tintColor="#1A56DB"
+            tintColor={colors.primary}
           />
         }
       >
@@ -115,9 +126,7 @@ export default function ManufacturerDashboard() {
           <View style={{ marginTop: 8 }}>
             <Text style={s.heroLabel}>Credit outstanding</Text>
             <Text style={s.heroAmount}>
-              {data?.totalCreditOwedByWholesalers != null
-                ? `$${data.totalCreditOwedByWholesalers.toFixed(2)}`
-                : '$0.00'}
+              {format(Number(data?.totalCreditOwedByWholesalers ?? 0))}
             </Text>
           </View>
         </View>
@@ -125,14 +134,14 @@ export default function ManufacturerDashboard() {
         <View style={s.body}>
           {error ? (
             <View style={s.errorBox}>
-              <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+              <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
               <Text style={s.errorText}>{error}</Text>
             </View>
           ) : null}
 
           {(data?.subscriptionStatus ?? user?.subscriptionStatus) === 'TRIAL' && trialDaysLeft !== null && trialDaysLeft <= 4 && trialDaysLeft > 0 && (
             <TouchableOpacity style={s.trialCard} onPress={() => router.push('/subscription' as any)}>
-              <Ionicons name="time-outline" size={16} color="#C27803" />
+              <Ionicons name="time-outline" size={16} color={colors.warning} />
               <Text style={s.trialCardText}>
                 Trial ends in {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} — tap to view plans
               </Text>
@@ -146,7 +155,7 @@ export default function ManufacturerDashboard() {
                   <Ionicons name={k.icon as any} size={17} color={k.iconColor} />
                 </View>
                 <Text style={s.kpiLabel}>{k.label}</Text>
-                <Text style={s.kpiValue}>{k.value}</Text>
+                <Text style={[s.kpiValue, i === 3 && { fontVariant: ['tabular-nums'] }]}>{k.value}</Text>
                 <Text style={s.kpiSub}>{k.sub}</Text>
               </View>
             ))}
@@ -154,7 +163,7 @@ export default function ManufacturerDashboard() {
 
           {(data?.overdueAccountsCount ?? 0) > 0 && (
             <TouchableOpacity style={s.alertCard}>
-              <Ionicons name="alert-circle-outline" size={16} color="#C27803" />
+              <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
               <Text style={s.alertText}>
                 {data.overdueAccountsCount} overdue credit account
                 {data.overdueAccountsCount > 1 ? 's' : ''} — tap to review
@@ -183,17 +192,17 @@ export default function ManufacturerDashboard() {
           </View>
           {(data?.recentActivity ?? []).length === 0 ? (
             <View style={s.emptyActivity}>
-              <Ionicons name="time-outline" size={24} color="#D1D5DB" />
+              <Ionicons name="time-outline" size={24} color={colors.borderStrong} />
               <Text style={s.emptyActivityText}>No recent activity</Text>
             </View>
           ) : (
             data?.recentActivity?.map((t: any, i: number) => (
               <View key={i} style={[s.txn, { marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }]}>
-                <View style={[s.txnIcon, { backgroundColor: t.positive ? '#ECFDF5' : '#F8FAFC' }]}>
+                <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
                   <Ionicons
                     name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
                     size={16}
-                    color={t.positive ? '#059669' : '#64748B'}
+                    color={t.positive ? colors.success : colors.textMuted}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -210,11 +219,11 @@ export default function ManufacturerDashboard() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F4F8' },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#64748B' },
-  hero: { backgroundColor: '#1A56DB', padding: 20, paddingTop: 24, paddingBottom: 40 },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  hero: { backgroundColor: colors.primary, padding: 20, paddingTop: 24, paddingBottom: 40 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greeting: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 3 },
   userName: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2, letterSpacing: -0.3 },
@@ -224,31 +233,31 @@ const s = StyleSheet.create({
   trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9 },
   trialText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
   heroLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   body: { padding: 14, marginTop: -20 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', borderRadius: 10, padding: 10, marginBottom: 12 },
-  errorText: { fontSize: 12, color: '#DC2626', flex: 1 },
-  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.25)', padding: 12, marginBottom: 12 },
-  trialCardText: { fontSize: 12, color: '#C27803', fontWeight: '500', flex: 1 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.dangerSurface, borderRadius: 10, padding: 10, marginBottom: 12 },
+  errorText: { fontSize: 12, color: colors.danger, flex: 1 },
+  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.warning + '40', padding: 12, marginBottom: 12 },
+  trialCardText: { fontSize: 12, color: colors.warning, fontWeight: '500', flex: 1 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
-  kpiCard: { width: '47.5%', backgroundColor: '#fff', borderRadius: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 14 },
+  kpiCard: { width: '47.5%', backgroundColor: colors.surface, borderRadius: 16, borderWidth: 0.5, borderColor: colors.border, padding: 14 },
   kpiIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  kpiLabel: { fontSize: 9, color: '#64748B', fontWeight: '500', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 },
-  kpiValue: { fontSize: 22, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
-  kpiSub: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
-  alertCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBEB', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(194,120,3,0.2)', padding: 12, marginBottom: 16 },
-  alertText: { fontSize: 12, color: '#C27803', fontWeight: '500', flex: 1 },
+  kpiLabel: { fontSize: 9, color: colors.textMuted, fontWeight: '500', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 },
+  kpiValue: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3 },
+  kpiSub: { fontSize: 10, color: colors.textPlaceholder, marginTop: 2 },
+  alertCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.warning + '33', padding: 12, marginBottom: 16 },
+  alertText: { fontSize: 12, color: colors.warning, fontWeight: '500', flex: 1 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#0F172A', marginBottom: 10, marginTop: 4 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 10, marginTop: 4 },
   actionsGrid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  actionCard: { flex: 1, backgroundColor: '#fff', borderRadius: 13, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 12, alignItems: 'center', gap: 5 },
+  actionCard: { flex: 1, backgroundColor: colors.surface, borderRadius: 13, borderWidth: 0.5, borderColor: colors.border, padding: 12, alignItems: 'center', gap: 5 },
   actionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  actionLabel: { fontSize: 9, fontWeight: '500', color: '#64748B', textAlign: 'center' },
-  txn: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.07)', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  actionLabel: { fontSize: 9, fontWeight: '500', color: colors.textMuted, textAlign: 'center' },
+  txn: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   txnIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  txnName: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
-  txnTime: { fontSize: 10, color: '#94A3B8', marginTop: 1 },
-  txnDetail: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  txnName: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
+  txnTime: { fontSize: 10, color: colors.textPlaceholder, marginTop: 1 },
+  txnDetail: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
   emptyActivity: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyActivityText: { fontSize: 13, color: '#9CA3AF' },
+  emptyActivityText: { fontSize: 13, color: colors.textPlaceholder },
 });

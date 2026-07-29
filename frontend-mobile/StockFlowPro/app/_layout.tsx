@@ -1,20 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
+import { useThemeColors } from '../hooks/useThemeColors';
 import { TIER_DASHBOARD_ROUTES, TIER_GROUP_SEGMENTS } from '../constants/routes';
 import AnimatedSplash from '../components/AnimatedSplash';
+import ToastHost from '../components/ToastHost';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const { token, user, isLoading, setAuth, clearAuth } = useAuthStore();
+  const hydrateTheme = useThemeStore(s => s.hydrate);
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const segments = useSegments();
   const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
+    hydrateTheme();
     (async () => {
       try {
         const storedToken = await SecureStore.getItemAsync('jwt_token');
@@ -71,9 +79,11 @@ export default function RootLayout() {
   }, [token, user, isLoading, segments]);
 
   return (
-    <>
-      <Slot />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false, animation: 'default', contentStyle: { backgroundColor: colors.bg } }} />
+      <ToastHost />
       {showIntro && <AnimatedSplash onFinish={handleIntroFinish} />}
-    </>
+    </View>
   );
 }

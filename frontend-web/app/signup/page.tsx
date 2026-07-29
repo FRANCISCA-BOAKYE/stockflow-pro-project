@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { API_BASE_URL } from "@/lib/api"
 import { MONTHLY_PRICE_USD as planPrices, SUB_ACCOUNT_LIMITS as ACCOUNT_LIMITS } from "@/lib/subscription-plans"
+import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries"
+import { Globe } from "lucide-react"
 
 const tiers = [
   { id: "MANUFACTURER", name: "Manufacturer", icon: Factory, description: "Materials, recipes, production planning, finished goods, dispatch", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", gradient: "from-blue-500 to-indigo-600" },
@@ -44,7 +46,7 @@ function SignupContent() {
   const [step, setStep] = useState(1)
   const [selectedTier, setSelectedTier] = useState(searchParams.get("tier")?.toUpperCase() || "")
   const [selectedPlan, setSelectedPlan] = useState(searchParams.get("plan")?.toUpperCase() || "")
-  const [formData, setFormData] = useState({ businessName: "", adminName: "", email: "", password: "" })
+  const [formData, setFormData] = useState({ businessName: "", adminName: "", email: "", password: "", country: DEFAULT_COUNTRY })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [registered, setRegistered] = useState<any>(null)
@@ -64,7 +66,7 @@ function SignupContent() {
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessName: formData.businessName, tierType: selectedTier, subscriptionPlan: selectedPlan, adminName: formData.adminName, adminEmail: formData.email, adminPassword: formData.password }),
+        body: JSON.stringify({ businessName: formData.businessName, tierType: selectedTier, subscriptionPlan: selectedPlan, adminName: formData.adminName, adminEmail: formData.email, adminPassword: formData.password, country: formData.country }),
       })
       const json = await res.json()
 if (!res.ok) throw new Error(json.error || json.message || "Registration failed")
@@ -201,6 +203,23 @@ setStep(4)
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white" placeholder="Acme Ltd" value={formData.businessName} onChange={(e) => setFormData({ ...formData, businessName: e.target.value })} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 text-sm font-medium">Country</Label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      className="w-full pl-10 h-12 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-sm text-slate-900 appearance-none"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    >
+                      {COUNTRIES.map(c => (
+                        <option key={c.code} value={c.code}>
+                          {c.name} — {c.currencyCode}{!c.paystackLive ? ' (card payments coming soon)' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-1.5">

@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../services/api';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
+import { showToast } from '../components/toast';
 
 export default function MyListingScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isPremium, setIsPremium] = useState(user?.subscriptionPlan === 'PREMIUM');
@@ -15,6 +20,7 @@ export default function MyListingScreen() {
     headline: '', description: '', deliveryTerms: '', creditTerms: '',
     location: '', contactEmail: user?.email || '', contactPhone: '',
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     api.get('/marketplace/my-listing')
@@ -37,15 +43,20 @@ export default function MyListingScreen() {
   }, []);
 
   const handleSave = async () => {
-    if (!form.headline.trim() || !form.location.trim() || !form.contactEmail.trim()) {
-      Alert.alert('Missing info', 'Headline, location and contact email are required.');
+    const errors: Record<string, string> = {};
+    if (!form.headline.trim()) errors.headline = 'Headline is required';
+    if (!form.location.trim()) errors.location = 'Location is required';
+    if (!form.contactEmail.trim()) errors.contactEmail = 'Contact email is required';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setSaving(true);
     try {
       await api.post('/marketplace/listing', form);
       setIsPremium(true);
-      Alert.alert('Success', 'Your business is now listed on the marketplace.');
+      showToast('Your business is now listed on the marketplace.');
       router.back();
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.response?.data?.message || '';
@@ -59,13 +70,13 @@ export default function MyListingScreen() {
     }
   };
 
-  if (loading) return <View style={s.center}><ActivityIndicator size="large" color="#1A56DB" /></View>;
+  if (loading) return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
 
   return (
     <SafeAreaView style={s.page}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back-outline" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View>
           <Text style={s.title}>Marketplace Listing</Text>
@@ -75,7 +86,7 @@ export default function MyListingScreen() {
 
       {!isPremium ? (
         <View style={s.upgradeBox}>
-          <Ionicons name="lock-closed-outline" size={32} color="#C27803" />
+          <Ionicons name="lock-closed-outline" size={32} color={colors.warning} />
           <Text style={s.upgradeTitle}>Premium feature</Text>
           <Text style={s.upgradeText}>Listing your business on the marketplace requires a Premium subscription.</Text>
           <TouchableOpacity style={s.upgradeBtn} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/pricing')}>
@@ -96,18 +107,19 @@ export default function MyListingScreen() {
             <View key={field.key} style={{ marginBottom: 16 }}>
               <Text style={s.fieldLabel}>{field.label}</Text>
               <TextInput
-                style={[s.fieldInput, field.multiline && { height: 90, textAlignVertical: 'top' }]}
+                style={[s.fieldInput, field.multiline && { height: 90, textAlignVertical: 'top' }, fieldErrors[field.key] && { borderColor: colors.danger }]}
                 placeholder={field.placeholder}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textPlaceholder}
                 value={(form as any)[field.key]}
-                onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                onChangeText={v => { setForm(f => ({ ...f, [field.key]: v })); setFieldErrors(fe => ({ ...fe, [field.key]: '' })); }}
                 keyboardType={(field.keyboard as any) || 'default'}
                 multiline={field.multiline}
               />
+              {!!fieldErrors[field.key] && <Text style={s.errorText}>{fieldErrors[field.key]}</Text>}
             </View>
           ))}
           <TouchableOpacity style={[s.confirmBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Save & Publish</Text>}
+            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Save & Publish</Text>}
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -115,21 +127,22 @@ export default function MyListingScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#F0F4F8' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#fff', padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  sub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { padding: 16, paddingBottom: 60 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', backgroundColor: '#fff' },
-  confirmBtn: { backgroundColor: '#1A56DB', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
-  confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surface },
+  errorText: { fontSize: 11, color: colors.danger, marginTop: 4 },
+  confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
+  confirmBtnText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
   upgradeBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 },
-  upgradeTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
-  upgradeText: { fontSize: 13, color: '#6B7280', textAlign: 'center' },
-  upgradeBtn: { backgroundColor: '#1A56DB', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginTop: 8 },
-  upgradeBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  upgradeTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  upgradeText: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+  upgradeBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginTop: 8 },
+  upgradeBtnText: { color: colors.onPrimary, fontWeight: '700', fontSize: 14 },
 });

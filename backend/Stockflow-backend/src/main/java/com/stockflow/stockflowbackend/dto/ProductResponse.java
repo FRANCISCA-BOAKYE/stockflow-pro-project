@@ -16,11 +16,19 @@ public class ProductResponse {
     private BigDecimal minThreshold;
     private Boolean isActive;
     private Boolean isLowStock;
+    private String imageBase64;
 
     public ProductResponse(Long id, String name, String categoryName,
                            String unit, BigDecimal priceUsd,
                            BigDecimal quantity, BigDecimal minThreshold,
                            Boolean isActive) {
+        this(id, name, categoryName, unit, priceUsd, quantity, minThreshold, isActive, null);
+    }
+
+    public ProductResponse(Long id, String name, String categoryName,
+                           String unit, BigDecimal priceUsd,
+                           BigDecimal quantity, BigDecimal minThreshold,
+                           Boolean isActive, String imageBase64) {
         this.id = id;
         this.name = name;
         this.categoryName = categoryName;
@@ -30,5 +38,6 @@ public class ProductResponse {
         this.minThreshold = minThreshold;
         this.isActive = isActive;
         this.isLowStock = quantity.compareTo(minThreshold) <= 0;
+        this.imageBase64 = imageBase64;
     }
 }

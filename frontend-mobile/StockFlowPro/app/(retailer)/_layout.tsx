@@ -1,21 +1,24 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 export default function RetailerLayout() {
+  const { colors } = useThemeColors();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: colors.bg },
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: colors.surface,
           borderTopWidth: 0.5,
-          borderTopColor: 'rgba(0,0,0,0.07)',
+          borderTopColor: colors.border,
           paddingBottom: 8,
           paddingTop: 8,
           height: 64,
         },
-        tabBarActiveTintColor: '#1A56DB',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textPlaceholder,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '500',
@@ -73,6 +76,10 @@ export default function RetailerLayout() {
  options={{ href: null }} />
 
       <Tabs.Screen name="reservations" options={{ href: null }} />
+
+      <Tabs.Screen name="customers/index" options={{ href: null }} />
+
+      <Tabs.Screen name="activity/index" options={{ href: null }} />
 
     </Tabs>
   );

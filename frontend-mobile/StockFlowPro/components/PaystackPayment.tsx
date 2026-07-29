@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal, View, ActivityIndicator, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { ThemeColors } from '../theme/colors';
 
 const PAYSTACK_KEY = 'pk_test_6620d84161debea0ad30c0617bde2eea7de28051';
 
@@ -14,6 +16,8 @@ interface Props {
 
 export default function PaystackPayment({ email, amount, onSuccess, onClose, visible }: Props) {
   const [loading, setLoading] = useState(true);
+  const { colors } = useThemeColors();
+  const s = useMemo(() => makeStyles(colors), [colors]);
 
   const html = `
     <!DOCTYPE html>
@@ -66,7 +70,7 @@ export default function PaystackPayment({ email, amount, onSuccess, onClose, vis
         </View>
         {loading && (
           <View style={s.loader}>
-            <ActivityIndicator size="large" color="#1A56DB" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={s.loaderText}>Loading payment...</Text>
           </View>
         )}
@@ -83,12 +87,12 @@ export default function PaystackPayment({ email, amount, onSuccess, onClose, vis
   )
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingTop: 50 },
-  title: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
-  closeText: { fontSize: 14, color: '#64748b' },
-  loader: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10, backgroundColor: '#fff' },
-  loaderText: { marginTop: 12, fontSize: 14, color: '#64748b' },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.surface },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: 50 },
+  title: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  closeText: { fontSize: 14, color: colors.textMuted },
+  loader: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10, backgroundColor: colors.surface },
+  loaderText: { marginTop: 12, fontSize: 14, color: colors.textMuted },
 });
