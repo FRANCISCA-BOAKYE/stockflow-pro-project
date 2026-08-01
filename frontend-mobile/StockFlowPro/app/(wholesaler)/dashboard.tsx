@@ -9,8 +9,10 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useCountUp } from '../../hooks/useCountUp';
 import { ThemeColors } from '../../theme/colors';
 import { SkeletonRow } from '../../components/Skeleton';
+import FadeInItem from '../../components/FadeInItem';
 
 export default function WholesalerDashboard() {
   const { user, clearAuth } = useAuthStore();
@@ -62,11 +64,16 @@ export default function WholesalerDashboard() {
     return 14 - daysElapsed;
   })();
 
+  const stockAnim = useCountUp(data?.totalStockItems);
+  const creditOwedAnim = useCountUp(Number(data?.totalCreditOwedByRetailers ?? 0));
+  const todaySalesAnim = useCountUp(Number(data?.todaySalesUsd ?? 0));
+  const activeRetailersAnim = useCountUp(data?.activeRetailers);
+
   const kpis = [
-    { label: 'WAREHOUSE STOCK', value: data?.totalStockItems ?? '—', sub: 'items', icon: 'archive-outline', iconBg: colors.primarySurface, iconColor: colors.primary, isMoney: false },
-    { label: 'CREDIT OWED', value: format(Number(data?.totalCreditOwedByRetailers ?? 0)), sub: 'by retailers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger, isMoney: true },
-    { label: "TODAY'S SALES", value: format(Number(data?.todaySalesUsd ?? 0)), sub: 'revenue', icon: 'trending-up-outline', iconBg: colors.successSurface, iconColor: colors.success, isMoney: true },
-    { label: 'ACTIVE RETAILERS', value: data?.activeRetailers ?? '—', sub: 'partners', icon: 'people-outline', iconBg: colors.warningSurface, iconColor: colors.warning, isMoney: false },
+    { label: 'WAREHOUSE STOCK', value: data?.totalStockItems != null ? Math.round(stockAnim).toLocaleString() : '—', sub: 'items', icon: 'archive-outline', iconBg: colors.primarySurface, iconColor: colors.primary, isMoney: false },
+    { label: 'CREDIT OWED', value: format(creditOwedAnim), sub: 'by retailers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger, isMoney: true },
+    { label: "TODAY'S SALES", value: format(todaySalesAnim), sub: 'revenue', icon: 'trending-up-outline', iconBg: colors.successSurface, iconColor: colors.success, isMoney: true },
+    { label: 'ACTIVE RETAILERS', value: data?.activeRetailers != null ? Math.round(activeRetailersAnim).toLocaleString() : '—', sub: 'partners', icon: 'people-outline', iconBg: colors.warningSurface, iconColor: colors.warning, isMoney: false },
   ];
 
 const quickActions = [
@@ -112,7 +119,7 @@ const quickActions = [
           <View style={{ marginTop: 8 }}>
             <Text style={s.heroLabel}>Credit outstanding</Text>
             <Text style={s.heroAmount}>
-              {format(Number(data?.totalCreditOwedByRetailers ?? 0))}
+              {format(creditOwedAnim)}
             </Text>
           </View>
         </View>
@@ -169,16 +176,18 @@ const quickActions = [
             </View>
           ) : (
             data?.recentActivity?.map((t: any, i: number) => (
-              <View key={i} style={[s.txn, { marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }]}>
-                <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
-                  <Ionicons name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'} size={16} color={t.positive ? colors.success : colors.textMuted} />
+              <FadeInItem key={i} index={i} style={{ marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }}>
+                <View style={s.txn}>
+                  <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
+                    <Ionicons name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'} size={16} color={t.positive ? colors.success : colors.textMuted} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.txnName}>{t.msg || t.name}</Text>
+                    <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+                  </View>
+                  <Text style={s.txnDetail}>{t.amount || t.detail}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.txnName}>{t.msg || t.name}</Text>
-                  <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-                </View>
-                <Text style={s.txnDetail}>{t.amount || t.detail}</Text>
-              </View>
+              </FadeInItem>
             ))
           )}
         </View>

@@ -9,8 +9,10 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useCountUp } from '../../hooks/useCountUp';
 import { ThemeColors } from '../../theme/colors';
 import { SkeletonRow } from '../../components/Skeleton';
+import FadeInItem from '../../components/FadeInItem';
 
 export default function RetailerDashboard() {
   const { user, clearAuth } = useAuthStore();
@@ -62,11 +64,17 @@ export default function RetailerDashboard() {
     return 14 - daysElapsed;
   })();
 
+  const totalProductsAnim = useCountUp(data?.totalProducts);
+  const lowStockAnim = useCountUp(data?.lowStockCount);
+  const todaySalesAnim = useCountUp(data?.todaySalesUsd);
+  const creditOwedAnim = useCountUp(data?.totalCreditOwedByCustomers);
+  const heroAmountAnim = useCountUp(data?.todaySalesUsd ?? 0);
+
   const kpis = [
-    { label: 'TOTAL PRODUCTS', value: data?.totalProducts ?? '—', sub: 'in inventory', icon: 'cube-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
-    { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
-    { label: "TODAY'S SALES", value: data?.todaySalesUsd != null ? format(data.todaySalesUsd) : '—', sub: 'revenue', icon: 'receipt-outline', iconBg: colors.successSurface, iconColor: colors.success },
-    { label: 'CREDIT OWED', value: data?.totalCreditOwedByCustomers != null ? format(data.totalCreditOwedByCustomers) : '—', sub: 'outstanding', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
+    { label: 'TOTAL PRODUCTS', value: data?.totalProducts != null ? Math.round(totalProductsAnim).toLocaleString() : '—', sub: 'in inventory', icon: 'cube-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
+    { label: 'LOW STOCK', value: data?.lowStockCount != null ? Math.round(lowStockAnim).toLocaleString() : '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
+    { label: "TODAY'S SALES", value: data?.todaySalesUsd != null ? format(todaySalesAnim) : '—', sub: 'revenue', icon: 'receipt-outline', iconBg: colors.successSurface, iconColor: colors.success },
+    { label: 'CREDIT OWED', value: data?.totalCreditOwedByCustomers != null ? format(creditOwedAnim) : '—', sub: 'outstanding', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
   ];
 
   const quickActions = [
@@ -125,9 +133,7 @@ export default function RetailerDashboard() {
           <View style={{ marginTop: 8 }}>
             <Text style={s.heroLabel}>Today's revenue</Text>
             <Text style={s.heroAmount}>
-              {data?.todaySalesUsd != null
-                ? format(data.todaySalesUsd)
-                : format(0)}
+              {format(heroAmountAnim)}
             </Text>
           </View>
         </View>
@@ -204,22 +210,24 @@ export default function RetailerDashboard() {
             </View>
           ) : (
             data?.recentActivity?.map((t: any, i: number) => (
-              <View key={i} style={[s.txn, { marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }]}>
-                <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
-                  <Ionicons
-                    name={t.positive ? 'arrow-down-outline' : 'arrow-up-outline'}
-                    size={16}
-                    color={t.positive ? colors.success : colors.textMuted}
-                  />
+              <FadeInItem key={i} index={i} style={{ marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }}>
+                <View style={s.txn}>
+                  <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
+                    <Ionicons
+                      name={t.positive ? 'arrow-down-outline' : 'arrow-up-outline'}
+                      size={16}
+                      color={t.positive ? colors.success : colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.txnName}>{t.name}</Text>
+                    <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+                  </View>
+                  <Text style={[s.txnAmount, { color: t.positive ? colors.success : colors.textPrimary }]}>
+                    {t.amount || t.detail}
+                  </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.txnName}>{t.name}</Text>
-                  <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-                </View>
-                <Text style={[s.txnAmount, { color: t.positive ? colors.success : colors.textPrimary }]}>
-                  {t.amount || t.detail}
-                </Text>
-              </View>
+              </FadeInItem>
             ))
           )}
         </View>

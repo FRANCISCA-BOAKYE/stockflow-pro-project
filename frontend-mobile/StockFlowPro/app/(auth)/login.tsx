@@ -12,6 +12,8 @@ import { TIER_DASHBOARD_ROUTES } from '../../constants/routes';
 import Svg, { Rect, Polygon, Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { ThemeColors } from '../../theme/colors';
+import PressableScale from '../../components/PressableScale';
+import DotGrid from '../../components/DotGrid';
 
 const Logo = () => (
   <Svg width="80" height="80" viewBox="0 0 90 90">
@@ -63,7 +65,11 @@ export default function Login() {
         router.replace(TIER_DASHBOARD_ROUTES[data.tierType] as any);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Check your credentials.');
+      if (err.code === 'ECONNABORTED') {
+        setError('Server is waking up — please try again in a few seconds.');
+      } else {
+        setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -78,7 +84,7 @@ export default function Login() {
           <View style={s.hero}>
             <View style={s.bubbleTopRight} />
             <View style={s.bubbleBottomLeft} />
-            <View style={s.grid} />
+            <DotGrid style={s.grid} color="rgba(255,255,255,0.06)" />
             <View style={s.logoBox}>
               <Logo />
               <Text style={s.brand}>StockFlow Pro</Text>
@@ -143,7 +149,7 @@ export default function Login() {
               </View>
             ) : null}
 
-            <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading} activeOpacity={0.85}>
+            <PressableScale style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading} haptic>
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
@@ -152,7 +158,7 @@ export default function Login() {
                   <Ionicons name="arrow-forward-outline" size={18} color={colors.onPrimary} />
                 </View>
               )}
-            </TouchableOpacity>
+            </PressableScale>
 
             <View style={s.dividerRow}>
               <View style={s.dividerLine} />
@@ -209,7 +215,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   grid: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    opacity: 0.03,
   },
   logoBox: { alignItems: 'center', zIndex: 1 },
   brand: { fontSize: 26, fontWeight: '800', color: '#ffffff', marginTop: 14, letterSpacing: -0.5 },

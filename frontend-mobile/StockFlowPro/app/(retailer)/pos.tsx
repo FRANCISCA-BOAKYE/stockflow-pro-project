@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator, AppState
@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import PaystackPayment from '../../components/PaystackPayment';
+import PressableScale from '../../components/PressableScale';
+import SuccessCheckmark from '../../components/SuccessCheckmark';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCurrency } from '../../hooks/useCurrency';
 import { ThemeColors } from '../../theme/colors';
@@ -164,11 +166,14 @@ export default function POSScreen() {
       const itemLines = (inv.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
       const pickupLine = inv.pickupCode ? `\nPickup code: ${inv.pickupCode} (emailed to customer)` : '';
       const customerLine = inv.customerId ? `\nCustomer ID: ${inv.customerId}` : '';
-      Alert.alert(
-        'Sale confirmed ✓',
-        `${itemLines}\nTotal: ${format(Number(inv.totalUsd))}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}${customerLine}`,
-        [{ text: 'OK', onPress: () => { resetForm(); fetchProducts(); } }]
-      );
+      pendingSuccessRef.current = () => {
+        Alert.alert(
+          'Sale confirmed ✓',
+          `${itemLines}\nTotal: ${format(Number(inv.totalUsd))}\nInvoice: ${inv.invoiceNumber || '—'}${pickupLine}${customerLine}`,
+          [{ text: 'OK', onPress: () => { resetForm(); fetchProducts(); } }]
+        );
+      };
+      setShowSuccessAnim(true);
     } catch (e: any) {
       if (isNetworkFailure(e)) {
         await enqueueSale('/pos/retail', body, `Sale · ${format(total)}`);
@@ -186,6 +191,9 @@ export default function POSScreen() {
     }
   };
 
+  const [showSuccessAnim, setShowSuccessAnim] = useState(false);
+  const pendingSuccessRef = useRef<(() => void) | null>(null);
+
   const handlePaystackSuccess = async (reference: string) => {
     setShowPaystack(false);
     await recordSale('CARD', reference);
@@ -197,8 +205,18 @@ export default function POSScreen() {
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
         amount={convert(total)}
+        currencyCode={country.currencyCode}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
+      />
+      <SuccessCheckmark
+        visible={showSuccessAnim}
+        message="Sale complete"
+        onDone={() => {
+          setShowSuccessAnim(false);
+          pendingSuccessRef.current?.();
+          pendingSuccessRef.current = null;
+        }}
       />
       <View style={s.header}>
         <Text style={s.title}>POS</Text>
@@ -389,14 +407,14 @@ export default function POSScreen() {
       </ScrollView>
 
       <View style={s.footer}>
-        <TouchableOpacity style={[s.confirmBtn, (cart.length === 0 || submitting) && { opacity: 0.4 }]} onPress={confirmSale} disabled={cart.length === 0 || submitting}>
+        <PressableScale style={[s.confirmBtn, (cart.length === 0 || submitting) && { opacity: 0.4 }]} onPress={confirmSale} disabled={cart.length === 0 || submitting} haptic>
           {submitting ? <ActivityIndicator color={colors.onPrimary} /> : (
             <>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimary} style={{ marginRight: 8 }} />
               <Text style={s.confirmText}>Confirm Sale · {format(total)}</Text>
             </>
           )}
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </SafeAreaView>
   );

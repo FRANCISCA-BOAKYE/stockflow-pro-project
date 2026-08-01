@@ -14,6 +14,7 @@ import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
 import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndicator';
 import { SkeletonRow } from '../../../components/Skeleton';
+import FadeInItem from '../../../components/FadeInItem';
 
 const LOW_STOCK = 10;
 
@@ -191,26 +192,28 @@ export default function ProductsScreen() {
               </TouchableOpacity>
             </View>
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isLow = item.isLowStock || item.quantity < LOW_STOCK;
             return (
-              <View style={[s.card, urgencyBorder(isLow ? 'warning' : 'ok', colors), isLow && { paddingLeft: 11 }]}>
-                <ImagePickerAvatar
-                  imageUri={item.imageBase64}
-                  onChange={(uri) => handleUpdateProductImage(item.id, uri)}
-                  size={40}
-                  placeholderIcon="cube-outline"
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.name}>{item.name}</Text>
-                  <Text style={s.sku}>{item.categoryName || 'Uncategorized'} · {item.unit}</Text>
-                  <Text style={[s.stock, isLow && { color: colors.danger }]}>{item.quantity} {item.unit} in stock</Text>
+              <FadeInItem index={index}>
+                <View style={[s.card, urgencyBorder(isLow ? 'warning' : 'ok', colors), isLow && { paddingLeft: 11 }]}>
+                  <ImagePickerAvatar
+                    imageUri={item.imageBase64}
+                    onChange={(uri) => handleUpdateProductImage(item.id, uri)}
+                    size={40}
+                    placeholderIcon="cube-outline"
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.name}>{item.name}</Text>
+                    <Text style={s.sku}>{item.categoryName || 'Uncategorized'} · {item.unit}</Text>
+                    <Text style={[s.stock, isLow && { color: colors.danger }]}>{item.quantity} {item.unit} in stock</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                    <Text style={s.price}>{format(Number(item.priceUsd))}</Text>
+                    <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'OK'} />
+                  </View>
                 </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <Text style={s.price}>{format(Number(item.priceUsd))}</Text>
-                  <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'OK'} />
-                </View>
-              </View>
+              </FadeInItem>
             );
           }}
         />

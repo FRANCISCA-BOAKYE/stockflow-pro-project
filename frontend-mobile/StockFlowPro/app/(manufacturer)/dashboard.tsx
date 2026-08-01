@@ -9,8 +9,10 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useCountUp } from '../../hooks/useCountUp';
 import { ThemeColors } from '../../theme/colors';
 import { SkeletonRow } from '../../components/Skeleton';
+import FadeInItem from '../../components/FadeInItem';
 
 export default function ManufacturerDashboard() {
   const { user, clearAuth } = useAuthStore();
@@ -63,11 +65,16 @@ export default function ManufacturerDashboard() {
     return left;
   })();
 
+  const materialsAnim = useCountUp(data?.totalMaterials);
+  const lowStockAnim = useCountUp(data?.lowStockCount);
+  const productionRunsAnim = useCountUp(data?.productionRunsThisMonth);
+  const creditOwedAnim = useCountUp(Number(data?.totalCreditOwedByWholesalers ?? 0));
+
   const kpis = [
-    { label: 'RAW MATERIALS', value: data?.totalMaterials ?? '—', sub: 'in stock', icon: 'flask-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
-    { label: 'LOW STOCK', value: data?.lowStockCount ?? '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
-    { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth ?? '—', sub: 'this month', icon: 'construct-outline', iconBg: colors.successSurface, iconColor: colors.success },
-    { label: 'CREDIT OWED', value: format(Number(data?.totalCreditOwedByWholesalers ?? 0)), sub: 'by wholesalers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
+    { label: 'RAW MATERIALS', value: data?.totalMaterials != null ? Math.round(materialsAnim).toLocaleString() : '—', sub: 'in stock', icon: 'flask-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
+    { label: 'LOW STOCK', value: data?.lowStockCount != null ? Math.round(lowStockAnim).toLocaleString() : '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
+    { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth != null ? Math.round(productionRunsAnim).toLocaleString() : '—', sub: 'this month', icon: 'construct-outline', iconBg: colors.successSurface, iconColor: colors.success },
+    { label: 'CREDIT OWED', value: format(creditOwedAnim), sub: 'by wholesalers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
   ];
 
   const quickActions = [
@@ -126,7 +133,7 @@ export default function ManufacturerDashboard() {
           <View style={{ marginTop: 8 }}>
             <Text style={s.heroLabel}>Credit outstanding</Text>
             <Text style={s.heroAmount}>
-              {format(Number(data?.totalCreditOwedByWholesalers ?? 0))}
+              {format(creditOwedAnim)}
             </Text>
           </View>
         </View>
@@ -197,20 +204,22 @@ export default function ManufacturerDashboard() {
             </View>
           ) : (
             data?.recentActivity?.map((t: any, i: number) => (
-              <View key={i} style={[s.txn, { marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }]}>
-                <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
-                  <Ionicons
-                    name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
-                    size={16}
-                    color={t.positive ? colors.success : colors.textMuted}
-                  />
+              <FadeInItem key={i} index={i} style={{ marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }}>
+                <View style={s.txn}>
+                  <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
+                    <Ionicons
+                      name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
+                      size={16}
+                      color={t.positive ? colors.success : colors.textMuted}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.txnName}>{t.name}</Text>
+                    <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
+                  </View>
+                  <Text style={s.txnDetail}>{t.detail}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.txnName}>{t.name}</Text>
-                  <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-                </View>
-                <Text style={s.txnDetail}>{t.detail}</Text>
-              </View>
+              </FadeInItem>
             ))
           )}
         </View>

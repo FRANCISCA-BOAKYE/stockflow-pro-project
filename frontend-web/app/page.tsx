@@ -3,6 +3,8 @@ import { Factory, Truck, Store, CreditCard, Lock, ShoppingCart, Search, ArrowRig
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
+import { ScrollReveal } from "@/components/scroll-reveal"
+import { AnimatedCounter } from "@/components/animated-counter"
 
 export default function HomePage() {
   return (
@@ -31,10 +33,10 @@ export default function HomePage() {
               StockFlow Pro connects manufacturers, wholesalers, and retailers in one platform — production planning, credit tracking, POS, and a marketplace to find trading partners.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="text-base px-8 py-6 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-shadow" asChild>
+              <Button size="lg" className="text-base px-8 py-6 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 transition-all" asChild>
                 <Link href="/signup">Start 14-day free trial <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-base px-8 py-6 rounded-xl" asChild>
+              <Button size="lg" variant="outline" className="text-base px-8 py-6 rounded-xl hover:scale-105 transition-transform" asChild>
                 <Link href="/marketplace">Browse marketplace</Link>
               </Button>
             </div>
@@ -45,15 +47,19 @@ export default function HomePage() {
           <div className="mx-auto max-w-4xl mt-20">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { value: "3", label: "Business tiers" },
-                { value: "14", label: "Day free trial" },
-                { value: "$0", label: "Due today" },
-                { value: "100%", label: "Data safe" },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-white/80 backdrop-blur rounded-2xl border border-slate-100 p-6 text-center shadow-sm">
-                  <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                  <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
-                </div>
+                { value: 3, label: "Business tiers" },
+                { value: 14, suffix: "-day", label: "Free trial" },
+                { value: 0, prefix: "$", label: "Due today" },
+                { value: 100, suffix: "%", label: "Data safe" },
+              ].map((stat, i) => (
+                <ScrollReveal key={stat.label} delayMs={i * 80}>
+                  <div className="bg-white/80 backdrop-blur rounded-2xl border border-slate-100 p-6 text-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <p className="text-3xl font-bold text-slate-900">
+                      <AnimatedCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
+                  </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -71,30 +77,39 @@ export default function HomePage() {
                 { icon: Factory, title: "Manufacturer", color: "from-blue-500 to-blue-600", bg: "bg-blue-50", iconColor: "text-blue-600", border: "border-blue-100", desc: "Materials, recipes, production planning with automatic calculation, finished goods tracking, and dispatch management.", features: ["Raw material tracking", "Recipe & production planning", "Finished goods inventory", "Dispatch management"] },
                 { icon: Truck, title: "Wholesaler", color: "from-amber-500 to-orange-500", bg: "bg-amber-50", iconColor: "text-amber-600", border: "border-amber-100", desc: "Warehouse stock management, receiving from manufacturers, selling to retailers, credit tracking in both directions.", features: ["Warehouse management", "Bulk receiving & dispatch", "Retailer credit tracking", "Linked partner network"] },
                 { icon: Store, title: "Retailer", color: "from-emerald-500 to-green-500", bg: "bg-emerald-50", iconColor: "text-emerald-600", border: "border-emerald-100", desc: "Products, POS, stock tracking, and credit owed to wholesalers — everything a retail business needs daily.", features: ["Product inventory", "Point of sale (POS)", "Low stock alerts", "Customer credit accounts"] },
-              ].map((tier) => (
-                <div key={tier.title} className={`relative rounded-3xl border ${tier.border} bg-white p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
-                  <div className={`h-14 w-14 rounded-2xl ${tier.bg} flex items-center justify-center mb-6`}>
-                    <tier.icon className={`h-7 w-7 ${tier.iconColor}`} />
+              ].map((tier, i) => (
+                <ScrollReveal key={tier.title} delayMs={i * 100}>
+                  <div className={`relative rounded-3xl border ${tier.border} bg-white p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
+                    <div className={`h-14 w-14 rounded-2xl ${tier.bg} flex items-center justify-center mb-6`}>
+                      <tier.icon className={`h-7 w-7 ${tier.iconColor}`} />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-3">{tier.title}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-6">{tier.desc}</p>
+                    <ul className="space-y-2">
+                      {tier.features.map(f => (
+                        <li key={f} className="flex items-center gap-2 text-sm text-slate-600">
+                          <Check className={`h-4 w-4 ${tier.iconColor} flex-shrink-0`} />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{tier.title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed mb-6">{tier.desc}</p>
-                  <ul className="space-y-2">
-                    {tier.features.map(f => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-slate-600">
-                        <Check className={`h-4 w-4 ${tier.iconColor} flex-shrink-0`} />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
         </section>
 
         {/* Features */}
-        <section className="py-24 px-6 lg:px-8 bg-slate-900">
-          <div className="mx-auto max-w-7xl">
+        <section className="relative py-24 px-6 lg:px-8 bg-gradient-to-br from-slate-900 to-slate-800 overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{
+              backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)",
+              backgroundSize: "22px 22px",
+            }}
+          />
+          <div className="relative mx-auto max-w-7xl">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-white">Built for how supply chains actually work</h2>
               <p className="mt-4 text-lg text-slate-400 max-w-2xl mx-auto">Every feature solves a real problem businesses face daily.</p>
@@ -109,14 +124,16 @@ export default function HomePage() {
                 { icon: BarChart3, title: "Dashboard reports", desc: "Real-time KPIs per tier — inventory, sales, credit outstanding, and production runs.", color: "text-cyan-400", bg: "bg-cyan-400/10" },
                 { icon: Zap, title: "Sub-accounts", desc: "Add team members with role-specific access. Retailers get 2–5, Manufacturers up to 10.", color: "text-orange-400", bg: "bg-orange-400/10" },
                 { icon: Star, title: "Tier linking", desc: "Manufacturers link to wholesalers. Wholesalers link to retailers. Everyone sees their supply chain.", color: "text-pink-400", bg: "bg-pink-400/10" },
-              ].map((f) => (
-                <div key={f.title} className="rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors">
-                  <div className={`h-10 w-10 rounded-xl ${f.bg} flex items-center justify-center mb-4`}>
-                    <f.icon className={`h-5 w-5 ${f.color}`} />
+              ].map((f, i) => (
+                <ScrollReveal key={f.title} delayMs={(i % 4) * 80}>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 hover:-translate-y-0.5 transition-all">
+                    <div className={`h-10 w-10 rounded-xl ${f.bg} flex items-center justify-center mb-4`}>
+                      <f.icon className={`h-5 w-5 ${f.color}`} />
+                    </div>
+                    <h3 className="font-semibold text-white mb-2">{f.title}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
                   </div>
-                  <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -134,14 +151,16 @@ export default function HomePage() {
                 { step: "01", title: "Choose your tier", desc: "Select Manufacturer, Wholesaler, or Retailer and pick Standard or Premium plan." },
                 { step: "02", title: "Start free trial", desc: "14-day free trial from first login. No card required. Your data stays safe forever." },
                 { step: "03", title: "Connect & operate", desc: "Link with trading partners and start tracking inventory, credit, and sales instantly." },
-              ].map((s) => (
-                <div key={s.step} className="text-center relative">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg mx-auto mb-6 shadow-lg shadow-blue-500/30">
-                    {s.step}
+              ].map((s, i) => (
+                <ScrollReveal key={s.step} delayMs={i * 120}>
+                  <div className="text-center relative">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg mx-auto mb-6 shadow-lg shadow-blue-500/30">
+                      {s.step}
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-lg mb-3">{s.title}</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed">{s.desc}</p>
                   </div>
-                  <h3 className="font-bold text-slate-900 text-lg mb-3">{s.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{s.desc}</p>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -157,11 +176,13 @@ export default function HomePage() {
                 { tier: "Retailer", from: 17, color: "emerald" },
                 { tier: "Wholesaler", from: 45, color: "amber" },
                 { tier: "Manufacturer", from: 80, color: "blue" },
-              ].map((p) => (
-                <div key={p.tier} className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-                  <p className="font-semibold text-slate-700 mb-2">{p.tier}</p>
-                  <p className="text-3xl font-bold text-slate-900">from ${p.from}<span className="text-sm font-normal text-slate-400">/mo</span></p>
-                </div>
+              ].map((p, i) => (
+                <ScrollReveal key={p.tier} delayMs={i * 100}>
+                  <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <p className="font-semibold text-slate-700 mb-2">{p.tier}</p>
+                    <p className="text-3xl font-bold text-slate-900">from ${p.from}<span className="text-sm font-normal text-slate-400">/mo</span></p>
+                  </div>
+                </ScrollReveal>
               ))}
             </div>
             <Button size="lg" className="text-base px-8 py-6 rounded-xl" asChild>
@@ -173,17 +194,26 @@ export default function HomePage() {
         {/* CTA */}
         <section className="py-24 px-6 lg:px-8">
           <div className="mx-auto max-w-4xl">
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-12 sm:p-16 text-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-600/20" />
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl" />
-              <div className="relative">
-                <h2 className="text-4xl font-bold text-white mb-4">Ready to connect your supply chain?</h2>
-                <p className="text-blue-100 text-lg mb-8">Join businesses already using StockFlow Pro. 14-day free trial, no card required.</p>
-                <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50 text-base px-8 py-6 rounded-xl font-semibold" asChild>
-                  <Link href="/signup">Start free trial <ArrowRight className="h-4 w-4 ml-2" /></Link>
-                </Button>
+            <ScrollReveal>
+              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-12 sm:p-16 text-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-600/20" />
+                <div
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    backgroundImage: "radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)",
+                    backgroundSize: "20px 20px",
+                  }}
+                />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl" />
+                <div className="relative">
+                  <h2 className="text-4xl font-bold text-white mb-4">Ready to connect your supply chain?</h2>
+                  <p className="text-blue-100 text-lg mb-8">Join businesses already using StockFlow Pro. 14-day free trial, no card required.</p>
+                  <Button size="lg" className="bg-white text-blue-700 hover:bg-blue-50 hover:scale-105 text-base px-8 py-6 rounded-xl font-semibold transition-transform" asChild>
+                    <Link href="/signup">Start free trial <ArrowRight className="h-4 w-4 ml-2" /></Link>
+                  </Button>
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
       </main>
