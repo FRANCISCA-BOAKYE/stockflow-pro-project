@@ -28,6 +28,9 @@ public class EmailSenderService {
     @Value("${frontend.web.base-url}")
     private String frontendWebBaseUrl;
 
+    @Value("${email.relay.secret}")
+    private String relaySecret;
+
     public void sendAsync(String to, String subject, String html) {
         try {
             String body = "{"
@@ -40,6 +43,7 @@ public class EmailSenderService {
                     .uri(URI.create(frontendWebBaseUrl + "/api/send-email"))
                     .timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/json")
+                    .header("X-Relay-Secret", relaySecret)
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
 

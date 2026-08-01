@@ -9,12 +9,13 @@ const PAYSTACK_KEY = 'pk_test_6620d84161debea0ad30c0617bde2eea7de28051';
 interface Props {
   email: string;
   amount: number;
+  currencyCode?: string;
   onSuccess: (reference: string) => void;
   onClose: () => void;
   visible: boolean;
 }
 
-export default function PaystackPayment({ email, amount, onSuccess, onClose, visible }: Props) {
+export default function PaystackPayment({ email, amount, currencyCode = 'GHS', onSuccess, onClose, visible }: Props) {
   const [loading, setLoading] = useState(true);
   const { colors } = useThemeColors();
   const s = useMemo(() => makeStyles(colors), [colors]);
@@ -33,7 +34,7 @@ export default function PaystackPayment({ email, amount, onSuccess, onClose, vis
             key: '${PAYSTACK_KEY}',
             email: '${email}',
             amount: ${amount * 100},
-            currency: 'GHS',
+            currency: '${currencyCode}',
             callback: function(response) {
               window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'success', reference: response.reference }));
             },

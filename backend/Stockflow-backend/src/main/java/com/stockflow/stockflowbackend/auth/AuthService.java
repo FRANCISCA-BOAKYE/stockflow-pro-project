@@ -100,7 +100,11 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> inviteSubAccount(
-            String email, String role, Long businessId, String inviterEmail) {
+            String email, String role, Long businessId, String inviterEmail, String callerRole) {
+
+        if (!"COMPANY_ADMIN".equals(callerRole)) {
+            throw new RuntimeException("Unauthorized: only the business admin can invite sub-accounts");
+        }
 
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already exists");

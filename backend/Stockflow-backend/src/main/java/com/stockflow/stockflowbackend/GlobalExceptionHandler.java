@@ -2,6 +2,7 @@ package com.stockflow.stockflowbackend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +15,17 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleDataAccessException(
+            DataAccessException ex) {
+        log.error("Database error", ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "A database error occurred. Please try again.",
+                "status", HttpStatus.CONFLICT.value(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(

@@ -5,6 +5,7 @@ import com.stockflow.stockflowbackend.geo.Country;
 import com.stockflow.stockflowbackend.geo.CurrencyRateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import java.util.Collection;
 import java.util.List;
@@ -48,11 +49,17 @@ public class AuthController {
             @RequestBody Map<String, String> req,
             Authentication auth) {
         Long businessId = (Long) auth.getDetails();
+        String callerRole = auth.getAuthorities().stream()
+                .findFirst()
+                .map(GrantedAuthority::getAuthority)
+                .map(a -> a.replace("ROLE_", ""))
+                .orElse(null);
         return ResponseEntity.ok(authService.inviteSubAccount(
                 req.get("email"),
                 req.get("role"),
                 businessId,
-                auth.getName()
+                auth.getName(),
+                callerRole
         ));
     }
 
