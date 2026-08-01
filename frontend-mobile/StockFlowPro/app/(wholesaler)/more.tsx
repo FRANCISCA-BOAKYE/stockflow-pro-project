@@ -84,6 +84,7 @@ export default function WholesalerMoreScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.userName}>{user?.name || 'User'}</Text>
             <Text style={s.userRole}>{user?.role} · {user?.tierType}</Text>
+            <Text style={s.userBiz} numberOfLines={1}>{user?.businessName} · {user?.email}</Text>
             <View style={{ marginTop: 4 }}>
               <StatusIndicator status={statusIndicatorStatus} label={statusLabel} />
             </View>
@@ -137,6 +138,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   avatarText: { color: colors.onPrimary, fontSize: 18, fontWeight: '700' },
   userName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   userRole: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  userBiz: { fontSize: 10.5, color: colors.textPlaceholder, marginTop: 2 },
   editBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   sectionCaption: { fontSize: 11, fontWeight: '600', color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 6, marginLeft: 4 },
   menuCard: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.border },

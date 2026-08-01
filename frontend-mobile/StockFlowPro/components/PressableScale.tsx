@@ -9,9 +9,9 @@ interface Props extends Omit<PressableProps, 'style'> {
   children: React.ReactNode;
 }
 
-/** Drop-in replacement for TouchableOpacity that adds a subtle press-scale spring. */
+/** Drop-in replacement for TouchableOpacity with a bold, visible press-squish + bounce-back. */
 export default function PressableScale({
-  scaleTo = 0.96,
+  scaleTo = 0.9,
   haptic = false,
   style,
   children,
@@ -24,12 +24,12 @@ export default function PressableScale({
   return (
     <Pressable
       onPressIn={(e) => {
-        Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, friction: 6, tension: 120 }).start();
-        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, friction: 4, tension: 180 }).start();
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 5, tension: 120 }).start();
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 3.5, tension: 160 }).start();
         onPressOut?.(e);
       }}
       {...rest}

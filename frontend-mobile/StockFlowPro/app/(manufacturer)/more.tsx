@@ -105,6 +105,7 @@ export default function ManufacturerMoreScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.userName}>{user?.name || 'User'}</Text>
             <Text style={s.userRole}>{user?.role} · {user?.tierType}</Text>
+            <Text style={s.userBiz} numberOfLines={1}>{user?.businessName} · {user?.email}</Text>
             <View style={s.statusRow}>
               <View style={[s.statusDot, { backgroundColor: statusColor }]} />
               <Text style={[s.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
@@ -163,6 +164,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   avatarText: { color: colors.onPrimary, fontSize: 18, fontWeight: '700' },
   userName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   userRole: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  userBiz: { fontSize: 10.5, color: colors.textPlaceholder, marginTop: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusLabel: { fontSize: 11, fontWeight: '500' },
