@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, ActivityIndicator, RefreshControl, TextInput, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, Alert, RefreshControl, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { ThemeColors } from '../../../theme/colors';
-import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndicator';
+import { StatusIndicator } from '../../../components/StatusIndicator';
 import { SkeletonRow } from '../../../components/Skeleton';
 import { showToast } from '../../../components/toast';
+import ListItemCard from '../../../components/ListItemCard';
+import EmptyState from '../../../components/EmptyState';
+import FormField from '../../../components/FormField';
+import Button from '../../../components/Button';
 
 export default function LinkedWholesalersScreen() {
   const router = useRouter();
@@ -104,38 +108,37 @@ export default function LinkedWholesalersScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPartners(); }} tintColor={colors.primary} />}
         ListEmptyComponent={
-          <View style={s.empty}>
-            <Ionicons name="people-outline" size={40} color={colors.borderStrong} />
-            <Text style={s.emptyText}>No linked wholesalers</Text>
-            <Text style={s.emptySub}>Tap Link to connect with a wholesaler</Text>
-          </View>
+          <EmptyState icon="people-outline" title="No linked wholesalers" message="Tap Link to connect with a wholesaler" />
         }
         renderItem={({ item }) => {
           const business = item.partnerBusiness?.tierType === 'WHOLESALER' ? item.partnerBusiness : item.requesterBusiness;
           const isPending = item.status === 'PENDING';
           const isIncoming = item.partnerBusiness?.id === user?.businessId;
           return (
-            <View style={[s.card, urgencyBorder(isPending ? 'warning' : 'ok', colors), isPending && { paddingLeft: 11 }]}>
-              <View style={s.cardIcon}>
-                <Ionicons name="business-outline" size={18} color={colors.warning} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.name}>{business?.name}</Text>
-                <Text style={s.type}>Wholesaler · ID: {business?.id}</Text>
-              </View>
-              {isPending && isIncoming ? (
-                <View style={{ gap: 6, alignItems: 'flex-end' }}>
-                  <TouchableOpacity style={s.acceptBtn} onPress={() => handleAccept(item.id)}>
-                    <Text style={s.acceptBtnText}>Accept</Text>
-                  </TouchableOpacity>
-                  <StatusIndicator status="warning" label="Pending" />
+            <ListItemCard
+              status={isPending ? 'warning' : 'ok'}
+              leading={
+                <View style={s.cardIcon}>
+                  <Ionicons name="business-outline" size={18} color={colors.warning} />
                 </View>
-              ) : isPending ? (
-                <StatusIndicator status="warning" label="Request sent" />
-              ) : (
-                <StatusIndicator status="ok" label="Active" />
-              )}
-            </View>
+              }
+              title={business?.name}
+              subtitle={`Wholesaler · ID: ${business?.id}`}
+              trailing={
+                isPending && isIncoming ? (
+                  <View style={{ gap: 6, alignItems: 'flex-end' }}>
+                    <TouchableOpacity style={s.acceptBtn} onPress={() => handleAccept(item.id)}>
+                      <Text style={s.acceptBtnText}>Accept</Text>
+                    </TouchableOpacity>
+                    <StatusIndicator status="warning" label="Pending" />
+                  </View>
+                ) : isPending ? (
+                  <StatusIndicator status="warning" label="Request sent" />
+                ) : (
+                  <StatusIndicator status="ok" label="Active" />
+                )
+              }
+            />
           );
         }}
       />
@@ -149,15 +152,17 @@ export default function LinkedWholesalersScreen() {
             </TouchableOpacity>
           </View>
           <View style={{ padding: 16 }}>
-            <Text style={s.fieldLabel}>Wholesaler Business ID</Text>
-            <TextInput style={s.fieldInput} placeholder="e.g. 2" placeholderTextColor={colors.textPlaceholder}
-              value={businessId} onChangeText={setBusinessId} keyboardType="numeric" />
-            <Text style={{ fontSize: 11, color: colors.textPlaceholder, marginTop: 6, marginBottom: 24 }}>
+            <FormField
+              label="Wholesaler Business ID"
+              placeholder="e.g. 2"
+              value={businessId}
+              onChangeText={setBusinessId}
+              keyboardType="numeric"
+            />
+            <Text style={{ fontSize: 11, color: colors.textPlaceholder, marginTop: -8, marginBottom: 24 }}>
               Find the business ID from the marketplace listing
             </Text>
-            <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleSendRequest} disabled={submitting}>
-              {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Send Link Request</Text>}
-            </TouchableOpacity>
+            <Button title="Send Link Request" onPress={handleSendRequest} loading={submitting} />
           </View>
         </SafeAreaView>
       </Modal>
@@ -174,19 +179,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12 },
   addBtnText: { fontSize: 13, color: colors.onPrimary, fontWeight: '600' },
-  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
   cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.warningSurface, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  type: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
   acceptBtn: { backgroundColor: colors.success, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 10 },
   acceptBtnText: { fontSize: 11, color: colors.onPrimary, fontWeight: '600' },
-  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
-  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
-  confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' },
-  confirmBtnText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
 });

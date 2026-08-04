@@ -12,6 +12,9 @@ import { ThemeColors } from '../../theme/colors';
 import { StatusIndicator } from '../../components/StatusIndicator';
 import { useConfirmSheet } from '../../components/ConfirmSheet';
 import { type } from '../../theme/typography';
+import { space } from '../../theme/spacing';
+import Card from '../../components/Card';
+import PressableScale from '../../components/PressableScale';
 
 const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
@@ -84,7 +87,7 @@ export default function RetailerMoreScreen() {
         <Text style={s.title}>More</Text>
       </View>
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-        <View style={s.profileCard}>
+        <Card style={s.profileCard} radiusSize="lg" padding={space[4]}>
           <View style={s.avatar}>
             <Text style={s.avatarText}>{initials}</Text>
           </View>
@@ -99,14 +102,14 @@ export default function RetailerMoreScreen() {
          <TouchableOpacity style={s.editBtn} onPress={() => router.push('/profile')}>
   <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
 </TouchableOpacity>
-        </View>
+        </Card>
         {SECTIONS.map(section => {
           const items = MENU_ITEMS.filter(item => item.group === section.key && (!item.ownerOnly || !user?.isSubAccount));
           if (items.length === 0) return null;
           return (
             <View key={section.key}>
               <Text style={s.sectionCaption}>{section.label}</Text>
-              <View style={s.menuCard}>
+              <Card padding={0} radiusSize="lg" style={{ overflow: 'hidden' }}>
                 {items.map((item, index) => (
                   <TouchableOpacity
                     key={item.label}
@@ -125,14 +128,16 @@ export default function RetailerMoreScreen() {
                     <Ionicons name="chevron-forward-outline" size={16} color={colors.borderStrong} />
                   </TouchableOpacity>
                 ))}
-              </View>
+              </Card>
             </View>
           );
         })}
-        <TouchableOpacity style={s.logoutCard} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
-          <Text style={s.logoutText}>Log out</Text>
-        </TouchableOpacity>
+        <PressableScale onPress={handleLogout} haptic>
+          <Card style={s.logoutCard} radiusSize="lg" padding={space[4]}>
+            <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
+            <Text style={s.logoutText}>Log out</Text>
+          </Card>
+        </PressableScale>
       </ScrollView>
       {confirmSheet}
     </SafeAreaView>
@@ -144,7 +149,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   body: { padding: 12, gap: 12, paddingBottom: 100 },
-  profileCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
+  profileCard: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.onPrimary, fontSize: 18, fontWeight: '700' },
   userName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
@@ -152,13 +157,12 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   userBiz: { fontSize: 10.5, color: colors.textPlaceholder, marginTop: 2 },
   editBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   sectionCaption: { ...type.caption, textTransform: 'uppercase', letterSpacing: 0.6, color: colors.textMuted, marginBottom: 6, marginLeft: 4 },
-  menuCard: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.border },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   menuBorder: { borderBottomWidth: 0.5, borderBottomColor: colors.border },
   menuIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   menuLabel: { flex: 1, fontSize: 13, fontWeight: '500', color: colors.textSecondary },
   badge: { backgroundColor: colors.danger, borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   badgeText: { color: colors.onPrimary, fontSize: 10, fontWeight: '700' },
-  logoutCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: colors.border },
+  logoutCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   logoutText: { fontSize: 14, fontWeight: '600', color: colors.danger },
 });

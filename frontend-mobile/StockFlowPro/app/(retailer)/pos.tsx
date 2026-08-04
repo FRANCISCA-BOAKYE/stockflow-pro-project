@@ -7,13 +7,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import PaystackPayment from '../../components/PaystackPayment';
-import PressableScale from '../../components/PressableScale';
 import SuccessCheckmark from '../../components/SuccessCheckmark';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCurrency } from '../../hooks/useCurrency';
 import { ThemeColors } from '../../theme/colors';
 import { generateIdempotencyKey, enqueueSale, isNetworkFailure, flushQueue, getPendingSales } from '../../services/offlineQueue';
 import { showToast } from '../../components/toast';
+import Card from '../../components/Card';
+import FormField from '../../components/FormField';
+import Button from '../../components/Button';
+import { space } from '../../theme/spacing';
 
 type CartLine = { productId: number; name: string; unit: string; priceUsd: number; available: number; qty: number };
 
@@ -267,7 +270,7 @@ export default function POSScreen() {
             <Text style={s.sectionLabel}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</Text>
             <View style={{ gap: 8, marginTop: 8 }}>
               {cart.map(line => (
-                <View key={line.productId} style={s.card}>
+                <Card key={line.productId} style={{ gap: space[2] }} radiusSize="lg" padding={space[4]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.prodName}>{line.name}</Text>
@@ -289,7 +292,7 @@ export default function POSScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                </View>
+                </Card>
               ))}
             </View>
           </View>
@@ -311,37 +314,38 @@ export default function POSScreen() {
         </View>
 
         {cart.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.fieldLabel}>Buyer name {payment === 'CREDIT' ? '' : '(optional)'}</Text>
-            <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="Customer name" placeholderTextColor={colors.textPlaceholder}
-                value={creditBuyer} onChangeText={setCreditBuyer} />
-            </View>
-            <Text style={s.fieldLabel}>Customer phone (optional)</Text>
-            <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor={colors.textPlaceholder}
-                value={buyerContact} onChangeText={setBuyerContact} keyboardType="phone-pad" />
-            </View>
-            <Text style={{ fontSize: 11, color: colors.textPlaceholder }}>Enter their phone to link this sale to their permanent customer ID — repeat visits build one purchase history instead of starting over each time.</Text>
+          <Card style={{ gap: space[1] }} radiusSize="lg" padding={space[4]}>
+            <FormField
+              label={`Buyer name ${payment === 'CREDIT' ? '' : '(optional)'}`}
+              placeholder="Customer name"
+              value={creditBuyer}
+              onChangeText={setCreditBuyer}
+            />
+            <FormField
+              label="Customer phone (optional)"
+              placeholder="e.g. 0244000000"
+              value={buyerContact}
+              onChangeText={setBuyerContact}
+              keyboardType="phone-pad"
+            />
+            <Text style={{ fontSize: 11, color: colors.textPlaceholder, marginTop: -8 }}>Enter their phone to link this sale to their permanent customer ID — repeat visits build one purchase history instead of starting over each time.</Text>
             {payment === 'CREDIT' && (
-              <>
-                <Text style={s.fieldLabel}>Due date</Text>
-                <View style={s.fieldInputRow}>
-                  <TextInput style={s.fieldInput} placeholder="e.g. 2026-07-30" placeholderTextColor={colors.textPlaceholder}
-                    value={dueDate} onChangeText={setDueDate} />
-                </View>
-              </>
+              <FormField
+                label="Due date"
+                placeholder="e.g. 2026-07-30"
+                value={dueDate}
+                onChangeText={setDueDate}
+              />
             )}
             {isPremium && (
-              <>
-                <Text style={s.fieldLabel}>Address (optional)</Text>
-                <View style={s.fieldInputRow}>
-                  <TextInput style={s.fieldInput} placeholder="Customer address" placeholderTextColor={colors.textPlaceholder}
-                    value={buyerAddress} onChangeText={setBuyerAddress} />
-                </View>
-              </>
+              <FormField
+                label="Address (optional)"
+                placeholder="Customer address"
+                value={buyerAddress}
+                onChangeText={setBuyerAddress}
+              />
             )}
-          </View>
+          </Card>
         )}
 
         {isPremium && cart.length > 0 && (
@@ -358,38 +362,43 @@ export default function POSScreen() {
               <Text style={s.invoiceToggleText}>Customer is collecting later (send pickup code)</Text>
             </TouchableOpacity>
             {isPickup && (
-              <View style={[s.card, { marginTop: 8 }]}>
-                <Text style={s.fieldLabel}>Customer email</Text>
-                <View style={s.fieldInputRow}>
-                  <TextInput style={s.fieldInput} placeholder="customer@email.com" placeholderTextColor={colors.textPlaceholder}
-                    value={buyerEmail} onChangeText={setBuyerEmail} keyboardType="email-address" autoCapitalize="none" />
-                </View>
-              </View>
+              <Card style={{ marginTop: 8 }} radiusSize="lg" padding={space[4]}>
+                <FormField
+                  label="Customer email"
+                  placeholder="customer@email.com"
+                  value={buyerEmail}
+                  onChangeText={setBuyerEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </Card>
             )}
           </View>
         )}
 
         {payment === 'MOBILE_MONEY' && (
-          <View style={s.card}>
-            <Text style={s.fieldLabel}>Mobile money number</Text>
-            <View style={s.fieldInputRow}>
-              <TextInput style={s.fieldInput} placeholder="e.g. 0244000000" placeholderTextColor={colors.textPlaceholder}
-                value={mobileNumber} onChangeText={setMobileNumber} keyboardType="phone-pad" />
-            </View>
-          </View>
+          <Card radiusSize="lg" padding={space[4]}>
+            <FormField
+              label="Mobile money number"
+              placeholder="e.g. 0244000000"
+              value={mobileNumber}
+              onChangeText={setMobileNumber}
+              keyboardType="phone-pad"
+            />
+          </Card>
         )}
 
         {payment === 'CARD' && (
-          <View style={s.card}>
+          <Card radiusSize="lg" padding={space[4]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="shield-checkmark-outline" size={16} color={colors.success} />
               <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>Secure card payment via Paystack</Text>
             </View>
-          </View>
+          </Card>
         )}
 
         {cart.length > 0 && (
-          <View style={s.card}>
+          <Card style={{ gap: space[2] }} radiusSize="lg" padding={space[4]}>
             <Text style={s.sectionLabel}>Order summary</Text>
             {cart.map(line => (
               <View key={line.productId} style={s.summaryRow}>
@@ -402,19 +411,20 @@ export default function POSScreen() {
               <Text style={s.totalLabel}>Total</Text>
               <Text style={s.totalAmt}>{format(total)}</Text>
             </View>
-          </View>
+          </Card>
         )}
       </ScrollView>
 
       <View style={s.footer}>
-        <PressableScale style={[s.confirmBtn, (cart.length === 0 || submitting) && { opacity: 0.4 }]} onPress={confirmSale} disabled={cart.length === 0 || submitting} haptic>
-          {submitting ? <ActivityIndicator color={colors.onPrimary} /> : (
-            <>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.onPrimary} style={{ marginRight: 8 }} />
-              <Text style={s.confirmText}>Confirm Sale · {format(total)}</Text>
-            </>
-          )}
-        </PressableScale>
+        <Button
+          title={`Confirm Sale · ${format(total)}`}
+          onPress={confirmSale}
+          disabled={cart.length === 0}
+          loading={submitting}
+          icon="checkmark-circle-outline"
+          iconPosition="left"
+          style={{ backgroundColor: colors.success, shadowColor: colors.success }}
+        />
       </View>
     </SafeAreaView>
   );
@@ -433,7 +443,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   resultIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   resultName: { flex: 1, fontSize: 13, color: colors.textPrimary },
   resultPrice: { fontSize: 13, fontWeight: '600', color: colors.primary, fontVariant: ['tabular-nums'] },
-  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: colors.border, gap: 8 },
   prodName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   prodPrice: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   stepperRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -452,9 +461,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   payBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   payBtnText: { fontSize: 12, color: colors.textSecondary },
   payBtnTextActive: { color: colors.onPrimary, fontWeight: '500' },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: colors.textSecondary },
-  fieldInputRow: { borderWidth: 0.5, borderColor: colors.borderStrong, borderRadius: 10, overflow: 'hidden' },
-  fieldInput: { padding: 10, fontSize: 13, color: colors.textPrimary },
   invoiceToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: 12, padding: 12, borderWidth: 0.5, borderColor: colors.border },
   invoiceToggleText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -464,6 +470,4 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   totalLabel: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   totalAmt: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   footer: { padding: 12, backgroundColor: colors.surface, borderTopWidth: 0.5, borderTopColor: colors.borderStrong },
-  confirmBtn: { backgroundColor: colors.success, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  confirmText: { color: colors.onPrimary, fontSize: 14, fontWeight: '600' },
 });

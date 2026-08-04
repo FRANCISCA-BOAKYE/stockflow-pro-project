@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TouchableOpacity,
   StyleSheet, ActivityIndicator, SafeAreaView,
   KeyboardAvoidingView, Platform, ScrollView, Linking
 } from 'react-native';
@@ -12,8 +12,11 @@ import { TIER_DASHBOARD_ROUTES } from '../../constants/routes';
 import Svg, { Rect, Polygon, Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { ThemeColors } from '../../theme/colors';
-import PressableScale from '../../components/PressableScale';
-import DotGrid from '../../components/DotGrid';
+import { space, radius } from '../../theme/spacing';
+import { type } from '../../theme/typography';
+import GradientHero from '../../components/GradientHero';
+import FormField from '../../components/FormField';
+import Button from '../../components/Button';
 
 const Logo = () => (
   <Svg width="80" height="80" viewBox="0 0 90 90">
@@ -44,8 +47,6 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const router = useRouter();
   const { colors } = useThemeColors();
@@ -80,60 +81,42 @@ export default function Login() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          {/* Dark hero top */}
-          <View style={s.hero}>
-            <View style={s.bubbleTopRight} />
-            <View style={s.bubbleBottomLeft} />
-            <DotGrid style={s.grid} color="rgba(255,255,255,0.06)" />
+          <GradientHero>
             <View style={s.logoBox}>
               <Logo />
               <Text style={s.brand}>StockFlow Pro</Text>
               <Text style={s.tagline}>Supply chain, connected.</Text>
             </View>
-          </View>
+          </GradientHero>
 
           {/* Form card */}
           <View style={s.formCard}>
             <Text style={s.formTitle}>Welcome back</Text>
             <Text style={s.formSub}>Sign in to your business account</Text>
 
-            <View style={s.field}>
-              <Text style={s.label}>Email address</Text>
-              <View style={[s.inputRow, emailFocused && s.inputFocused]}>
-                <Ionicons name="mail-outline" size={17} color={emailFocused ? colors.primary : colors.textPlaceholder} style={{ marginRight: 10 }} />
-                <TextInput
-                  style={s.input}
-                  placeholder="you@business.com"
-                  placeholderTextColor={colors.textPlaceholder}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                />
-              </View>
-            </View>
+            <FormField
+              label="Email address"
+              icon="mail-outline"
+              placeholder="you@business.com"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
 
-            <View style={s.field}>
-              <Text style={s.label}>Password</Text>
-              <View style={[s.inputRow, passwordFocused && s.inputFocused]}>
-                <Ionicons name="lock-closed-outline" size={17} color={passwordFocused ? colors.primary : colors.textPlaceholder} style={{ marginRight: 10 }} />
-                <TextInput
-                  style={[s.input, { flex: 1 }]}
-                  placeholder="Enter your password"
-                  placeholderTextColor={colors.textPlaceholder}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                />
+            <FormField
+              label="Password"
+              icon="lock-closed-outline"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              rightElement={
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={17} color={colors.textPlaceholder} />
                 </TouchableOpacity>
-              </View>
-            </View>
+              }
+            />
 
             <TouchableOpacity
               style={s.forgotLink}
@@ -149,26 +132,17 @@ export default function Login() {
               </View>
             ) : null}
 
-            <PressableScale style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading} haptic>
-              {loading ? (
-                <ActivityIndicator color={colors.onPrimary} />
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={s.btnText}>Sign in</Text>
-                  <Ionicons name="arrow-forward-outline" size={18} color={colors.onPrimary} />
-                </View>
-              )}
-            </PressableScale>
+            <Button title="Sign in" onPress={handleLogin} loading={loading} icon="arrow-forward-outline" />
 
             <View style={s.dividerRow}>
               <View style={s.dividerLine} />
               <Text style={s.dividerText}>New to StockFlow Pro?</Text>
               <View style={s.dividerLine} />
             </View>
-<TouchableOpacity style={s.signupHint} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/signup')}>
-  <Ionicons name="globe-outline" size={14} color={colors.primary} />
-  <Text style={s.signupText}>Sign up at <Text style={s.signupLink}>phenomenal-blini-7b80dd.netlify.app</Text></Text>
-</TouchableOpacity>
+            <TouchableOpacity style={s.signupHint} onPress={() => Linking.openURL('https://phenomenal-blini-7b80dd.netlify.app/signup')}>
+              <Ionicons name="globe-outline" size={14} color={colors.primary} />
+              <Text style={s.signupText}>Sign up at <Text style={s.signupLink}>phenomenal-blini-7b80dd.netlify.app</Text></Text>
+            </TouchableOpacity>
           </View>
 
           {/* Features */}
@@ -195,82 +169,38 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1 },
 
-  hero: {
-    backgroundColor: '#0F172A',
-    paddingTop: 60,
-    paddingBottom: 50,
-    alignItems: 'center',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  bubbleTopRight: {
-    position: 'absolute', top: -60, right: -60,
-    width: 200, height: 200, borderRadius: 100,
-    backgroundColor: 'rgba(59,130,246,0.1)',
-  },
-  bubbleBottomLeft: {
-    position: 'absolute', bottom: -40, left: -40,
-    width: 150, height: 150, borderRadius: 75,
-    backgroundColor: 'rgba(99,102,241,0.08)',
-  },
-  grid: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-  },
   logoBox: { alignItems: 'center', zIndex: 1 },
   brand: { fontSize: 26, fontWeight: '800', color: '#ffffff', marginTop: 14, letterSpacing: -0.5 },
   tagline: { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 5 },
 
   formCard: {
     backgroundColor: colors.surface,
-    marginHorizontal: 16,
+    marginHorizontal: space[4],
     marginTop: -24,
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: radius.xl,
+    padding: space[6],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 24,
     elevation: 8,
-    marginBottom: 16,
+    marginBottom: space[4],
   },
-  formTitle: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
-  formSub: { fontSize: 13, color: colors.textMuted, marginBottom: 24 },
-
-  field: { marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 7, textTransform: 'uppercase', letterSpacing: 0.4 },
-  inputRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.borderStrong,
-    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13,
-    backgroundColor: colors.surfaceAlt,
-  },
-  inputFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
-  input: { fontSize: 14, color: colors.textPrimary, flex: 1 },
+  formTitle: { ...type.display, fontSize: 22, color: colors.textPrimary, marginBottom: 4 },
+  formSub: { ...type.bodySm, color: colors.textMuted, marginBottom: space[6] },
 
   forgotLink: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 14 },
   forgotLinkText: { fontSize: 12.5, color: colors.primary, fontWeight: '600' },
 
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.dangerSurface, borderRadius: 10,
-    padding: 12, marginBottom: 14,
+    backgroundColor: colors.dangerSurface, borderRadius: radius.md,
+    padding: space[3], marginBottom: space[4],
     borderWidth: 0.5, borderColor: colors.danger + '40',
   },
   errorText: { fontSize: 12, color: colors.danger, flex: 1 },
 
-  btn: {
-    backgroundColor: colors.primary,
-    borderRadius: 14, padding: 16,
-    alignItems: 'center', marginTop: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  btnText: { color: colors.onPrimary, fontSize: 16, fontWeight: '700' },
-
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, marginBottom: 14 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space[5], marginBottom: space[4] },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.borderStrong },
   dividerText: { fontSize: 11, color: colors.textPlaceholder, fontWeight: '500' },
 
@@ -280,7 +210,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
 
   features: {
     flexDirection: 'row', justifyContent: 'center',
-    gap: 20, paddingHorizontal: 20, paddingBottom: 32, flexWrap: 'wrap',
+    gap: space[5], paddingHorizontal: space[5], paddingBottom: space[8], flexWrap: 'wrap',
   },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   featureText: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
