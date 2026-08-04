@@ -64,12 +64,12 @@ FROM tel_biz WHERE tier_type = 'RETAILER';
 
 -- --- Link the three tiers together --------------------------------------
 INSERT INTO tier_links (requester_business_id, partner_business_id, status, created_at, accepted_at)
-SELECT m.id, w.id, 'ACCEPTED', now(), now()
+SELECT m.id, w.id, 'ACTIVE', now(), now()
 FROM tel_biz m, tel_biz w
 WHERE m.tier_type = 'MANUFACTURER' AND w.tier_type = 'WHOLESALER';
 
 INSERT INTO tier_links (requester_business_id, partner_business_id, status, created_at, accepted_at)
-SELECT w.id, r.id, 'ACCEPTED', now(), now()
+SELECT w.id, r.id, 'ACTIVE', now(), now()
 FROM tel_biz w, tel_biz r
 WHERE w.tier_type = 'WHOLESALER' AND r.tier_type = 'RETAILER';
 
