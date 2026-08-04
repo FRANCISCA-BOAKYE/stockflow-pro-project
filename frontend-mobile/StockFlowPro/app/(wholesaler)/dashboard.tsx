@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView,
+  View, Text, StyleSheet,
   ScrollView, RefreshControl, TouchableOpacity
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -19,6 +19,7 @@ import GradientHero from '../../components/GradientHero';
 import StatCard from '../../components/StatCard';
 import ListItemCard from '../../components/ListItemCard';
 import EmptyState from '../../components/EmptyState';
+import ScreenBackground from '../../components/ScreenBackground';
 
 export default function WholesalerDashboard() {
   const { user, clearAuth } = useAuthStore();
@@ -87,18 +88,18 @@ export default function WholesalerDashboard() {
   ];
 
   if (loading) return (
-    <SafeAreaView style={s.page}>
+    <ScreenBackground style={s.page}>
       <View style={s.loadingHeader}>
         <Text style={s.loadingTitle}>Dashboard</Text>
       </View>
       <View style={{ padding: 12, gap: 8 }}>
         {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
       </View>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 
   return (
-    <SafeAreaView style={s.page}>
+    <ScreenBackground style={s.page}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -188,12 +189,12 @@ export default function WholesalerDashboard() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.bg },
+  page: { flex: 1, },
   loadingHeader: { backgroundColor: colors.surface, padding: space[4], paddingBottom: space[3], borderBottomWidth: 0.5, borderBottomColor: colors.border },
   loadingTitle: { ...type.h1, color: colors.textPrimary },
 

@@ -1,6 +1,7 @@
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import DotGrid from './DotGrid';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface GradientHeroProps {
   children: React.ReactNode;
@@ -25,16 +26,17 @@ export default function GradientHero({
   dotGrid = true,
   style,
 }: GradientHeroProps) {
+  const { colors } = useThemeColors();
   return (
     <LinearGradient
-      colors={['#182449', '#0F172A']}
+      colors={colors.heroGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.hero, { paddingTop, paddingBottom }, style]}
     >
       {bubbles && <View style={styles.bubbleTopRight} />}
       {bubbles && <View style={styles.bubbleBottomLeft} />}
-      {dotGrid && <DotGrid style={styles.grid} color="rgba(255,255,255,0.06)" />}
+      {dotGrid && <DotGrid style={styles.grid} color="rgba(255,255,255,0.08)" />}
       <View style={[styles.content, { paddingHorizontal }]}>{children}</View>
     </LinearGradient>
   );

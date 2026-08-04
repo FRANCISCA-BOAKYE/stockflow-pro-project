@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, ActivityIndicator, SafeAreaView,
+  StyleSheet, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Linking
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ import { type } from '../../theme/typography';
 import GradientHero from '../../components/GradientHero';
 import FormField from '../../components/FormField';
 import Button from '../../components/Button';
+import ScreenBackground from '../../components/ScreenBackground';
 
 const Logo = () => (
   <Svg width="80" height="80" viewBox="0 0 90 90">
@@ -77,7 +78,7 @@ export default function Login() {
   };
 
   return (
-    <SafeAreaView style={s.page}>
+    <ScreenBackground style={s.page}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
@@ -161,12 +162,12 @@ export default function Login() {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.bg },
+  page: { flex: 1, },
   scroll: { flexGrow: 1 },
 
   logoBox: { alignItems: 'center', zIndex: 1 },

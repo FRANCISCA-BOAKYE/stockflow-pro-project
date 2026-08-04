@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, SafeAreaView, ScrollView, Linking
+  StyleSheet, ScrollView, Linking
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { type } from '../../theme/typography';
 import { space } from '../../theme/spacing';
 import Card from '../../components/Card';
 import PressableScale from '../../components/PressableScale';
+import ScreenBackground from '../../components/ScreenBackground';
 
 const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
@@ -98,7 +99,7 @@ export default function ManufacturerMoreScreen() {
   };
 
   return (
-    <SafeAreaView style={s.page}>
+    <ScreenBackground style={s.page}>
       <View style={s.header}>
         <Text style={s.title}>More</Text>
       </View>
@@ -156,12 +157,12 @@ export default function ManufacturerMoreScreen() {
         </PressableScale>
       </ScrollView>
       {confirmSheet}
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.bg },
+  page: { flex: 1, },
   header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   body: { padding: 12, gap: 12, paddingBottom: 100 },
