@@ -10,6 +10,11 @@ import { StatusIndicator, urgencyBorder, UrgencyStatus } from './StatusIndicator
 import { SkeletonRow } from './Skeleton';
 import { useConfirmSheet } from './ConfirmSheet';
 import { showToast } from './toast';
+import Card from './Card';
+import FormField from './FormField';
+import Button from './Button';
+import EmptyState from './EmptyState';
+import { space, radius } from '../theme/spacing';
 
 const STATUS_MAP = (colors: ThemeColors): Record<string, { bg: string; text: string; label: string; icon: string }> => ({
   OVERDUE: { bg: colors.dangerSurface, text: colors.dangerText, label: 'Overdue', icon: 'alert-circle-outline' },
@@ -165,7 +170,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
       </View>
 
       <View style={s.body}>
-        <View style={s.balanceCard}>
+        <Card style={s.balanceCard} radiusSize="lg" padding={space[5]} elevated>
           <View style={s.balRow}>
             <View>
               <Text style={s.balLabel}>Total outstanding</Text>
@@ -176,7 +181,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
               <Ionicons name="wallet-outline" size={28} color="rgba(255,255,255,0.6)" />
             </View>
           </View>
-        </View>
+        </Card>
 
         <FlatList
           data={data}
@@ -185,11 +190,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAccounts(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
-            <View style={s.empty}>
-              <Ionicons name="wallet-outline" size={40} color={colors.borderStrong} />
-              <Text style={s.emptyText}>No credit accounts</Text>
-              <Text style={s.emptySub}>{emptySubtext}</Text>
-            </View>
+            <EmptyState icon="wallet-outline" title="No credit accounts" message={emptySubtext} />
           }
           renderItem={({ item }) => {
             const st = STATUS[item.status] || STATUS.OUTSTANDING;
@@ -197,7 +198,11 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
             const showActions = tab === 'owe_me' && item.status !== 'SETTLED';
             const isIndividualCustomer = tab === 'owe_me' && !item.partnerBusinessId;
             return (
-              <View style={[s.card, urgencyBorder(urgency, colors), urgency === 'danger' && { paddingLeft: 11 }]}>
+              <Card
+                style={[urgencyBorder(urgency, colors), urgency === 'danger' && { paddingLeft: 11 }, { gap: space[3] }]}
+                radiusSize="lg"
+                padding={space[4]}
+              >
                 <View style={s.cardTop}>
                   <View style={[s.cardIcon, { backgroundColor: st.bg }]}>
                     <Ionicons name={st.icon as any} size={18} color={st.text} />
@@ -254,7 +259,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
                     <Text style={s.deleteBtnText}>Delete record</Text>
                   </TouchableOpacity>
                 )}
-              </View>
+              </Card>
             );
           }}
         />
@@ -285,9 +290,7 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
             <Text style={{ fontSize: 12, color: colors.textPlaceholder, marginTop: 8, marginBottom: 24 }}>
               Full balance: {format(Number(selectedAccount?.amountUsd || 0))}
             </Text>
-            <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleRecordPayment} disabled={submitting}>
-              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Confirm Payment</Text>}
-            </TouchableOpacity>
+            <Button title="Confirm Payment" onPress={handleRecordPayment} loading={submitting} style={{ backgroundColor: colors.success, shadowColor: colors.success }} />
           </View>
         </SafeAreaView>
       </Modal>
@@ -305,22 +308,22 @@ export function CreditScreen({ subtitle, emptySubtext }: CreditScreenProps) {
               This permanently removes the credit record for {deleteAccount?.partnerBusinessName}
               ({format(Number(deleteAccount?.amountUsd || 0))}). This cannot be undone.
             </Text>
-            <Text style={s.fieldLabel}>Enter your password to confirm</Text>
-            <TextInput
-              style={s.fieldInput}
+            <FormField
+              label="Enter your password to confirm"
+              icon="lock-closed-outline"
               placeholder="Your account password"
-              placeholderTextColor={colors.textPlaceholder}
               value={deletePassword}
               onChangeText={setDeletePassword}
               secureTextEntry
             />
-            <TouchableOpacity
-              style={[s.deleteConfirmBtn, (deleting || !deletePassword.trim()) && { opacity: 0.5 }]}
+            <Button
+              title="Delete Permanently"
               onPress={handleDeleteRecord}
-              disabled={deleting || !deletePassword.trim()}
-            >
-              {deleting ? <ActivityIndicator color="#fff" /> : <Text style={s.confirmBtnText}>Delete Permanently</Text>}
-            </TouchableOpacity>
+              loading={deleting}
+              disabled={!deletePassword.trim()}
+              variant="danger"
+              style={{ marginTop: 8 }}
+            />
           </View>
         </SafeAreaView>
       </Modal>
@@ -348,7 +351,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   balAmount: { fontSize: 28, fontWeight: '700', color: colors.onPrimary, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   balCount: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
   balIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, borderWidth: 0.5, borderColor: colors.border, gap: 10 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -367,17 +369,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   holdBtnTextActive: { color: '#fff' },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
   deleteBtnText: { fontSize: 11, color: colors.textPlaceholder, fontWeight: '500' },
-  deleteConfirmBtn: { backgroundColor: colors.danger, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 20 },
-  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
-  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
-  fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
   fieldInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, backgroundColor: colors.surfaceAlt },
   fieldInputInner: { flex: 1, padding: 12, fontSize: 14, color: colors.textPrimary },
   errorText: { fontSize: 11, color: colors.danger, marginTop: 4 },
-  confirmBtn: { backgroundColor: colors.success, borderRadius: 14, padding: 16, alignItems: 'center' },
-  confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

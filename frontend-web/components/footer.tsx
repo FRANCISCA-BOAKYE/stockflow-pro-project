@@ -1,5 +1,7 @@
 "use client"
 import Link from "next/link"
+import { ArrowRight, Compass, CircleUserRound, Layers } from "lucide-react"
+import { GradientBlobs } from "@/components/gradient-blobs"
 
 const Logo = () => (
   <svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
@@ -17,85 +19,116 @@ const Logo = () => (
   </svg>
 )
 
+const COLUMNS = [
+  {
+    heading: "Platform",
+    icon: Compass,
+    links: [
+      { label: "Features", href: "/#features" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Marketplace", href: "/marketplace" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "Help", href: "/help" },
+    ],
+  },
+  {
+    heading: "Account",
+    icon: CircleUserRound,
+    links: [
+      { label: "Sign in", href: "/login" },
+      { label: "Start free trial", href: "/signup" },
+      { label: "Dashboard", href: "/dashboard" },
+    ],
+  },
+]
+
 export function Footer() {
   return (
-    <footer style={{ background: 'linear-gradient(135deg, #0f172a 0%, #0f1f4a 100%)', padding: '64px 24px 32px' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px', marginBottom: '48px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <Logo />
-              <span style={{ fontWeight: 700, fontSize: '17px', color: '#ffffff' }}>StockFlow Pro</span>
-            </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, maxWidth: '220px' }}>
-              Integrated supply chain management for manufacturers, wholesalers, and retailers across Ghana.
-            </p>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-              {['M', 'W', 'R'].map((t, i) => (
-                <div key={t} style={{
-                  width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '11px', fontWeight: 700, color: '#ffffff',
-                  background: i === 0 ? 'linear-gradient(135deg,#1a56db,#4f46e5)' : i === 1 ? 'linear-gradient(135deg,#d97706,#ea580c)' : 'linear-gradient(135deg,#059669,#10b981)'
-                }}>{t}</div>
-              ))}
-            </div>
-          </div>
+    <footer className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0f172a 0%, #0f1f4a 100%)" }}>
+      <GradientBlobs variant="dark" className="opacity-40" />
 
+      {/* Mini CTA strip — every page gets a chance to convert, not just the homepage */}
+      <div className="relative border-b border-white/[0.06] px-6 py-10 sm:py-12">
+        <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           <div>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Platform</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { label: 'Features', href: '/#features' },
-                { label: 'How it works', href: '/#how-it-works' },
-                { label: 'Marketplace', href: '/marketplace' },
-                { label: 'Pricing', href: '/pricing' },
-                { label: 'Help', href: '/help' },
-              ].map(link => (
-                <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
-                  onMouseEnter={(e: any) => e.target.style.color = '#ffffff'}
-                  onMouseLeave={(e: any) => e.target.style.color = '#94a3b8'}>
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Ready to connect your supply chain?</h3>
+            <p className="mt-1.5 text-sm text-slate-400">14-day free trial · No card required · Data always safe</p>
           </div>
-
-          <div>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Account</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { label: 'Sign in', href: '/login' },
-                { label: 'Start free trial', href: '/signup' },
-                { label: 'Dashboard', href: '/dashboard' },
-              ].map(link => (
-                <Link key={link.label} href={link.href} style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'none' }}
-                  onMouseEnter={(e: any) => e.target.style.color = '#ffffff'}
-                  onMouseLeave={(e: any) => e.target.style.color = '#94a3b8'}>
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Business tiers</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {['Manufacturer', 'Wholesaler', 'Retailer'].map(t => (
-                <span key={t} style={{ fontSize: '13px', color: '#94a3b8' }}>{t}</span>
-              ))}
-            </div>
-            <div style={{ marginTop: '24px', padding: '16px', borderRadius: '14px', backgroundColor: 'rgba(26,86,219,0.1)', border: '1px solid rgba(26,86,219,0.2)' }}>
-              <p style={{ fontSize: '11px', color: '#60a5fa', fontWeight: 600, marginBottom: '6px' }}>14-day free trial</p>
-              <p style={{ fontSize: '11px', color: '#475569' }}>No card required. Data always safe.</p>
-            </div>
-          </div>
+          <Link
+            href="/signup"
+            className="group inline-flex items-center gap-2 shrink-0 bg-white text-slate-950 text-sm font-semibold px-6 py-3 rounded-full shadow-lg hover:bg-blue-600 hover:text-white hover:-translate-y-0.5 transition-all duration-300"
+          >
+            Start free trial
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </Link>
         </div>
+      </div>
 
-        <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: '24px' }} />
+      <div className="relative px-6 py-12 sm:py-16">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-10 sm:gap-12" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+            <div>
+              <div className="flex items-center gap-2.5 mb-4">
+                <Logo />
+                <span className="font-bold text-[17px] text-white">StockFlow Pro</span>
+              </div>
+              <p className="text-[13px] text-slate-500 leading-relaxed max-w-[220px]">
+                Integrated supply chain management for manufacturers, wholesalers, and retailers across Ghana.
+              </p>
+              <div className="flex gap-2 mt-5">
+                {["M", "W", "R"].map((t, i) => (
+                  <div
+                    key={t}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white transition-transform duration-300 hover:scale-110 hover:-translate-y-0.5"
+                    style={{
+                      background: i === 0 ? "linear-gradient(135deg,#1a56db,#4f46e5)" : i === 1 ? "linear-gradient(135deg,#d97706,#ea580c)" : "linear-gradient(135deg,#059669,#10b981)",
+                    }}
+                  >
+                    {t}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <p style={{ fontSize: '12px', color: '#334155' }}>© 2026 StockFlow Pro · Group 3 · All rights reserved.</p>
-          <p style={{ fontSize: '12px', color: '#334155' }}>Built with care for Ghana's supply chain.</p>
+            {COLUMNS.map(col => (
+              <div key={col.heading}>
+                <div className="flex items-center gap-1.5 mb-4">
+                  <col.icon className="h-3.5 w-3.5 text-slate-600" />
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{col.heading}</p>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {col.links.map(link => (
+                    <Link key={link.label} href={link.href} className="text-[13px] text-slate-400 hover:text-white transition-colors duration-200 w-fit">
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div>
+              <div className="flex items-center gap-1.5 mb-4">
+                <Layers className="h-3.5 w-3.5 text-slate-600" />
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Business tiers</p>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {["Manufacturer", "Wholesaler", "Retailer"].map(t => (
+                  <span key={t} className="text-[13px] text-slate-400">{t}</span>
+                ))}
+              </div>
+              <div className="mt-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+                <p className="text-[11px] text-blue-400 font-semibold mb-1.5">14-day free trial</p>
+                <p className="text-[11px] text-slate-500">No card required. Data always safe.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-white/[0.06] my-8" />
+
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <p className="text-xs text-slate-600">© 2026 StockFlow Pro · Group 3 · All rights reserved.</p>
+            <p className="text-xs text-slate-600">Built with care for Ghana&apos;s supply chain.</p>
+          </div>
         </div>
       </div>
     </footer>

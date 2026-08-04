@@ -15,6 +15,7 @@ import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndica
 import { SkeletonRow } from '../../../components/Skeleton';
 import { useConfirmSheet } from '../../../components/ConfirmSheet';
 import { showToast } from '../../../components/toast';
+import FadeInItem from '../../../components/FadeInItem';
 
 export default function MaterialsScreen() {
   const { colors } = useThemeColors();
@@ -190,41 +191,43 @@ export default function MaterialsScreen() {
               </TouchableOpacity>
             </View>
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isLow = item.quantity < item.minThreshold;
             return (
-              <TouchableOpacity
-                style={[s.card, urgencyBorder(isLow ? 'warning' : 'ok', colors), isLow && { paddingLeft: 13 }]}
-                onPress={() => {
-                  setSelectedMaterial(item);
-                  setShowActionsModal(true);
-                }}
-              >
-                <ImagePickerAvatar
-                  imageUri={item.imageBase64}
-                  onChange={(uri) => handleUpdateMaterialImage(item.id, uri)}
-                  size={44}
-                  placeholderIcon={isLow ? 'warning-outline' : 'flask-outline'}
-                />
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={s.name}>{item.name}</Text>
-                  <Text style={[s.qty, isLow && { color: colors.danger }]}>
-                    {Number(item.quantity).toFixed(0)} {item.unit} in stock
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={s.unit}>Min {item.minThreshold} {item.unit}</Text>
-                    <Text style={s.metaDot}>·</Text>
-                    <Text style={s.unit}>{format(Number(item.costPerUnit))}/{item.unit}</Text>
+              <FadeInItem index={index}>
+                <TouchableOpacity
+                  style={[s.card, urgencyBorder(isLow ? 'warning' : 'ok', colors), isLow && { paddingLeft: 13 }]}
+                  onPress={() => {
+                    setSelectedMaterial(item);
+                    setShowActionsModal(true);
+                  }}
+                >
+                  <ImagePickerAvatar
+                    imageUri={item.imageBase64}
+                    onChange={(uri) => handleUpdateMaterialImage(item.id, uri)}
+                    size={44}
+                    placeholderIcon={isLow ? 'warning-outline' : 'flask-outline'}
+                  />
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text style={s.name}>{item.name}</Text>
+                    <Text style={[s.qty, isLow && { color: colors.danger }]}>
+                      {Number(item.quantity).toFixed(0)} {item.unit} in stock
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={s.unit}>Min {item.minThreshold} {item.unit}</Text>
+                      <Text style={s.metaDot}>·</Text>
+                      <Text style={s.unit}>{format(Number(item.costPerUnit))}/{item.unit}</Text>
+                    </View>
+                    {item.packageUnit && item.unitsPerPackage && (
+                      <Text style={s.packageCaption}>1 {item.packageUnit} = {Number(item.unitsPerPackage).toFixed(0)} {item.unit}</Text>
+                    )}
                   </View>
-                  {item.packageUnit && item.unitsPerPackage && (
-                    <Text style={s.packageCaption}>1 {item.packageUnit} = {Number(item.unitsPerPackage).toFixed(0)} {item.unit}</Text>
-                  )}
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'In stock'} />
-                  <Ionicons name="chevron-forward" size={16} color={colors.borderStrong} />
-                </View>
-              </TouchableOpacity>
+                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                    <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'In stock'} />
+                    <Ionicons name="chevron-forward" size={16} color={colors.borderStrong} />
+                  </View>
+                </TouchableOpacity>
+              </FadeInItem>
             );
           }}
         />

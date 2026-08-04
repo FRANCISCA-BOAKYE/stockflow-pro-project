@@ -1,5 +1,9 @@
 export interface ThemeColors {
   bg: string;
+  /** Two-stop gradient for full-page ambient backgrounds — pairs with ScreenBackground. */
+  bgGradient: [string, string];
+  /** Deep navy-to-blue gradient for hero/header sections — richer than bgGradient. */
+  heroGradient: [string, string];
   surface: string;
   surfaceAlt: string;
   surfaceRaised: string;
@@ -40,6 +44,8 @@ export interface ThemeColors {
 // Unchanged from the app's existing look — every screen already uses these exact hexes.
 export const lightColors: ThemeColors = {
   bg: '#F0F4F8',
+  bgGradient: ['#F3F6FC', '#E7EDF9'],
+  heroGradient: ['#0B1740', '#004B8E'],
   surface: '#FFFFFF',
   surfaceAlt: '#F8FAFC',
   surfaceRaised: '#FFFFFF',
@@ -82,6 +88,8 @@ export const lightColors: ThemeColors = {
 // read as blue/purple/green/red/amber against a dark surface (AA-friendly).
 export const darkColors: ThemeColors = {
   bg: '#0A0E1A',
+  bgGradient: ['#050914', '#0D1B3D'],
+  heroGradient: ['#010528', '#004B8E'],
   surface: '#141B2E',
   surfaceAlt: '#1B2338',
   surfaceRaised: '#1E273D',

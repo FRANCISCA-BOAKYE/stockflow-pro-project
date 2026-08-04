@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, SafeAreaView, Alert,
@@ -9,6 +9,8 @@ import { useRouter } from 'expo-router';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
 import PaystackPayment from '../../../components/PaystackPayment';
+import PressableScale from '../../../components/PressableScale';
+import SuccessCheckmark from '../../../components/SuccessCheckmark';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
@@ -181,10 +183,13 @@ export default function DispatchScreen() {
       const dispatch = res.data;
       const itemLines = (dispatch.items || []).map((it: any) => `${it.productName} x${it.quantity}`).join('\n');
       const pickupLine = dispatch.pickupCode ? `\nPickup code: ${dispatch.pickupCode} (emailed to buyer)` : '';
-      Alert.alert('Success', `${itemLines}\nTotal: ${format(Number(dispatch.totalUsd))}${pickupLine}`);
-      setShowModal(false);
-      resetForm();
-      fetchData();
+      pendingSuccessRef.current = () => {
+        Alert.alert('Success', `${itemLines}\nTotal: ${format(Number(dispatch.totalUsd))}${pickupLine}`);
+        setShowModal(false);
+        resetForm();
+        fetchData();
+      };
+      setShowSuccessAnim(true);
     } catch (e: any) {
       if (isNetworkFailure(e)) {
         await enqueueSale('/manufacturer/dispatch', body, `Dispatch · ${format(grandTotal)}`);
@@ -201,6 +206,9 @@ export default function DispatchScreen() {
       setSubmitting(false);
     }
   };
+
+  const [showSuccessAnim, setShowSuccessAnim] = useState(false);
+  const pendingSuccessRef = useRef<(() => void) | null>(null);
 
   const handlePaystackSuccess = async (reference: string) => {
     setShowPaystack(false);
@@ -229,8 +237,18 @@ export default function DispatchScreen() {
         visible={showPaystack}
         email={user?.email || 'customer@business.com'}
         amount={convert(grandTotal)}
+        currencyCode={country.currencyCode}
         onSuccess={handlePaystackSuccess}
         onClose={() => setShowPaystack(false)}
+      />
+      <SuccessCheckmark
+        visible={showSuccessAnim}
+        message="Dispatch complete"
+        onDone={() => {
+          setShowSuccessAnim(false);
+          pendingSuccessRef.current?.();
+          pendingSuccessRef.current = null;
+        }}
       />
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
@@ -463,9 +481,9 @@ export default function DispatchScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleDispatch} disabled={submitting}>
+            <PressableScale style={[s.confirmBtn, submitting && { opacity: 0.7 }]} onPress={handleDispatch} disabled={submitting} haptic>
               {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmBtnText}>Confirm Dispatch · {format(grandTotal)}</Text>}
-            </TouchableOpacity>
+            </PressableScale>
           </ScrollView>
         </SafeAreaView>
       </Modal>

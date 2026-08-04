@@ -12,8 +12,14 @@ import ImagePickerAvatar from '../../../components/ImagePickerAvatar';
 import { useThemeColors } from '../../../hooks/useThemeColors';
 import { useCurrency } from '../../../hooks/useCurrency';
 import { ThemeColors } from '../../../theme/colors';
-import { StatusIndicator, urgencyBorder } from '../../../components/StatusIndicator';
+import { StatusIndicator } from '../../../components/StatusIndicator';
 import { SkeletonRow } from '../../../components/Skeleton';
+import FadeInItem from '../../../components/FadeInItem';
+import ListItemCard from '../../../components/ListItemCard';
+import FormField from '../../../components/FormField';
+import Button from '../../../components/Button';
+import EmptyState from '../../../components/EmptyState';
+import PressableScale from '../../../components/PressableScale';
 
 const LOW_STOCK = 10;
 
@@ -181,44 +187,46 @@ export default function ProductsScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
-            <View style={s.empty}>
-              <Ionicons name="cube-outline" size={40} color={colors.borderStrong} />
-              <Text style={s.emptyText}>No products yet</Text>
-              <Text style={s.emptySub}>Tap + to add your first product</Text>
-              <TouchableOpacity style={s.emptyActionBtn} onPress={() => { setLastAdded(''); setFieldErrors({}); setShowAddModal(true); }}>
-                <Ionicons name="add" size={16} color={colors.onPrimary} />
-                <Text style={s.emptyActionText}>Add your first product</Text>
-              </TouchableOpacity>
-            </View>
+            <EmptyState
+              icon="cube-outline"
+              title="No products yet"
+              message="Tap + to add your first product"
+              actionLabel="Add your first product"
+              onAction={() => { setLastAdded(''); setFieldErrors({}); setShowAddModal(true); }}
+            />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isLow = item.isLowStock || item.quantity < LOW_STOCK;
             return (
-              <View style={[s.card, urgencyBorder(isLow ? 'warning' : 'ok', colors), isLow && { paddingLeft: 11 }]}>
-                <ImagePickerAvatar
-                  imageUri={item.imageBase64}
-                  onChange={(uri) => handleUpdateProductImage(item.id, uri)}
-                  size={40}
-                  placeholderIcon="cube-outline"
+              <FadeInItem index={index}>
+                <ListItemCard
+                  status={isLow ? 'warning' : 'ok'}
+                  leading={
+                    <ImagePickerAvatar
+                      imageUri={item.imageBase64}
+                      onChange={(uri) => handleUpdateProductImage(item.id, uri)}
+                      size={40}
+                      placeholderIcon="cube-outline"
+                    />
+                  }
+                  title={item.name}
+                  subtitle={`${item.categoryName || 'Uncategorized'} · ${item.quantity} ${item.unit} in stock`}
+                  trailing={
+                    <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                      <Text style={s.price}>{format(Number(item.priceUsd))}</Text>
+                      <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'OK'} />
+                    </View>
+                  }
                 />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.name}>{item.name}</Text>
-                  <Text style={s.sku}>{item.categoryName || 'Uncategorized'} · {item.unit}</Text>
-                  <Text style={[s.stock, isLow && { color: colors.danger }]}>{item.quantity} {item.unit} in stock</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <Text style={s.price}>{format(Number(item.priceUsd))}</Text>
-                  <StatusIndicator status={isLow ? 'warning' : 'ok'} label={isLow ? 'Low' : 'OK'} />
-                </View>
-              </View>
+              </FadeInItem>
             );
           }}
         />
       </View>
 
-      <TouchableOpacity style={s.fab} onPress={() => { setLastAdded(''); setFieldErrors({}); setShowAddModal(true); }}>
+      <PressableScale style={s.fab} onPress={() => { setLastAdded(''); setFieldErrors({}); setShowAddModal(true); }} haptic>
         <Ionicons name="add" size={28} color={colors.onPrimary} />
-      </TouchableOpacity>
+      </PressableScale>
 
       {/* Add Product Modal */}
       <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddModal(false)}>
@@ -254,9 +262,9 @@ export default function ProductsScreen() {
                     {fieldErrors.unit ? <Text style={s.errorText}>{fieldErrors.unit}</Text> : null}
                   </View>
                 )}
-                <View style={{ marginBottom: 16 }}>
-                  <Text style={s.fieldLabel}>{field.label}</Text>
-                  {field.isMoney ? (
+                {field.isMoney ? (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={s.fieldLabel}>{field.label}</Text>
                     <View style={s.moneyInputRow}>
                       <Text style={s.moneyPrefix}>{country.currencySymbol}</Text>
                       <TextInput
@@ -268,18 +276,18 @@ export default function ProductsScreen() {
                         keyboardType={(field.keyboard as any) || 'default'}
                       />
                     </View>
-                  ) : (
-                    <TextInput
-                      style={s.fieldInput}
-                      placeholder={field.placeholder}
-                      placeholderTextColor={colors.textPlaceholder}
-                      value={(form as any)[field.key]}
-                      onChangeText={v => { setForm(f => ({ ...f, [field.key]: v })); setFieldErrors(fe => ({ ...fe, [field.key]: '' })); }}
-                      keyboardType={(field.keyboard as any) || 'default'}
-                    />
-                  )}
-                  {fieldErrors[field.key] ? <Text style={s.errorText}>{fieldErrors[field.key]}</Text> : null}
-                </View>
+                    {fieldErrors[field.key] ? <Text style={s.errorText}>{fieldErrors[field.key]}</Text> : null}
+                  </View>
+                ) : (
+                  <FormField
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    value={(form as any)[field.key]}
+                    onChangeText={v => { setForm(f => ({ ...f, [field.key]: v })); setFieldErrors(fe => ({ ...fe, [field.key]: '' })); }}
+                    keyboardType={(field.keyboard as any) || 'default'}
+                    error={fieldErrors[field.key]}
+                  />
+                )}
               </View>
             ))}
 
@@ -325,9 +333,12 @@ export default function ProductsScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={[s.confirmBtn, addLoading && { opacity: 0.7 }]} onPress={handleAddProduct} disabled={addLoading}>
-              {addLoading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmText}>{lastAdded ? 'Add Another' : 'Add Product'}</Text>}
-            </TouchableOpacity>
+            <Button
+              title={lastAdded ? 'Add Another' : 'Add Product'}
+              onPress={handleAddProduct}
+              loading={addLoading}
+              style={{ marginTop: 8 }}
+            />
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -350,11 +361,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 12, color: colors.textSecondary },
   chipTextActive: { color: colors.onPrimary, fontWeight: '500' },
-  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
-  cardIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  sku: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
-  stock: { fontSize: 11, color: colors.success, fontWeight: '500', marginTop: 2 },
   price: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4, fontVariant: ['tabular-nums'] },
   fab: {
     position: 'absolute', bottom: 90, right: 16, width: 50, height: 50, backgroundColor: colors.primary, borderRadius: 25, alignItems: 'center', justifyContent: 'center',
@@ -362,11 +368,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
       ? { shadowColor: colors.shadow, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
       : { elevation: 6 }),
   },
-  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
-  emptySub: { fontSize: 13, color: colors.textPlaceholder },
-  emptyActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 9, paddingHorizontal: 16, marginTop: 8 },
-  emptyActionText: { fontSize: 13, fontWeight: '600', color: colors.onPrimary },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   modalBody: { padding: 16, paddingBottom: 40 },
@@ -376,8 +377,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   moneyPrefix: { paddingLeft: 12, color: colors.textMuted, fontWeight: '600', fontSize: 14 },
   moneyInput: { flex: 1, padding: 12, fontSize: 14, color: colors.textPrimary },
   errorText: { fontSize: 11, color: colors.danger, marginTop: 4 },
-  confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
-  confirmText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
   bulkHint: { fontSize: 11, color: colors.textPlaceholder, marginBottom: 16, fontStyle: 'italic' },
   addedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.successSurface, borderRadius: 10, padding: 10, marginBottom: 16 },
   addedBannerText: { fontSize: 11, color: colors.successText, flex: 1 },

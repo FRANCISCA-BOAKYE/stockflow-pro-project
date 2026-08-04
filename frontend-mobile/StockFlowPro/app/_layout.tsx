@@ -59,6 +59,11 @@ export default function RootLayout() {
       return;
     }
 
+    if (user?.mustChangePassword) {
+      router.replace('/(auth)/change-password');
+      return;
+    }
+
     if (user?.subscriptionStatus === 'EXPIRED') {
       router.replace('/(auth)/trial-expired');
       return;

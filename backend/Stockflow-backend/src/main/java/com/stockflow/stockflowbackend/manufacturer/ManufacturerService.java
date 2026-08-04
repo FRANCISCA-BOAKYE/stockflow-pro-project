@@ -81,6 +81,12 @@ public class ManufacturerService {
     // ADD MATERIAL
     @Transactional
     public Material addMaterial(AddMaterialRequest req, Long businessId) {
+        if (req.getQuantity() == null || req.getQuantity().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Quantity cannot be negative");
+        }
+        if (req.getCostPerUnit() == null || req.getCostPerUnit().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Cost per unit cannot be negative");
+        }
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
         Material m = new Material();

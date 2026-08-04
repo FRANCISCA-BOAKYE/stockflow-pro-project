@@ -12,6 +12,11 @@ import { ThemeColors } from '../../theme/colors';
 import { SkeletonRow } from '../../components/Skeleton';
 import { useConfirmSheet } from '../../components/ConfirmSheet';
 import { showToast } from '../../components/toast';
+import ListItemCard from '../../components/ListItemCard';
+import EmptyState from '../../components/EmptyState';
+import FormField from '../../components/FormField';
+import Button from '../../components/Button';
+import PressableScale from '../../components/PressableScale';
 
 function formatCountdown(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
@@ -138,33 +143,37 @@ export default function ReservationsScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
-            <View style={s.empty}>
-              <Ionicons name="time-outline" size={40} color={colors.borderStrong} />
-              <Text style={s.emptyText}>No active reservations</Text>
-              <Text style={s.emptySub}>Hold stock for a customer for 10 minutes with the + button</Text>
-            </View>
+            <EmptyState
+              icon="time-outline"
+              title="No active reservations"
+              message="Hold stock for a customer for 10 minutes with the + button"
+            />
           }
           renderItem={({ item }) => (
-            <View style={s.card}>
-              <View style={s.cardIcon}>
-                <Ionicons name="time-outline" size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.name}>{productName(item.productId)}</Text>
-                <Text style={s.qty}>{item.quantity} units held</Text>
-                <Text style={s.countdown}>{formatCountdown(item.expiresAt)}</Text>
-              </View>
-              <TouchableOpacity style={s.releaseBtn} onPress={() => handleRelease(item)}>
-                <Text style={s.releaseBtnText}>Release</Text>
-              </TouchableOpacity>
-            </View>
+            <ListItemCard
+              leading={
+                <View style={s.cardIcon}>
+                  <Ionicons name="time-outline" size={18} color={colors.primary} />
+                </View>
+              }
+              title={productName(item.productId)}
+              subtitle={`${item.quantity} units held`}
+              trailing={
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <Text style={s.countdown}>{formatCountdown(item.expiresAt)}</Text>
+                  <TouchableOpacity style={s.releaseBtn} onPress={() => handleRelease(item)}>
+                    <Text style={s.releaseBtnText}>Release</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
           )}
         />
       </View>
 
-      <TouchableOpacity style={s.fab} onPress={() => setShowAddModal(true)}>
+      <PressableScale style={s.fab} onPress={() => setShowAddModal(true)} haptic>
         <Ionicons name="add" size={28} color={colors.onPrimary} />
-      </TouchableOpacity>
+      </PressableScale>
 
       <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddModal(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -193,24 +202,21 @@ export default function ReservationsScreen() {
               {products.length === 0 && <Text style={s.productStock}>No products yet — add one first.</Text>}
             </ScrollView>
 
-            <Text style={s.fieldLabel}>Quantity to hold</Text>
-            <TextInput
-              style={s.fieldInput}
+            <FormField
+              label="Quantity to hold"
               placeholder="e.g. 5"
-              placeholderTextColor={colors.textPlaceholder}
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="numeric"
             />
             <Text style={s.hint}>Held for 10 minutes, then automatically released.</Text>
 
-            <TouchableOpacity
-              style={[s.confirmBtn, (!selectedProduct || !quantity || submitting) && { opacity: 0.5 }]}
+            <Button
+              title="Reserve Stock"
               onPress={handleCreateReservation}
-              disabled={!selectedProduct || !quantity || submitting}
-            >
-              {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={s.confirmText}>Reserve Stock</Text>}
-            </TouchableOpacity>
+              loading={submitting}
+              disabled={!selectedProduct || !quantity}
+            />
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -228,11 +234,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { flex: 1, padding: 12 },
-  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
   cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  qty: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  countdown: { fontSize: 11, color: colors.warning, fontWeight: '600', marginTop: 2 },
+  countdown: { fontSize: 11, color: colors.warning, fontWeight: '600' },
   releaseBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, backgroundColor: colors.dangerSurface },
   releaseBtnText: { fontSize: 12, fontWeight: '600', color: colors.danger },
   fab: {
@@ -241,19 +244,13 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
       ? { shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
       : { elevation: 6 }),
   },
-  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
-  emptySub: { fontSize: 13, color: colors.textPlaceholder, textAlign: 'center', paddingHorizontal: 40 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   modalBody: { padding: 16, paddingBottom: 40 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 },
-  fieldInput: { borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, backgroundColor: colors.surfaceAlt },
   hint: { fontSize: 11, color: colors.textPlaceholder, marginTop: 6, marginBottom: 20 },
   productRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.borderStrong, marginBottom: 8 },
   productRowActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
   productName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   productStock: { fontSize: 11, color: colors.textPlaceholder, marginTop: 2 },
-  confirmBtn: { backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
-  confirmText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
 });
