@@ -63,7 +63,7 @@ export default function Login() {
       if (data.subscriptionStatus === 'EXPIRED') {
         router.replace('/(auth)/trial-expired');
       } else {
-        router.replace(TIER_DASHBOARD_ROUTES[data.tierType] as any);
+        router.replace((TIER_DASHBOARD_ROUTES[data.tierType] ?? '/(auth)/login') as any);
       }
     } catch (err: any) {
       if (err.code === 'ECONNABORTED') {

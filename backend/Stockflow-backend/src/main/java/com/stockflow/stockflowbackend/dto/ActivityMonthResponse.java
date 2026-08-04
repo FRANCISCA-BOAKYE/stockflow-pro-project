@@ -17,5 +17,6 @@ public class ActivityMonthResponse {
     private long entryCount;
     private LocalDateTime clearedAt;
     private String clearedByName;
+    private LocalDateTime summaryEmailedAt;
     private boolean canClear;
 }

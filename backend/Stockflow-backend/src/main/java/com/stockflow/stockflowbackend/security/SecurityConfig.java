@@ -18,13 +18,16 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final SubscriptionAccessFilter subscriptionAccessFilter;
+    private final MustChangePasswordFilter mustChangePasswordFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                           SubscriptionAccessFilter subscriptionAccessFilter,
+                          MustChangePasswordFilter mustChangePasswordFilter,
                           CorsConfigurationSource corsConfigurationSource) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.subscriptionAccessFilter = subscriptionAccessFilter;
+        this.mustChangePasswordFilter = mustChangePasswordFilter;
         this.corsConfigurationSource = corsConfigurationSource;
     }
 
@@ -45,7 +48,8 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(subscriptionAccessFilter, JwtAuthFilter.class);
+                .addFilterAfter(mustChangePasswordFilter, JwtAuthFilter.class)
+                .addFilterAfter(subscriptionAccessFilter, MustChangePasswordFilter.class);
 
         return http.build();
     }

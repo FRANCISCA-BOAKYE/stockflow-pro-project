@@ -36,10 +36,16 @@ export default function CreditPage() {
       const res = await fetch(`${API_BASE_URL}/credit/accounts`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
+      if (!res.ok) {
+        setAccounts([])
+        toast.error("Could not load credit accounts. Please try again.")
+        return
+      }
       const data = await res.json()
       setAccounts(Array.isArray(data) ? data : [])
     } catch (e) {
       setAccounts([])
+      toast.error("Could not load credit accounts. Please try again.")
     } finally {
       setLoading(false)
     }

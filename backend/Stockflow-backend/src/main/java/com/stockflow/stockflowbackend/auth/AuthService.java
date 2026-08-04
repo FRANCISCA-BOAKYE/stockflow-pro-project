@@ -1,5 +1,6 @@
 package com.stockflow.stockflowbackend.auth;
 
+import com.stockflow.stockflowbackend.activity.ActivityLogService;
 import com.stockflow.stockflowbackend.dto.*;
 import com.stockflow.stockflowbackend.email.EmailSenderService;
 import com.stockflow.stockflowbackend.email.EmailTemplateUtil;
@@ -28,6 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailSenderService emailSenderService;
+    private final ActivityLogService activityLogService;
 
     @Value("${frontend.web.base-url}")
     private String frontendWebBaseUrl;
@@ -36,12 +38,14 @@ public class AuthService {
                        BusinessRepository businessRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
-                       EmailSenderService emailSenderService) {
+                       EmailSenderService emailSenderService,
+                       ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.businessRepository = businessRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.emailSenderService = emailSenderService;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -191,6 +195,7 @@ public class AuthService {
         response.setSubscriptionPlan(business.getSubscriptionPlan());
         response.setIsSubAccount(Boolean.TRUE.equals(user.getIsSubAccount()));
         response.setSubAccountRole(user.getSubAccountRole());
+        response.setMustChangePassword(Boolean.TRUE.equals(user.getMustChangePassword()));
         response.setTrialStartedAt(business.getTrialStartedAt());
         response.setCountry(CountryCatalog.isSupported(business.getCountry())
                 ? business.getCountry() : CountryCatalog.DEFAULT_COUNTRY);
@@ -278,6 +283,7 @@ public class AuthService {
         PasswordValidator.validate(req.getNewPassword());
 
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
 
         String html = EmailTemplateUtil.wrap(
@@ -286,6 +292,9 @@ public class AuthService {
                 EmailTemplateUtil.paragraph("The password on your StockFlow Pro account was just changed.")
                         + EmailTemplateUtil.smallNote("If you didn't make this change, contact support immediately."));
         emailSenderService.sendAsync(user.getEmail(), "Your StockFlow Pro password was changed", html);
+
+        activityLogService.log(user.getBusiness(), user, "PASSWORD_CHANGE",
+                user.getName() + " changed their password", null);
 
         return Map.of("success", true);
     }

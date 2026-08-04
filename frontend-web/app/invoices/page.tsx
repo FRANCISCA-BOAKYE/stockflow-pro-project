@@ -32,10 +32,16 @@ export default function InvoicesPage() {
       const headers: any = {}
       if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch(`${API_BASE_URL}/pos/invoices`, { headers })
+      if (!res.ok) {
+        setInvoices([])
+        toast.error("Could not load invoices. Please try again.")
+        return
+      }
       const data = await res.json()
       setInvoices(data?.content || data || [])
     } catch (e) {
       setInvoices([])
+      toast.error("Could not load invoices. Please try again.")
     } finally {
       setLoading(false)
     }

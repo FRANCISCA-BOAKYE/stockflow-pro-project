@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity
+  ScrollView, RefreshControl, TouchableOpacity
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,8 +11,14 @@ import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useCountUp } from '../../hooks/useCountUp';
 import { ThemeColors } from '../../theme/colors';
+import { space, radius } from '../../theme/spacing';
+import { type, tabularNums } from '../../theme/typography';
 import { SkeletonRow } from '../../components/Skeleton';
 import FadeInItem from '../../components/FadeInItem';
+import GradientHero from '../../components/GradientHero';
+import StatCard from '../../components/StatCard';
+import ListItemCard from '../../components/ListItemCard';
+import EmptyState from '../../components/EmptyState';
 
 export default function ManufacturerDashboard() {
   const { user, clearAuth } = useAuthStore();
@@ -61,34 +67,30 @@ export default function ManufacturerDashboard() {
     if (!startedAt) return null;
     const start = new Date(startedAt);
     const daysElapsed = Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const left = 14 - daysElapsed;
-    return left;
+    return 14 - daysElapsed;
   })();
 
-  const materialsAnim = useCountUp(data?.totalMaterials);
-  const lowStockAnim = useCountUp(data?.lowStockCount);
-  const productionRunsAnim = useCountUp(data?.productionRunsThisMonth);
-  const creditOwedAnim = useCountUp(Number(data?.totalCreditOwedByWholesalers ?? 0));
+  const heroAmountAnim = useCountUp(Number(data?.totalCreditOwedByWholesalers ?? 0));
 
   const kpis = [
-    { label: 'RAW MATERIALS', value: data?.totalMaterials != null ? Math.round(materialsAnim).toLocaleString() : '—', sub: 'in stock', icon: 'flask-outline', iconBg: colors.primarySurface, iconColor: colors.primary },
-    { label: 'LOW STOCK', value: data?.lowStockCount != null ? Math.round(lowStockAnim).toLocaleString() : '—', sub: 'need restocking', icon: 'warning-outline', iconBg: colors.warningSurface, iconColor: colors.warning },
-    { label: 'PRODUCTION RUNS', value: data?.productionRunsThisMonth != null ? Math.round(productionRunsAnim).toLocaleString() : '—', sub: 'this month', icon: 'construct-outline', iconBg: colors.successSurface, iconColor: colors.success },
-    { label: 'CREDIT OWED', value: format(creditOwedAnim), sub: 'by wholesalers', icon: 'wallet-outline', iconBg: colors.dangerSurface, iconColor: colors.danger },
+    { label: 'Raw materials', value: data?.totalMaterials, sub: 'in stock', icon: 'flask-outline' as const, iconBg: colors.primarySurface, iconColor: colors.primary },
+    { label: 'Low stock', value: data?.lowStockCount, sub: 'need restocking', icon: 'warning-outline' as const, iconBg: colors.warningSurface, iconColor: colors.warning },
+    { label: 'Production runs', value: data?.productionRunsThisMonth, sub: 'this month', icon: 'construct-outline' as const, iconBg: colors.successSurface, iconColor: colors.success },
+    { label: 'Credit owed', value: data?.totalCreditOwedByWholesalers, sub: 'by wholesalers', icon: 'wallet-outline' as const, iconBg: colors.dangerSurface, iconColor: colors.danger, formatValue: (n: number) => format(n) },
   ];
 
   const quickActions = [
-    { label: 'Production', icon: 'construct-outline', bg: colors.primarySurface, color: colors.primary, route: '/(manufacturer)/production' },
-    { label: 'Materials', icon: 'flask-outline', bg: colors.successSurface, color: colors.success, route: '/(manufacturer)/materials' },
-    { label: 'Dispatch', icon: 'cube-outline', bg: colors.warningSurface, color: colors.warning, route: '/(manufacturer)/dispatch' },
-    { label: 'Credit', icon: 'wallet-outline', bg: colors.dangerSurface, color: colors.danger, route: '/(manufacturer)/credit' },
+    { label: 'Production', icon: 'construct-outline' as const, bg: colors.primarySurface, color: colors.primary, route: '/(manufacturer)/production' },
+    { label: 'Materials', icon: 'flask-outline' as const, bg: colors.successSurface, color: colors.success, route: '/(manufacturer)/materials' },
+    { label: 'Dispatch', icon: 'cube-outline' as const, bg: colors.warningSurface, color: colors.warning, route: '/(manufacturer)/dispatch' },
+    { label: 'Credit', icon: 'wallet-outline' as const, bg: colors.dangerSurface, color: colors.danger, route: '/(manufacturer)/credit' },
   ];
 
   if (loading) {
     return (
       <SafeAreaView style={s.page}>
-        <View style={s.header}>
-          <Text style={s.title}>Dashboard</Text>
+        <View style={s.loadingHeader}>
+          <Text style={s.loadingTitle}>Dashboard</Text>
         </View>
         <View style={{ padding: 12, gap: 8 }}>
           {[1, 2, 3, 4, 5].map(i => <SkeletonRow key={i} />)}
@@ -110,7 +112,7 @@ export default function ManufacturerDashboard() {
           />
         }
       >
-        <View style={s.hero}>
+        <GradientHero paddingTop={24} paddingBottom={44} paddingHorizontal={space[5]}>
           <View style={s.heroTop}>
             <View>
               <Text style={s.greeting}>{getGreeting()}</Text>
@@ -130,13 +132,13 @@ export default function ManufacturerDashboard() {
               )}
             </View>
           </View>
-          <View style={{ marginTop: 8 }}>
+          <View style={{ marginTop: space[2] }}>
             <Text style={s.heroLabel}>Credit outstanding</Text>
-            <Text style={s.heroAmount}>
-              {format(creditOwedAnim)}
+            <Text style={[s.heroAmount, tabularNums]}>
+              {format(heroAmountAnim)}
             </Text>
           </View>
-        </View>
+        </GradientHero>
 
         <View style={s.body}>
           {error ? (
@@ -157,14 +159,7 @@ export default function ManufacturerDashboard() {
 
           <View style={s.kpiGrid}>
             {kpis.map((k, i) => (
-              <View key={i} style={s.kpiCard}>
-                <View style={[s.kpiIcon, { backgroundColor: k.iconBg }]}>
-                  <Ionicons name={k.icon as any} size={17} color={k.iconColor} />
-                </View>
-                <Text style={s.kpiLabel}>{k.label}</Text>
-                <Text style={[s.kpiValue, i === 3 && { fontVariant: ['tabular-nums'] }]}>{k.value}</Text>
-                <Text style={s.kpiSub}>{k.sub}</Text>
-              </View>
+              <StatCard key={i} {...k} style={{ width: '47.5%' }} />
             ))}
           </View>
 
@@ -187,7 +182,7 @@ export default function ManufacturerDashboard() {
                 onPress={() => a.route && router.push(a.route as any)}
               >
                 <View style={[s.actionIcon, { backgroundColor: a.bg }]}>
-                  <Ionicons name={a.icon as any} size={18} color={a.color} />
+                  <Ionicons name={a.icon} size={18} color={a.color} />
                 </View>
                 <Text style={s.actionLabel}>{a.label}</Text>
               </TouchableOpacity>
@@ -198,29 +193,28 @@ export default function ManufacturerDashboard() {
             <Text style={s.sectionTitle}>Recent activity</Text>
           </View>
           {(data?.recentActivity ?? []).length === 0 ? (
-            <View style={s.emptyActivity}>
-              <Ionicons name="time-outline" size={24} color={colors.borderStrong} />
-              <Text style={s.emptyActivityText}>No recent activity</Text>
-            </View>
+            <EmptyState icon="time-outline" title="No recent activity" message="Production and credit activity will show up here." />
           ) : (
-            data?.recentActivity?.map((t: any, i: number) => (
-              <FadeInItem key={i} index={i} style={{ marginBottom: i < (data.recentActivity.length - 1) ? 6 : 0 }}>
-                <View style={s.txn}>
-                  <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
-                    <Ionicons
-                      name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
-                      size={16}
-                      color={t.positive ? colors.success : colors.textMuted}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.txnName}>{t.name}</Text>
-                    <Text style={s.txnTime}>{t.time} · by {t.by}</Text>
-                  </View>
-                  <Text style={s.txnDetail}>{t.detail}</Text>
-                </View>
-              </FadeInItem>
-            ))
+            <View style={{ gap: space[2] }}>
+              {data?.recentActivity?.map((t: any, i: number) => (
+                <FadeInItem key={i} index={i}>
+                  <ListItemCard
+                    leading={
+                      <View style={[s.txnIcon, { backgroundColor: t.positive ? colors.successSurface : colors.surfaceAlt }]}>
+                        <Ionicons
+                          name={t.positive ? 'checkmark-circle-outline' : 'arrow-down-outline'}
+                          size={16}
+                          color={t.positive ? colors.success : colors.textMuted}
+                        />
+                      </View>
+                    }
+                    title={t.name}
+                    subtitle={`${t.time} · by ${t.by}`}
+                    trailing={<Text style={[s.txnDetail, tabularNums]}>{t.detail}</Text>}
+                  />
+                </FadeInItem>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -230,43 +224,38 @@ export default function ManufacturerDashboard() {
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
-  header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
-  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
-  hero: { backgroundColor: colors.primary, padding: 20, paddingTop: 24, paddingBottom: 40 },
+  loadingHeader: { backgroundColor: colors.surface, padding: space[4], paddingBottom: space[3], borderBottomWidth: 0.5, borderBottomColor: colors.border },
+  loadingTitle: { ...type.h1, color: colors.textPrimary },
+
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  greeting: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 3 },
-  userName: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2, letterSpacing: -0.3 },
-  bizName: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
+  greeting: { ...type.caption, color: 'rgba(255,255,255,0.6)', marginBottom: 3 },
+  userName: { ...type.h1, color: '#fff', marginBottom: 2, letterSpacing: -0.3 },
+  bizName: { ...type.micro, color: 'rgba(255,255,255,0.5)' },
   avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingVertical: 3, paddingHorizontal: 9 },
+  trialPill: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: radius.full, paddingVertical: 3, paddingHorizontal: 9 },
   trialText: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5 },
-  heroLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
-  body: { padding: 14, marginTop: -20 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.dangerSurface, borderRadius: 10, padding: 10, marginBottom: 12 },
+  heroLabel: { ...type.micro, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
+  heroAmount: { fontSize: 30, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+
+  body: { padding: space[4], marginTop: -24 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.dangerSurface, borderRadius: radius.md, padding: space[3], marginBottom: space[3] },
   errorText: { fontSize: 12, color: colors.danger, flex: 1 },
-  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.warning + '40', padding: 12, marginBottom: 12 },
+  trialCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: radius.lg, borderWidth: 0.5, borderColor: colors.warning + '40', padding: space[3], marginBottom: space[3] },
   trialCardText: { fontSize: 12, color: colors.warning, fontWeight: '500', flex: 1 },
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
-  kpiCard: { width: '47.5%', backgroundColor: colors.surface, borderRadius: 16, borderWidth: 0.5, borderColor: colors.border, padding: 14 },
-  kpiIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  kpiLabel: { fontSize: 9, color: colors.textMuted, fontWeight: '500', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 },
-  kpiValue: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3 },
-  kpiSub: { fontSize: 10, color: colors.textPlaceholder, marginTop: 2 },
-  alertCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.warning + '33', padding: 12, marginBottom: 16 },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3], marginBottom: space[4] },
+  alertCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warningSurface, borderRadius: radius.lg, borderWidth: 0.5, borderColor: colors.warning + '33', padding: space[3], marginBottom: space[4] },
   alertText: { fontSize: 12, color: colors.warning, fontWeight: '500', flex: 1 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 10, marginTop: 4 },
-  actionsGrid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  actionCard: { flex: 1, backgroundColor: colors.surface, borderRadius: 13, borderWidth: 0.5, borderColor: colors.border, padding: 12, alignItems: 'center', gap: 5 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[3] },
+  sectionTitle: { ...type.bodySm, fontWeight: '600', color: colors.textPrimary, marginBottom: space[3], marginTop: 4 },
+  actionsGrid: { flexDirection: 'row', gap: space[2], marginBottom: space[5] },
+  actionCard: {
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, padding: space[3],
+    alignItems: 'center', gap: 5,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
   actionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { fontSize: 9, fontWeight: '500', color: colors.textMuted, textAlign: 'center' },
-  txn: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 0.5, borderColor: colors.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   txnIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  txnName: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  txnTime: { fontSize: 10, color: colors.textPlaceholder, marginTop: 1 },
   txnDetail: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  emptyActivity: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyActivityText: { fontSize: 13, color: colors.textPlaceholder },
 });

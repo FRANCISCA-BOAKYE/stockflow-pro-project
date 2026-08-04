@@ -70,6 +70,12 @@ public class WholesalerService {
     @Transactional
     public WarehouseProduct addProduct(AddWarehouseProductRequest request,
                                        Long businessId) {
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Quantity cannot be negative");
+        }
+        if (request.getPriceUsd() == null || request.getPriceUsd().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Price cannot be negative");
+        }
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 

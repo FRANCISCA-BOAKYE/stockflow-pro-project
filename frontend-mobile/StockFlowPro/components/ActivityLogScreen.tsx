@@ -17,6 +17,7 @@ const ACTION_ICONS_MAP = (colors: ThemeColors): Record<string, { icon: string; c
   PRODUCTION: { icon: 'cog-outline', color: colors.purpleDark, bg: colors.purpleSurface },
   CREDIT_PAYMENT: { icon: 'wallet-outline', color: colors.success, bg: colors.successSurface },
   CREDIT_DELETE: { icon: 'trash-outline', color: colors.danger, bg: colors.dangerSurface },
+  PASSWORD_CHANGE: { icon: 'key-outline', color: colors.warning, bg: colors.warningSurface },
 });
 
 function EntryRow({ item, cfg, colors }: { item: any; cfg: { icon: string; color: string; bg: string }; colors: ThemeColors }) {
@@ -88,6 +89,7 @@ export function ActivityLogScreen() {
       }
     } catch (e) {
       console.log('Error fetching activity log:', e);
+      showToast('Could not load activity — pull down to retry', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -228,6 +230,12 @@ export function ActivityLogScreen() {
                           <Text style={s.clearedPillText}>Cleared {new Date(m.clearedAt).toLocaleDateString()}</Text>
                         </View>
                       )}
+                      {!!m.summaryEmailedAt && (
+                        <View style={s.emailedPill}>
+                          <Ionicons name="mail-outline" size={11} color={colors.primary} />
+                          <Text style={s.emailedPillText}>Emailed to you</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                   <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
@@ -280,6 +288,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   monthCount: { fontSize: 11.5, color: colors.textMuted },
   clearedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successSurface, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   clearedPillText: { fontSize: 10, color: colors.successText, fontWeight: '600' },
+  emailedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primarySurface, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  emailedPillText: { fontSize: 10, color: colors.primary, fontWeight: '600' },
   monthBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 12, borderTopWidth: 0.5, borderTopColor: colors.border, paddingTop: 14 },
   clearBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.primarySurface, borderRadius: 12, paddingVertical: 11, marginTop: 4 },
   clearBtnText: { fontSize: 12.5, fontWeight: '600', color: colors.primary },

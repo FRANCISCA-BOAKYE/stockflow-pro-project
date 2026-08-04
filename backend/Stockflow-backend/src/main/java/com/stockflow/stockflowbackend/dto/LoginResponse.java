@@ -21,4 +21,5 @@ public class LoginResponse {
     private String subAccountRole;
     private LocalDateTime trialStartedAt;
     private String country;
+    private Boolean mustChangePassword;
 }

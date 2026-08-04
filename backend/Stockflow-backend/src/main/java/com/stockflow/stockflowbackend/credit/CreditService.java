@@ -44,6 +44,9 @@ public class CreditService {
 
     @Transactional
     public CreditRecord createCreditRecord(CreateCreditRequest request, Long callerBusinessId) {
+        if (request.getAmountUsd() == null || request.getAmountUsd().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Amount must be greater than zero");
+        }
         CreditRecord record = new CreditRecord();
 
         Business creditor = businessRepository.findById(request.getCreditorBusinessId())

@@ -38,6 +38,11 @@ public class ActivityLogClearance {
     @Column(name = "cleared_by_name", length = 100)
     private String clearedByName;
 
-    @Column(name = "cleared_at", updatable = false)
-    private LocalDateTime clearedAt = LocalDateTime.now();
+    /** Null until the owner actually taps "clear" — see clearedAt vs summaryEmailedAt: a row can exist with only the latter set. */
+    @Column(name = "cleared_at")
+    private LocalDateTime clearedAt;
+
+    /** Set once the month's summary email has gone out, independent of whether it's been cleared yet. */
+    @Column(name = "summary_emailed_at")
+    private LocalDateTime summaryEmailedAt;
 }

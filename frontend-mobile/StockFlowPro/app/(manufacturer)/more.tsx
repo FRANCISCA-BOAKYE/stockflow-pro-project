@@ -9,7 +9,12 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { ThemeColors } from '../../theme/colors';
+import { StatusIndicator } from '../../components/StatusIndicator';
 import { useConfirmSheet } from '../../components/ConfirmSheet';
+import { type } from '../../theme/typography';
+import { space } from '../../theme/spacing';
+import Card from '../../components/Card';
+import PressableScale from '../../components/PressableScale';
 
 const HELP_URL = 'https://phenomenal-blini-7b80dd.netlify.app/help';
 
@@ -73,8 +78,8 @@ export default function ManufacturerMoreScreen() {
     ? user.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const statusColor = user?.subscriptionStatus === 'ACTIVE' ? colors.success
-    : user?.subscriptionStatus === 'TRIAL' ? colors.warning : colors.danger;
+  const statusIndicatorStatus = user?.subscriptionStatus === 'ACTIVE' ? 'ok'
+    : user?.subscriptionStatus === 'TRIAL' ? 'warning' : 'danger';
 
   const statusLabel = user?.subscriptionStatus === 'ACTIVE' ? 'Active'
     : user?.subscriptionStatus === 'TRIAL' ? 'Trial active' : 'Expired';
@@ -98,7 +103,7 @@ export default function ManufacturerMoreScreen() {
         <Text style={s.title}>More</Text>
       </View>
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-        <View style={s.profileCard}>
+        <Card style={s.profileCard} radiusSize="lg" padding={space[4]}>
           <View style={s.avatar}>
             <Text style={s.avatarText}>{initials}</Text>
           </View>
@@ -106,22 +111,21 @@ export default function ManufacturerMoreScreen() {
             <Text style={s.userName}>{user?.name || 'User'}</Text>
             <Text style={s.userRole}>{user?.role} · {user?.tierType}</Text>
             <Text style={s.userBiz} numberOfLines={1}>{user?.businessName} · {user?.email}</Text>
-            <View style={s.statusRow}>
-              <View style={[s.statusDot, { backgroundColor: statusColor }]} />
-              <Text style={[s.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+            <View style={{ marginTop: 4 }}>
+              <StatusIndicator status={statusIndicatorStatus} label={statusLabel} />
             </View>
           </View>
           <TouchableOpacity style={s.editBtn} onPress={() => router.push('/profile')}>
-  <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
-</TouchableOpacity>
-        </View>
+            <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        </Card>
         {MENU_GROUPS.map(group => {
           const visibleItems = group.items.filter(item => !item.ownerOnly || !user?.isSubAccount);
           if (visibleItems.length === 0) return null;
           return (
             <View key={group.title}>
-              <Text style={s.groupTitle}>{group.title.toUpperCase()}</Text>
-              <View style={s.menuCard}>
+              <Text style={s.groupTitle}>{group.title}</Text>
+              <Card padding={0} radiusSize="lg" style={{ overflow: 'hidden' }}>
                 {visibleItems.map((item, index) => (
                   <TouchableOpacity
                     key={item.label}
@@ -140,14 +144,16 @@ export default function ManufacturerMoreScreen() {
                     <Ionicons name="chevron-forward-outline" size={16} color={colors.borderStrong} />
                   </TouchableOpacity>
                 ))}
-              </View>
+              </Card>
             </View>
           );
         })}
-        <TouchableOpacity style={s.logoutCard} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
-          <Text style={s.logoutText}>Log out</Text>
-        </TouchableOpacity>
+        <PressableScale onPress={handleLogout} haptic>
+          <Card style={s.logoutCard} radiusSize="lg" padding={space[4]}>
+            <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
+            <Text style={s.logoutText}>Log out</Text>
+          </Card>
+        </PressableScale>
       </ScrollView>
       {confirmSheet}
     </SafeAreaView>
@@ -159,24 +165,20 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: { backgroundColor: colors.surface, padding: 16, paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: colors.border },
   title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   body: { padding: 12, gap: 12, paddingBottom: 100 },
-  profileCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 0.5, borderColor: colors.border },
+  profileCard: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.onPrimary, fontSize: 18, fontWeight: '700' },
   userName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   userRole: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   userBiz: { fontSize: 10.5, color: colors.textPlaceholder, marginTop: 2 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusLabel: { fontSize: 11, fontWeight: '500' },
   editBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  groupTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, marginLeft: 4 },
-  menuCard: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.border },
+  groupTitle: { ...type.caption, textTransform: 'uppercase', letterSpacing: 0.6, color: colors.textMuted, marginBottom: 6, marginLeft: 4 },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   menuBorder: { borderBottomWidth: 0.5, borderBottomColor: colors.border },
   menuIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   menuLabel: { flex: 1, fontSize: 13, fontWeight: '500', color: colors.textSecondary },
   badge: { backgroundColor: colors.danger, borderRadius: 10, minWidth: 20, height: 20, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   badgeText: { color: colors.onPrimary, fontSize: 10, fontWeight: '700' },
-  logoutCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: colors.border },
+  logoutCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   logoutText: { fontSize: 14, fontWeight: '600', color: colors.danger },
 });

@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,6 +42,12 @@ public class RetailerService {
     @Transactional
     public ProductResponse addProduct(AddProductRequest request,
                                       Long businessId) {
+        if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Quantity cannot be negative");
+        }
+        if (request.getPriceUsd() == null || request.getPriceUsd().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Price cannot be negative");
+        }
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 

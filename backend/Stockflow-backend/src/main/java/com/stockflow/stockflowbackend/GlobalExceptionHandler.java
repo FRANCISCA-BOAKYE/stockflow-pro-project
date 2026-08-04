@@ -27,6 +27,22 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    /**
+     * These are always programming errors, never a deliberately-thrown business
+     * message — their default messages can include field/method/class names
+     * (e.g. an NPE from an un-validated null field) that shouldn't reach a client.
+     */
+    @ExceptionHandler({ NullPointerException.class, ClassCastException.class,
+            NumberFormatException.class, ArithmeticException.class })
+    public ResponseEntity<Map<String, Object>> handleUnexpectedRuntimeException(RuntimeException ex) {
+        log.error("Unexpected runtime error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "error", "Internal server error",
+                "status", HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(
             RuntimeException ex) {
